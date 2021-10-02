@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ArtifactsWorkspaceSettings">
+    <artifacts-to-build>
+      <artifact name="Wizards" />
+    </artifacts-to-build>
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="af273a0f-0106-4254-aae8-0e679ab0b940" name="Default Changelist" comment="" />
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CodeInsightWorkspaceSettings">
+    <option name="optimizeImportsOnTheFly" value="true" />
+  </component>
+  <component name="DatabaseView">
+    <option name="SHOW_INTERMEDIATE" value="true" />
+    <option name="GROUP_DATA_SOURCES" value="true" />
+    <option name="GROUP_SCHEMA" value="true" />
+    <option name="GROUP_CONTENTS" value="false" />
+    <option name="SORT_POSITIONED" value="false" />
+    <option name="SHOW_EMPTY_GROUPS" value="false" />
+    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
+    <option name="HIDDEN_KINDS">
+      <set />
+    </option>
+    <expand />
+    <select />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Enum" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="importingSettings">
+      <MavenImportingSettings>
+        <option name="importAutomatically" value="true" />
+      </MavenImportingSettings>
+    </option>
+  </component>
+  <component name="ProjectId" id="1mqRghtiOgz3korEXlMSHqvKx0X" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="PropertiesComponent">
+    <property name="WebServerToolWindowFactoryState" value="false" />
+    <property name="aspect.path.notification.shown" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="project.structure.last.edited" value="Artifacts" />
+    <property name="project.structure.proportion" value="0.15" />
+    <property name="project.structure.side.proportion" value="0.2" />
+    <property name="run.code.analysis.last.selected.profile" value="pProject Default" />
+    <property name="settings.editor.selected.configurable" value="project.propVCSSupport.Mappings" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CreateClassDialog.RecentsKey">
+      <recent name="dev.thomashanson.wizards.game.state.types" />
+    </key>
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards" />
+    </key>
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="af273a0f-0106-4254-aae8-0e679ab0b940" name="Default Changelist" comment="" />
+      <created>1610219247121</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1610219247121</updated>
+      <workItem from="1610219248655" duration="563000" />
+      <workItem from="1610225547951" duration="2714000" />
+      <workItem from="1610389491281" duration="12000" />
+      <workItem from="1610418076645" duration="9838000" />
+      <workItem from="1611108030068" duration="12475000" />
+      <workItem from="1611178390621" duration="3130000" />
+      <workItem from="1611675012597" duration="3981000" />
+      <workItem from="1611788627564" duration="10387000" />
+      <workItem from="1612399660678" duration="1544000" />
+      <workItem from="1612401466435" duration="924000" />
+      <workItem from="1612827123559" duration="650000" />
+      <workItem from="1614795280932" duration="658000" />
+      <workItem from="1617238026145" duration="2625000" />
+      <workItem from="1617375427487" duration="12705000" />
+      <workItem from="1617686626284" duration="250000" />
+      <workItem from="1617939338768" duration="10280000" />
+      <workItem from="1618060777144" duration="2442000" />
+      <workItem from="1618398035857" duration="1292000" />
+      <workItem from="1618709486654" duration="1088000" />
+      <workItem from="1618780773218" duration="1419000" />
+      <workItem from="1619641291680" duration="789000" />
+      <workItem from="1619642909403" duration="620000" />
+      <workItem from="1621869050812" duration="151000" />
+      <workItem from="1621880752793" duration="728000" />
+      <workItem from="1625025205816" duration="74065000" />
+      <workItem from="1625770202897" duration="51156000" />
+      <workItem from="1625948895487" duration="88937000" />
+      <workItem from="1627651500758" duration="10740000" />
+      <workItem from="1627666830304" duration="50147000" />
+      <workItem from="1628259485866" duration="107783000" />
+      <workItem from="1629341424031" duration="1486000" />
+      <workItem from="1629743914121" duration="1478000" />
+      <workItem from="1629860360917" duration="3000" />
+      <workItem from="1629862769540" duration="57000" />
+      <workItem from="1631147009291" duration="365000" />
+      <workItem from="1631305223744" duration="10000" />
+      <workItem from="1631305247101" duration="485000" />
+      <workItem from="1631414184880" duration="68000" />
+      <workItem from="1633051533448" duration="4711000" />
+      <workItem from="1633140055729" duration="1442000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+</project>
