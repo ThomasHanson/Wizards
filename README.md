@@ -1,2 +1,1 @@
 # Wizards
-# Wizards
