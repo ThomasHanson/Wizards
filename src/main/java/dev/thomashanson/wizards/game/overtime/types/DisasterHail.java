@@ -61,11 +61,9 @@ public class DisasterHail extends Disaster {
             return;
 
         Vector vector = new Vector (
-
                 ThreadLocalRandom.current().nextDouble() - 0.5,
                 0.8,
                 ThreadLocalRandom.current().nextDouble() - 0.5
-
         ).normalize();
 
         vector.multiply(40);
@@ -93,9 +91,8 @@ public class DisasterHail extends Disaster {
 
                     location.getWorld().spawnParticle(Particle.EXPLOSION_LARGE, fallingBlock.getLocation(), 3, 0.3, 0.3, 0.3);
 
-                    if (i++ % 6 == 0) {
+                    if (i++ % 6 == 0)
                         fallingBlock.getWorld().playSound(fallingBlock.getLocation(), Sound.ENTITY_CAT_HISS, 1.3F, 0F);
-                    }
 
                 } else {
                     cancel();
@@ -161,24 +158,19 @@ public class DisasterHail extends Disaster {
 
             for (Block block : BlockUtil.getInRadius(event.getEntity().getLocation(), size, true).keySet()) {
 
-                if (block.getType() != Material.AIR) {
+                if (block.getType() == Material.AIR)
+                    continue;
 
-                    block.setType(Material.PACKED_ICE);
+                block.setType(Material.PACKED_ICE);
 
-                    if (block.getRelative(BlockFace.DOWN).getType() == Material.AIR) {
+                if (block.getRelative(BlockFace.DOWN).getType() != Material.AIR)
+                    continue;
 
-                        if (fall) {
+                if (fall)
+                    block.getWorld().spawnFallingBlock(block.getLocation(), Bukkit.createBlockData(block.getType()));
 
-                            block.getWorld().spawnFallingBlock(block.getLocation(), Bukkit.createBlockData(block.getType()));
-                            fall = false;
-
-                        } else {
-                            fall = true;
-                        }
-
-                        block.setType(Material.AIR);
-                    }
-                }
+                fall = !fall;
+                block.setType(Material.AIR);
             }
         }
     }
@@ -200,7 +192,7 @@ public class DisasterHail extends Disaster {
         }
     }
 
-    private boolean onIce(Player player) {
+    private boolean isOnIce(Player player) {
 
         Block block = player.getLocation().getBlock().getRelative(BlockFace.DOWN);
         Material material = block.getType();

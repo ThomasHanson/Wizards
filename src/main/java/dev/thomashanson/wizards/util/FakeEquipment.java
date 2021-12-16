@@ -33,7 +33,7 @@ public abstract class FakeEquipment {
         CHESTPLATE(4),
         HELMET(5);
 
-        private int id;
+        private final int id;
 
         EquipmentSlot(int id) {
             this.id = id;
@@ -44,7 +44,7 @@ public abstract class FakeEquipment {
          * @param entity - the entity.
          * @return The equipment.
          */
-        public ItemStack getEquipment(LivingEntity entity) {
+        ItemStack getEquipment(LivingEntity entity) {
 
             if (entity.getEquipment() == null)
                 return null;
@@ -73,11 +73,11 @@ public abstract class FakeEquipment {
          * Retrieve the underlying equipment slot ID.
          * @return The ID.
          */
-        public int getId() {
+        int getId() {
             return id;
         }
 
-        public EnumWrappers.ItemSlot toWrapper() {
+        EnumWrappers.ItemSlot toWrapper() {
 
             switch (this) {
 
@@ -109,8 +109,8 @@ public abstract class FakeEquipment {
     // Necessary to detect duplicate
     private Map<Object, EquipmentSlot> processedPackets = new MapMaker().weakKeys().makeMap();
 
-    private Plugin plugin;
-    private ProtocolManager manager;
+    private final Plugin plugin;
+    private final ProtocolManager manager;
 
     private PacketListener listener;
 

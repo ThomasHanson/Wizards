@@ -163,15 +163,8 @@ public enum PotionType {
         return duration;
     }
 
-    public Color getColor() {
-        return color;
-    }
-
     public Class<? extends Potion> getPotionClass() {
         return potionClass;
     }
 
-    public String[] getDescription() {
-        return description;
-    }
 }

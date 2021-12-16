@@ -1,4 +1,4 @@
 package dev.thomashanson.wizards.stats.types;
 
-public class LossTracker {
+class LossTracker {
 }

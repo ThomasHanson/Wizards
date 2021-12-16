@@ -1,6 +1,7 @@
 package dev.thomashanson.wizards.game.kit;
 
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
@@ -12,14 +13,16 @@ import java.util.List;
 public abstract class WizardsKit implements Listener {
 
     private final String name;
-    private final ChatColor color;
+    private final ChatColor chatColor;
+    private final Color color;
     private final List<String> description;
     private final ItemStack menuItem;
     private final ItemStack itemInHand;
     private final int cost;
 
-    private WizardsKit(String name, ChatColor color, List<String> description, ItemStack menuItem, ItemStack itemInHand, int cost) {
+    private WizardsKit(String name, ChatColor chatColor, Color color, List<String> description, ItemStack menuItem, ItemStack itemInHand, int cost) {
         this.name = name;
+        this.chatColor = chatColor;
         this.color = color;
         this.description = description;
         this.menuItem = menuItem;
@@ -27,18 +30,16 @@ public abstract class WizardsKit implements Listener {
         this.cost = cost;
     }
 
-    protected WizardsKit(String name, ChatColor color, List<String> description, ItemStack menuItem, ItemStack itemInHand) {
-        this(name, color, description, menuItem, itemInHand, 0);
+    protected WizardsKit(String name, ChatColor chatColor, Color color, List<String> description, ItemStack menuItem, ItemStack itemInHand) {
+        this(name, chatColor, color, description, menuItem, itemInHand, 0);
     }
 
     public abstract void playSpellEffect(Player player, Location location);
 
-    public void playIntro(Player player, Location location) {
+    public void playIntro(Player player, Location location, int ticks) {}
 
-    }
-
-    public String getFormattedName() {
-        return color.toString() + ChatColor.BOLD + name;
+    String getFormattedName() {
+        return chatColor.toString() + ChatColor.BOLD + name;
     }
 
     public String getName() {
@@ -51,7 +52,11 @@ public abstract class WizardsKit implements Listener {
         return formattedDesc;
     }
 
-    public ItemStack getMenuItem() {
+    public Color getColor() {
+        return color;
+    }
+
+    ItemStack getMenuItem() {
         return menuItem;
     }
 

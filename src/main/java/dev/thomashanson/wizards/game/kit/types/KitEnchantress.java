@@ -8,6 +8,7 @@ import dev.thomashanson.wizards.game.manager.DamageManager;
 import dev.thomashanson.wizards.game.spell.WandElement;
 import dev.thomashanson.wizards.util.BlockUtil;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -34,7 +35,7 @@ public class KitEnchantress extends WizardsKit {
     public KitEnchantress(Wizards game) {
 
         super (
-                "Enchantress", ChatColor.RED,
+                "Enchantress", ChatColor.RED, Color.RED,
 
                 Collections.singletonList (
                         "Duplicate spellbooks have a 20-25% chance to level up a random spell."
@@ -53,7 +54,7 @@ public class KitEnchantress extends WizardsKit {
     }
 
     @Override
-    public void playIntro(Player player, Location location) {
+    public void playIntro(Player player, Location location, int ticks) {
 
     }
 

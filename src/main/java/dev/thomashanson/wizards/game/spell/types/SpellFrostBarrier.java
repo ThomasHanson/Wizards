@@ -23,7 +23,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SpellFrostBarrier extends Spell implements Spell.SpellBlock {
 
     private int updateTaskID;
-    private Map<Block, Instant> blocks = new HashMap<>();
+    private final Map<Block, Instant> blocks = new HashMap<>();
 
     @Override
     public void castSpell(Player player, int level) {
@@ -107,7 +107,7 @@ public class SpellFrostBarrier extends Spell implements Spell.SpellBlock {
         }
     }
 
-    public void update(int taskID) {
+    private void update(int taskID) {
 
         Iterator<Map.Entry<Block, Instant>> iterator = blocks.entrySet().iterator();
 

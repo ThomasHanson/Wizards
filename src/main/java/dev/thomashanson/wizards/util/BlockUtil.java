@@ -17,7 +17,7 @@ public class BlockUtil {
             BlockFace.WEST
     };
 
-    public static final BlockFace[] RADIAL = {
+    private static final BlockFace[] RADIAL = {
             BlockFace.NORTH, BlockFace.NORTH_EAST,
             BlockFace.EAST, BlockFace.SOUTH_EAST,
             BlockFace.SOUTH, BlockFace.SOUTH_WEST,
@@ -28,7 +28,7 @@ public class BlockUtil {
         return getFace(yaw, true);
     }
 
-    public static BlockFace getFace(float yaw, boolean useSubCardinalDirections) {
+    private static BlockFace getFace(float yaw, boolean useSubCardinalDirections) {
 
         return useSubCardinalDirections ?
                 RADIAL[Math.round(yaw / 45F) & 0x7].getOppositeFace() :
@@ -146,7 +146,7 @@ public class BlockUtil {
         return getLinesLimitedPoints(startingPoint, endingPoint, (int) Math.ceil(startingPoint.distance(endingPoint) / distanceBetweenParticles));
     }
 
-    public static List<Location> getLinesLimitedPoints(Location startingPoint, Location endingPoint, int amountOfPoints) {
+    private static List<Location> getLinesLimitedPoints(Location startingPoint, Location endingPoint, int amountOfPoints) {
 
         startingPoint = startingPoint.clone();
 
@@ -171,7 +171,7 @@ public class BlockUtil {
         return nonSolids;
     }
 
-    public static Set<Material> getSolidBlocks() {
+    private static Set<Material> getSolidBlocks() {
 
         Set<Material> solids = new HashSet<>(Arrays.asList(Material.values()));
         solids.removeIf(material -> (material.isBlock() && !material.isSolid()));

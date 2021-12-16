@@ -53,7 +53,7 @@ public class SpellRumble extends Spell implements Spell.SpellBlock {
 
             private Block currentBlock = block;
             private int distanceTravelled = 0;
-            private List<Integer> affected = new ArrayList<>();
+            private final List<Integer> affected = new ArrayList<>();
             private List<Block> previousBlocks = new ArrayList<>();
 
             @Override
@@ -213,11 +213,6 @@ public class SpellRumble extends Spell implements Spell.SpellBlock {
                             }
                         }
                     }
-
-                    // TODO: 7/30/21 explosion
-
-                    //Wizards.getArcadeManager().GetExplosion()
-                      //      .BlockExplosion(toExplode, block.getLocation().add(0.5, 0, 0.5), false);
 
                     for (LivingEntity entity : block.getWorld().getEntitiesByClass(LivingEntity.class)) {
 

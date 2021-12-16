@@ -13,6 +13,9 @@ public class PotionRusher extends Potion {
 
     @Override
     public void deactivate(Wizard wizard) {
+
+        super.deactivate(wizard);
+
         wizard.revert();
     }
 }

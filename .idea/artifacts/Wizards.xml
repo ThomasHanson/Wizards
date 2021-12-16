@@ -3,6 +3,7 @@
     <output-path>$PROJECT_DIR$/out/artifacts/Wizards</output-path>
     <root id="archive" name="Wizards.jar">
       <element id="module-output" name="wizards" />
+      <element id="library" level="project" name="Maven: dev.jcsoftware:JScoreboards:2.1.2-RELEASE" />
     </root>
   </artifact>
 </component>

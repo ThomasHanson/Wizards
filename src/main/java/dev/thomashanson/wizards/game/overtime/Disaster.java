@@ -1,10 +1,12 @@
 package dev.thomashanson.wizards.game.overtime;
 
+import dev.thomashanson.wizards.damage.DamageTick;
 import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.spell.SpellType;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Sound;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 
 import java.time.Duration;
@@ -21,10 +23,9 @@ public abstract class Disaster {
     private final Set<SpellType> buffedSpells;
     private final List<String> messages;
 
-    private Instant
-            lastStrike,
-            nextStrike = Instant.now().plusSeconds(6),
-            nextSound;
+    private Instant lastStrike;
+    private final Instant nextStrike = Instant.now().plusSeconds(6);
+    private Instant nextSound;
 
     private double accuracy = 0;
     private float size = 1.5F;
@@ -38,7 +39,7 @@ public abstract class Disaster {
         this.messages = messages;
     }
 
-    public void strike() {
+    protected void strike() {
         this.lastStrike = Instant.now();
     }
 
@@ -52,7 +53,7 @@ public abstract class Disaster {
 
         if (nextSound == null || Duration.between(Instant.now(), nextSound).toMillis() <= 0) {
 
-            Sound sound = null;
+            Sound sound;
 
             switch (ThreadLocalRandom.current().nextInt(3)) {
 
@@ -103,6 +104,10 @@ public abstract class Disaster {
         }
 
         return null;
+    }
+
+    protected void damage(LivingEntity entity, DamageTick tick) {
+        getGame().getPlugin().getDamageManager().damage(entity, tick);
     }
 
     public String getName() {

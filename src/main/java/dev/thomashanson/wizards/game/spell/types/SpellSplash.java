@@ -2,6 +2,7 @@ package dev.thomashanson.wizards.game.spell.types;
 
 import dev.thomashanson.wizards.damage.types.CustomDamageTick;
 import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.util.MathUtil;
 import org.bukkit.Sound;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
@@ -20,9 +21,7 @@ public class SpellSplash extends Spell {
 
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_GENERIC_SPLASH, 0.4F, 1.5F);
 
-        int
-                radius = 5, //(int) getValue(player, "Radius"),
-                knockback = 3 + level; //(int) getValue(player, "Knockback");
+        int radius = 5;
 
         player.getNearbyEntities(radius, radius, radius)
                 .stream()
@@ -32,19 +31,19 @@ public class SpellSplash extends Spell {
                     if (entity instanceof Player)
                         ((Player) entity).addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, 20 * (level * 5), 0));
 
-                    /*
-                     * Deal damage & knockback to targets, lowering to 50% at the end of range
-                     */
-                    CustomDamageTick splashTick = new CustomDamageTick (
-                            level,
+                    double knockback = 3 + level;
+                    double distance = MathUtil.getOffset2D(player.getLocation(), entity.getLocation());
+
+                    CustomDamageTick damageTick = new CustomDamageTick (
+                            (double) level * (1 - (distance / 10)),
                             EntityDamageEvent.DamageCause.CUSTOM,
                             getSpell().getSpellName(),
                             Instant.now(),
                             player
                     );
 
-                    splashTick.addKnockback(getSpell().getSpellName(), knockback);
-                    damage((LivingEntity) entity, splashTick);
+                    damageTick.addKnockback(getSpell().getSpellName(), knockback * (1 - (distance / 10)));
+                    damage((LivingEntity) entity, damageTick);
         });
     }
 }

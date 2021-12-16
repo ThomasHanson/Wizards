@@ -18,12 +18,12 @@ public class SpellWizardsCompass extends Spell {
     public void castSpell(Player player, int level) {
 
         Location castLocation = player.getEyeLocation().subtract(0, 1, 0);
-        final List<Integer[]> colors = new ArrayList<>();
+        final List<Color> colors = new ArrayList<>();
 
         for (int x = -1; x <= 1; x++)
             for (int y = -1; y <= 1; y++)
                 for (int z = -1; z <= 1; z++)
-                    colors.add(new Integer[] { x, y, z });
+                    colors.add(Color.fromRGB(x, y, z));
 
         Collections.shuffle(colors);
 
@@ -39,7 +39,7 @@ public class SpellWizardsCompass extends Spell {
             Vector trajectory = MathUtil.getTrajectory(player.getLocation(), target.getEyeLocation()).multiply(0.1);
 
             final Location location = castLocation.clone();
-            final Integer[] integers = colors.remove(0);
+            final Color color = colors.remove(0);
 
             new BukkitRunnable() {
 
@@ -49,7 +49,6 @@ public class SpellWizardsCompass extends Spell {
                 public void run() {
 
                     tick++;
-
                     Iterator<Map.Entry<Location, Integer>> iterator = locations.entrySet().iterator();
 
                     while (iterator.hasNext()) {
@@ -58,10 +57,9 @@ public class SpellWizardsCompass extends Spell {
 
                         if ((entry.getValue() + tick) % 3 == 0) {
 
-                            player.getWorld().spawnParticle(
-                                    Particle.REDSTONE, entry.getKey(), 0,
-                                    integers[0], integers[1], integers[2],
-                                    new Particle.DustOptions(Color.RED, 1)
+                            player.getWorld().spawnParticle (
+                                    Particle.REDSTONE, entry.getKey(), 1,
+                                    new Particle.DustOptions(color, 1.0F)
                             );
                         }
 
@@ -74,9 +72,8 @@ public class SpellWizardsCompass extends Spell {
                         for (int a = 0; a < 2; a++) {
 
                             player.getWorld().spawnParticle (
-                                    Particle.REDSTONE, location, 0,
-                                    integers[0], integers[1], integers[2],
-                                    new Particle.DustOptions(Color.RED, 1)
+                                    Particle.REDSTONE, location, 1,
+                                    new Particle.DustOptions(color, 1.0F)
                             );
 
                             locations.put(location.clone(), tick + 50);

@@ -2,13 +2,17 @@ package dev.thomashanson.wizards.game.state.types;
 
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.potion.Potion;
 import dev.thomashanson.wizards.game.spell.Spell;
 import dev.thomashanson.wizards.game.state.GameState;
 import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.event.HandlerList;
 import org.bukkit.scheduler.BukkitTask;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  * Represents the brief state while the winner
@@ -17,6 +21,13 @@ import org.bukkit.scheduler.BukkitTask;
  * stage for the janitor process.
  */
 public class WinnerState extends GameState {
+
+    private final String[] messages;
+
+    public WinnerState(String... messages) {
+        this.messages = new String[messages.length];
+        System.arraycopy(messages, 0, this.messages, 0, messages.length);
+    }
 
     @Override
     public void onEnable(WizardsPlugin plugin) {
@@ -47,9 +58,7 @@ public class WinnerState extends GameState {
         /*
          * Kits
          */
-        for (WizardsKit kit : plugin.getGameManager().getWizardsKits())
-            HandlerList.unregisterAll(kit);
-
+        plugin.getGameManager().getWizardsKits().forEach(HandlerList::unregisterAll);
         plugin.getGameManager().getWizardsKits().clear();
 
         /*
@@ -57,12 +66,25 @@ public class WinnerState extends GameState {
          */
         HandlerList.unregisterAll(activeGame);
 
+        Bukkit.getOnlinePlayers().forEach(player -> {
+            // TODO: 12/15/21 teleport and winner effects
+            plugin.getGameManager().gameAnnounce(player, false, messages);
+        });
+
         setState(new ResetState());
     }
 
     @Override
     public void onDisable() {
         super.onDisable();
+    }
+
+    @Override
+    public List<String> getScoreboardLines() {
+
+        return Collections.singletonList (
+                ChatColor.GREEN + ChatColor.BOLD.toString() + "Winner declared!"
+        );
     }
 
     @Override

@@ -15,6 +15,7 @@ import java.util.function.BiConsumer;
 import java.util.function.BiPredicate;
 import java.util.function.Supplier;
 
+/** @noinspection UnusedReturnValue*/
 public class ItemBuilder implements Supplier<ItemStack> {
 
     private final List<BiConsumer<ItemStack, ItemMeta>> consumerList;

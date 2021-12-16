@@ -24,7 +24,7 @@ public class PotionGambler extends Potion {
         DOUBLE_DAMAGE
     }
 
-    private Map<UUID, GamblerResult> results = new HashMap<>();
+    private final Map<UUID, GamblerResult> results = new HashMap<>();
 
     @Override
     public void activate(Wizard wizard) {
@@ -38,6 +38,7 @@ public class PotionGambler extends Potion {
     @Override
     public void deactivate(Wizard wizard) {
         results.remove(wizard.getUniqueId());
+        super.deactivate(wizard);
     }
 
     @Override
@@ -56,8 +57,9 @@ public class PotionGambler extends Potion {
             return;
 
         event.setManaMultiplier (
-                result == GamblerResult.NO_MANA ? 0 :
-                        result == GamblerResult.DOUBLE_MANA ? 2 : 1
+                result == GamblerResult.NO_MANA ? 0 : // All spells cast will cost no mana
+                        result == GamblerResult.DOUBLE_MANA ? 2 : // All spells cast will cost double mana
+                                1 // Neither result was selected - mana costs will be defaulted
         );
     }
 
@@ -74,9 +76,9 @@ public class PotionGambler extends Potion {
             return;
 
         event.setDamage (
-                result == GamblerResult.NO_DAMAGE ? 0 :
-                        result == GamblerResult.DOUBLE_DAMAGE ? event.getDamage() * 2 :
-                                event.getDamage()
+                result == GamblerResult.NO_DAMAGE ? 0 : // Every spell will deal no damage
+                        result == GamblerResult.DOUBLE_DAMAGE ? event.getDamage() * 2 : // Every spell will deal double damage
+                                event.getDamage() // Neither result was selected - damages will be defaulted
         );
     }
 }

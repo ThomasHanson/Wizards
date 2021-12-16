@@ -1,5 +1,5 @@
 core:
-  name: "Orbis Harbor"
+  name: "Haven"
   authors: ["GamerzKing"]
   type: "NORMAL"
 
@@ -12,15 +12,15 @@ locations:
     x: 1
     y: 1
     z: 1
-  spectator: "0,0,0"
+  spectator: "0,64,0"
   spawns:
-    - "0,0,0"
-    - "0,0,0"
-    - "0,0,0"
-    - "0,0,0"
-    - "0,0,0"
-    - "0,0,0"
-    - "0,0,0"
+    - "0,64,0"
+    - "0,64,0"
+    - "0,64,0"
+    - "0,64,0"
+    - "0,64,0"
+    - "0,64,0"
+    - "0,64,0"
   chests:
     - "0,0,0"
     - "0,0,0"

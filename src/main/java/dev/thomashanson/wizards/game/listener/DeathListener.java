@@ -36,7 +36,7 @@ public class DeathListener implements Listener {
             List<DamageTick> ticks = damageManager.getLoggedTicks(player.getUniqueId());
             List<String> summary = damageManager.getDamageSummary(ticks);
 
-            ((PlayerDeathEvent) event).setDeathMessage(ticks.isEmpty() ? null : ticks.get(ticks.size() - 1).getDeathMessage(player));
+            ((PlayerDeathEvent) event).setDeathMessage(!ticks.isEmpty() ? ticks.get(ticks.size() - 1).getDeathMessage(player) : null);
 
             if (summary.size() > 0) {
 

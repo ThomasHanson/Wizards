@@ -10,8 +10,8 @@ public class CustomDeathEvent extends Event implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
-    private LivingEntity victim;
-    private DamageTick damageTick;
+    private final LivingEntity victim;
+    private final DamageTick damageTick;
 
     private boolean cancelled;
 

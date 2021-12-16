@@ -16,10 +16,10 @@ public abstract class DamageTick implements Comparable<DamageTick> {
     private final String reason;
     private Instant timestamp;
 
-    private Map<String, Double> damageMods = new HashMap<>();
+    private final Map<String, Double> damageMods = new HashMap<>();
 
     private Location knockbackOrigin;
-    private Map<String, Double> knockbackMods = new HashMap<>();
+    private final Map<String, Double> knockbackMods = new HashMap<>();
 
     protected DamageTick(double damage, EntityDamageEvent.DamageCause cause, String reason, Instant timestamp) {
         this.damage = damage;

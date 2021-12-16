@@ -8,7 +8,7 @@ import java.util.List;
 
 public class NPCMetadata {
 
-    private WrappedDataWatcher watcher = new WrappedDataWatcher();
+    private final WrappedDataWatcher watcher = new WrappedDataWatcher();
 
     private final WrappedDataWatcher.Serializer byteSerializer = WrappedDataWatcher.Registry.get(Byte.class);
     private final WrappedDataWatcher.Serializer intSerializer = WrappedDataWatcher.Registry.get(Integer.class);

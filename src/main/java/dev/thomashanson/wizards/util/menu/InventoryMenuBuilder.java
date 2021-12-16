@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.bukkit.event.inventory.ClickType.*;
 
+/** @noinspection UnusedReturnValue*/
 public class InventoryMenuBuilder extends MenuBuilder<Inventory> {
 
     private final WizardsPlugin plugin;
@@ -180,7 +181,7 @@ public class InventoryMenuBuilder extends MenuBuilder<Inventory> {
      * @param callback {@link ItemCallback}
      * @return the InventoryMenuBuilder
      */
-    public InventoryMenuBuilder withItem(ItemCallback callback) {
+    private InventoryMenuBuilder withItem(ItemCallback callback) {
         callbackItems.add(callback);
         return this;
     }

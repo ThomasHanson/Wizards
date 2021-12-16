@@ -19,9 +19,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class NPC {
 
-    private static AtomicInteger atomicInteger = new AtomicInteger();
+    private static final AtomicInteger ATOMIC_INTEGER = new AtomicInteger();
 
-    private final String hideTeam;
     private final int entityID;
     private WrappedGameProfile profile;
     private final NPCMetadata metadata = new NPCMetadata();
@@ -30,14 +29,14 @@ public class NPC {
     private EnumWrappers.NativeGameMode gameMode = EnumWrappers.NativeGameMode.SURVIVAL;
     private String displayName;
 
-    public NPC(UUID uuid, Location location, String displayName) {
+    private NPC(UUID uuid, Location location, String displayName) {
 
-        this.entityID = atomicInteger.incrementAndGet();
+        this.entityID = ATOMIC_INTEGER.incrementAndGet();
 
         this.profile = new WrappedGameProfile(uuid, displayName);
         this.location = location;
         this.displayName = displayName;
-        this.hideTeam = "hide-" + Integer.toHexString(ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE));
+        String hideTeam = "hide-" + Integer.toHexString(ThreadLocalRandom.current().nextInt(0, Integer.MAX_VALUE));
     }
 
     public NPC(Location location, String displayName) {
@@ -82,7 +81,7 @@ public class NPC {
         players.forEach(player -> this.teleportNPC(player, location, onGround));
     }
 
-    public void teleportNPC(Player player, Location location, boolean onGround) {
+    private void teleportNPC(Player player, Location location, boolean onGround) {
         this.location.setX(location.getX());
         this.location.setY(location.getY());
         this.location.setZ(location.getZ());
@@ -96,7 +95,7 @@ public class NPC {
         players.forEach(this::updateMetadata);
     }
 
-    public void updateMetadata(Player player) {
+    private void updateMetadata(Player player) {
         this.sendPacket(player, this.getEntityMetadataPacket());
     }
 
@@ -104,7 +103,7 @@ public class NPC {
         players.forEach(this::updateGameMode);
     }
 
-    public void updateGameMode(Player player) {
+    private void updateGameMode(Player player) {
         this.sendPacket(player, this.getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.UPDATE_GAME_MODE));
     }
 
@@ -112,7 +111,7 @@ public class NPC {
         players.forEach(this::updatePing);
     }
 
-    public void updatePing(Player player) {
+    private void updatePing(Player player) {
         this.sendPacket(player, this.getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.UPDATE_LATENCY));
     }
 
@@ -120,7 +119,7 @@ public class NPC {
         players.forEach(this::updateTabListName);
     }
 
-    public void updateTabListName(Player player) {
+    private void updateTabListName(Player player) {
         this.sendPacket(player, this.getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.UPDATE_DISPLAY_NAME));
     }
 
@@ -128,7 +127,7 @@ public class NPC {
         players.forEach(this::removeFromTabList);
     }
 
-    public void removeFromTabList(Player player) {
+    private void removeFromTabList(Player player) {
         this.sendPacket(player, this.getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.REMOVE_PLAYER));
     }
 
@@ -136,7 +135,7 @@ public class NPC {
         players.forEach(this::addToTabList);
     }
 
-    public void addToTabList(Player player) {
+    private void addToTabList(Player player) {
         this.sendPacket(player, this.getPlayerInfoPacket(EnumWrappers.PlayerInfoAction.ADD_PLAYER));
     }
 
@@ -148,7 +147,7 @@ public class NPC {
         players.forEach(player -> this.playAnimation(player, animation));
     }
 
-    public void playAnimation(Player player, Animation animation) {
+    private void playAnimation(Player player, Animation animation) {
         this.sendPacket(player, this.getEntityAnimationPacket(animation));
     }
 
@@ -156,7 +155,7 @@ public class NPC {
         players.forEach(player -> this.lookAtPlayer(player, target));
     }
 
-    public void lookAtPlayer(Player player, Player target) {
+    private void lookAtPlayer(Player player, Player target) {
         this.lookAtPoint(player, target.getEyeLocation());
     }
 
@@ -164,7 +163,7 @@ public class NPC {
         players.forEach(player -> this.lookAtPoint(player, location));
     }
 
-    public void lookAtPoint(Player player, Location location) {
+    private void lookAtPoint(Player player, Location location) {
 
         Location eyeLocation = this.getEyeLocation();
 
@@ -183,7 +182,7 @@ public class NPC {
         players.forEach(player -> this.rotateHead(player, pitch, yaw));
     }
 
-    public void rotateHead(Player player, float pitch, float yaw) {
+    private void rotateHead(Player player, float pitch, float yaw) {
         this.location.setPitch(pitch);
         this.location.setYaw(yaw);
         this.sendPacket(player, this.getEntityLookPacket());
@@ -360,7 +359,7 @@ public class NPC {
         return packet;
     }
 
-    public PacketContainer getPlayerInfoPacket(EnumWrappers.PlayerInfoAction action) {
+    private PacketContainer getPlayerInfoPacket(EnumWrappers.PlayerInfoAction action) {
 
         PacketContainer packet = ProtocolLibrary.getProtocolManager().createPacket(PacketType.Play.Server.PLAYER_INFO);
 
@@ -400,7 +399,7 @@ public class NPC {
         return location;
     }
 
-    public Location getEyeLocation() {
+    private Location getEyeLocation() {
         return location.clone().add(0, /*EntityTypes.bi.m().b * 0.85F*/ 0, 0);
     }
 

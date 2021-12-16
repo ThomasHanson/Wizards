@@ -11,11 +11,9 @@ public class SpellHeal extends Spell {
     @Override
     public void castSpell(Player player, int level) {
 
-        int regenLength = (level + 5) * 20; //(int) getValue(player, "Regeneration Length (seconds)") * 20;
+        int effectLength = (level + 5) * 20;
 
-        player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, regenLength, 0, false));
-
-        // Special effects
+        player.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, effectLength, 0, false));
         player.getWorld().spawnParticle(Particle.HEART, player.getEyeLocation(), 6, 0.8F, 0.4F, 0.8F, 0);
     }
 }

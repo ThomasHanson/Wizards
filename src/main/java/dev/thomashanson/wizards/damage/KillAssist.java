@@ -5,12 +5,10 @@ import org.bukkit.entity.Player;
 public class KillAssist implements Comparable<KillAssist> {
 
     private final Player attacker;
-    private final double damage;
     private final int percentage;
 
     public KillAssist(Player attacker, double damage, int percentage) {
         this.attacker = attacker;
-        this.damage = damage;
         this.percentage = percentage;
     }
 

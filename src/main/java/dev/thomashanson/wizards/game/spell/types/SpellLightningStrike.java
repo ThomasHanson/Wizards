@@ -1,5 +1,7 @@
 package dev.thomashanson.wizards.game.spell.types;
 
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.game.Wizard;
 import dev.thomashanson.wizards.game.overtime.types.DisasterLightning;
 import dev.thomashanson.wizards.game.spell.Spell;
 import org.apache.commons.lang.Validate;
@@ -11,22 +13,30 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.util.Vector;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class SpellLightningStrike extends Spell {
 
+    private static final int MAX_RANGE = 150;
+
     @Override
     public void castSpell(Player player, int level) {
 
         double currentRange = 0;
-        long delay = 25L / (getGame().isOvertime() && getGame().getDisaster() instanceof DisasterLightning ? 2 : 1);
+        long delay = 25L;
 
-        while (currentRange <= 150) {
+        if (getGame().isOvertime())
+            if (getGame().getDisaster() instanceof DisasterLightning)
+                delay /= 2;
+
+        while (currentRange <= MAX_RANGE) {
 
             Location newTarget = player.getEyeLocation()
                     .add(new Vector(0, 0.2, 0))
@@ -50,10 +60,15 @@ public class SpellLightningStrike extends Spell {
             location.getWorld().spawnParticle(Particle.VILLAGER_ANGRY, location.clone().add(0, 1.3, 0), 7, 0.5, 0.3, 0.5, 0);
             location.getWorld().playSound(location, Sound.ENTITY_CAT_HISS, 1F, 1F);
 
+            double finalRange = currentRange;
+
             Bukkit.getScheduler().scheduleSyncDelayedTask(getGame().getPlugin(), () -> {
 
                 LightningStrike lightning = player.getWorld().strikeLightning(location);
+
                 lightning.setMetadata("Wizard", new FixedMetadataValue(getGame().getPlugin(), getWizard(player)));
+                lightning.setMetadata("SL", new FixedMetadataValue(getGame().getPlugin(), level));
+                lightning.setMetadata("Range", new FixedMetadataValue(getGame().getPlugin(), finalRange));
 
                 Block block = location.getWorld().getHighestBlockAt(location);
                 block = block.getRelative(BlockFace.DOWN);
@@ -109,7 +124,22 @@ public class SpellLightningStrike extends Spell {
         if (!lightning.hasMetadata("Wizard"))
             return;
 
-        event.setCancelled(true); // TODO: 2020-05-12 set custom damage
-        entity.setFireTicks(80); // change
+        event.setCancelled(true);
+
+        Wizard wizard = (Wizard) lightning.getMetadata("Wizard").get(0).value();
+
+        int spellLevel = lightning.getMetadata("SL").get(0).asInt();
+        int range = lightning.getMetadata("Range").get(0).asInt();
+
+        CustomDamageTick damageTick = new CustomDamageTick (
+                ((spellLevel * 2) + 1) * (1 - ((double) range / (MAX_RANGE * 2))),
+                EntityDamageEvent.DamageCause.CUSTOM,
+                getSpell().getSpellName(),
+                Instant.now(),
+                wizard != null ? wizard.getPlayer() : null
+        );
+
+        damage(entity, damageTick);
+        entity.setFireTicks(80);
     }
 }

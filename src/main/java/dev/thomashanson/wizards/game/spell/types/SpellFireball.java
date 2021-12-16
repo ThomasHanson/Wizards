@@ -38,6 +38,34 @@ public class SpellFireball extends Spell implements Spell.Deflectable {
     }
 
     @EventHandler
+    public void onEntityDamage(EntityDamageByEntityEvent event) {
+
+        if (!(event.getEntity() instanceof ArmorStand))
+            return;
+
+        ArmorStand stand = (ArmorStand) event.getEntity();
+
+        if (!isShield(stand))
+            return;
+
+        if (!(event.getDamager() instanceof Fireball))
+            return;
+
+        Fireball fireball = (Fireball) event.getDamager();
+
+        if (!fireball.hasMetadata("Wizard"))
+            return;
+
+        // Do not allow fireball to damage shield
+        event.setCancelled(true);
+
+        Wizard wizard = (Wizard) fireball.getMetadata("Wizard").get(0).value();
+        setDeflected(true, wizard != null ? wizard.getPlayer() : null);
+
+        fireball.setVelocity(fireball.getDirection().multiply(-1));
+    }
+
+    @EventHandler
     public void onExplode(EntityExplodeEvent event) {
 
         if (event.getEntityType() != EntityType.FIREBALL)
@@ -90,16 +118,13 @@ public class SpellFireball extends Spell implements Spell.Deflectable {
                 EntityDamageEvent.DamageCause.ENTITY_EXPLOSION,
                 getSpell().getSpellName(),
                 Instant.now(),
-                isAlive ? wizard.getPlayer() : null
+                wizard != null ? wizard.getPlayer() : null
         );
 
         damage((LivingEntity) event.getEntity(), damageTick);
-
         event.getEntity().setFireTicks(80);
     }
 
     @Override
-    public void deflectSpell(Player player, int level, Vector direction) {
-
-    }
+    public void deflectSpell(Player player, int level, Vector direction) {}
 }

@@ -13,9 +13,6 @@ public class PotionLuck extends Potion {
     @Override
     public void activate(Wizard wizard) {}
 
-    @Override
-    public void deactivate(Wizard wizard) {}
-
     @EventHandler
     public void onSpellCollect(SpellCollectEvent event) {
 

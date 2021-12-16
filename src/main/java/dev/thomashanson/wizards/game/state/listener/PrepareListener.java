@@ -60,7 +60,7 @@ public class PrepareListener extends StateListenerProvider {
 
         String extra = game.getCurrentMode().toString();
 
-        event.setMotd(
+        event.setMotd (
                 ChatColor.GOLD + extra + " - Preparing Map\n" +
                         ChatColor.YELLOW + "Map Selected: " + ChatColor.GOLD + selectedMap.getName()
         );
@@ -86,7 +86,9 @@ public class PrepareListener extends StateListenerProvider {
         if (event.getPlayer().getGameMode() == GameMode.SPECTATOR)
             return;
 
-        Location from = event.getFrom(), to = event.getTo();
+        Location
+                from = event.getFrom(),
+                to = event.getTo();
 
         if (to == null)
             return;

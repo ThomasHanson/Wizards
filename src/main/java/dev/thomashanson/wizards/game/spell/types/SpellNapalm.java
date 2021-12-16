@@ -38,7 +38,7 @@ public class SpellNapalm extends Spell {
     @Override
     public void castSpell(Player player, int level) {
 
-        final int length = (level * 10) + 5; //(int) getValue(player, "Length");
+        final int length = (level * 10) + 5;
         final double multiplier = 0.3 * (getGame().isOvertime() && getGame().getDisaster() instanceof DisasterMeteors ? 2 : 1);
         final Vector vector = player.getLocation().getDirection().normalize().multiply(multiplier);
 
@@ -46,10 +46,8 @@ public class SpellNapalm extends Spell {
         final Location napalmLocation = playerLocation.clone().add(playerLocation.getDirection().normalize().multiply(2));
 
         Validate.notNull(napalmLocation.getWorld());
-        new BukkitRunnable() {
 
-            // TODO: 2020-05-21 litOnFire
-            // TODO: 2020-05-21 tempIgnore
+        new BukkitRunnable() {
 
             final List<Block> litOnFire = new ArrayList<>();
             final Map<Block, Double> tempIgnore = new HashMap<>();
@@ -73,16 +71,14 @@ public class SpellNapalm extends Spell {
                         z = ThreadLocalRandom.current().nextFloat();
                     }
 
-
                     napalmLocation.getWorld().spawnParticle (
 
                             Particle.REDSTONE,
 
-                            napalmLocation.clone().add(
+                            napalmLocation.clone().add (
                                     (size * (x - 0.5)) / 5,
                                     (size * (y - 0.5)) / 5,
                                     (size * (z - 0.5)) / 5
-
                             ),
 
                             0,
@@ -158,7 +154,6 @@ public class SpellNapalm extends Spell {
 
                                     double newHeat = newSize - napalmLocation.distance(block.getLocation().add(0.5, 0.5, 0.5));
 
-
                                     if (tempIgnore.containsKey(block)) {
                                         if (tempIgnore.remove(block) > newHeat) {
                                             litOnFire.add(block);
@@ -172,18 +167,15 @@ public class SpellNapalm extends Spell {
                                     if (block.getType() != Material.AIR) {
 
                                         block.getType().getHardness();
-
                                         float strength = block.getType().getHardness();
 
                                         if (strength <= newHeat) {
-
                                             block.setType(Material.AIR);
                                             block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXTINGUISH_FIRE, 1.3F, 0.6F + ((ThreadLocalRandom.current().nextFloat() - 0.5F) / 3F));
 
                                         } else if (0.2 <= newHeat) {
 
                                             if (glazedBlocks.containsKey(block.getType())) {
-
                                                 block.setType(glazedBlocks.get(block.getType()));
                                                 block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXTINGUISH_FIRE, 1.3F, 0.6F + ((ThreadLocalRandom.current().nextFloat() - 0.5F) / 3F));
                                             }
@@ -234,7 +226,7 @@ public class SpellNapalm extends Spell {
                 travelled += multiplier;
 
                 if (lastTick++ % 8 == 0)
-                    napalmLocation.getWorld().playSound(napalmLocation, Sound.ENTITY_CAT_HISS, Math.min(0.8F + (float) (size * 0.09F), 1.8f), 0F);
+                    napalmLocation.getWorld().playSound(napalmLocation, Sound.ENTITY_CAT_HISS, Math.min(0.8F + (float) (size * 0.09F), 1.8F), 0F);
 
                 if (travelled >= length) {
                     createFire(napalmLocation);
@@ -252,7 +244,6 @@ public class SpellNapalm extends Spell {
     private void createFire(final Location location) {
 
         Validate.notNull(location.getWorld());
-        location.getWorld().playSound(location, "napalm.burn.a", 1F, 1F);
 
         location.getWorld().spawnParticle (
 
@@ -263,14 +254,11 @@ public class SpellNapalm extends Spell {
                 0
         );
 
-        //Fire Blocks
         final Map<Block, Double> blocks = BlockUtil.getInRadius(location, 3.5, false);
 
         blocks.keySet().forEach(block -> {
             if (!block.getRelative(BlockFace.DOWN).getType().isSolid())
                 Bukkit.getScheduler().scheduleSyncDelayedTask(getGame().getPlugin(), () -> block.setType(Material.FIRE), 60 - (int) (60 * blocks.get(block)));
         });
-
-        Bukkit.getScheduler().scheduleSyncDelayedTask(getGame().getPlugin(), () -> location.getWorld().playSound(location, "napalm.burn.b", 1F, 1F), 20L);
     }
 }

@@ -3,20 +3,16 @@ package dev.thomashanson.wizards.util;
 import net.md_5.bungee.api.ChatColor;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.apache.commons.lang.Validate;
 import org.apache.commons.lang.WordUtils;
-import org.bukkit.Bukkit;
-import org.bukkit.GameMode;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.inventory.meta.FireworkMeta;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
@@ -74,6 +70,25 @@ public class EntityUtil {
 
             Objects.requireNonNull(spawnedStand.getEquipment()).setHelmet(new ItemStack(material));
         });
+    }
+
+    public static Firework launchFirework(Location location, FireworkEffect effect, Vector vector, int power) {
+
+        Validate.notNull(location.getWorld());
+
+        Firework firework = location.getWorld().spawn(location, Firework.class);
+        FireworkMeta data = firework.getFireworkMeta();
+
+        data.clearEffects();
+        data.setPower(power);
+        data.addEffect(effect);
+
+        firework.setFireworkMeta(data);
+
+        if (vector != null)
+            firework.setVelocity(vector);
+
+        return firework;
     }
 
     public static void displayProgress(Player player, String prefix, double amount, String suffix) {

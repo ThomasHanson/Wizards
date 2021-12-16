@@ -1,14 +1,16 @@
 package dev.thomashanson.wizards.game.mode;
 
 import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.util.LocationUtil;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.entity.Player;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public class GameTeam {
 
@@ -62,96 +64,80 @@ public class GameTeam {
 
     private final Wizards game;
 
-    private final UUID teamId;
     private final Set<Player> players = new HashSet<>();
 
+    private String teamName;
     private final List<Location> spawns;
 
-    public GameTeam(Wizards game, UUID teamId, List<Location> spawns) {
+    public GameTeam(Wizards game, String teamName, List<Location> spawns) {
         this.game = game;
-        this.teamId = teamId;
         this.spawns = spawns;
     }
 
-    public boolean isAlive(Player player) {
+    public Location getSpawn() {
+
+        Location location = LocationUtil.getLocationNearPlayers(spawns, getPlayers(true), game.getPlayers(true));
+
+        if (location != null)
+            return location;
+
+        if (game.getCurrentMode().isTourney()) {
+
+            // Spawn near other enemies
+            location = LocationUtil.getLocationNearPlayers(spawns, game.getPlayers(true), game.getPlayers(true));
+
+            if (location != null)
+                return location;
+        }
+
+        return spawns.get(ThreadLocalRandom.current().nextInt(spawns.size()));
+    }
+
+    public void addPlayer(Player player) {
+        players.add(player);
+    }
+
+    public List<Player> getPlayers(boolean alive) {
+
+        List<Player> players = new ArrayList<>();
+
+        for (Player player : this.players)
+            if (!alive || (isAlive(player) && player.isOnline()))
+                players.add(player);
+
+        return players;
+    }
+
+    private boolean isAlive(Player player) {
         return game.getWizard(player) != null;
     }
 
     public boolean isTeamAlive() {
 
-        boolean alive = false;
-
         for (Player player : players)
             if (isAlive(player))
-                alive = true;
+                return true;
 
-        return alive;
+        return false;
     }
 
     public boolean isOnTeam(Player player) {
         return players.contains(player);
     }
 
-    /*
-
-        //Keep allies together
-        if (!game.isLive() && Host.SpawnNearAllies) {
-
-            //Find Location Nearest Ally
-            Location loc = UtilAlg.getLocationNearPlayers(spawns, GetPlayers(true), Host.GetPlayers(true));
-            if (loc != null)
-                return loc;
-
-            //No allies existed spawned yet
-
-            //Spawn near enemies (used for SG)
-            if (Host.SpawnNearEnemies) {
-
-                loc = UtilAlg.getLocationNearPlayers(spawns, Host.GetPlayers(true), Host.GetPlayers(true));
-
-                if (loc != null)
-                    return loc;
-
-            } else {
-
-                //Spawn away from enemies
-                loc = UtilAlg.getLocationAwayFromPlayers(spawns, Host.GetPlayers(true));
-
-                if (loc != null)
-                    return loc;
-            }
-
-        } else {
-
-            //Spawn near players
-            if (Host.SpawnNearEnemies) {
-
-                Location loc = UtilAlg.getLocationNearPlayers(spawns, Host.GetPlayers(true), Host.GetPlayers(true));
-
-                if (loc != null)
-                    return loc;
-
-            } else {
-
-                Location loc = UtilAlg.getLocationAwayFromPlayers(spawns, Host.GetPlayers(true));
-
-                if (loc != null)
-                    return loc;
-            }
-        }
-
-        return spawns.get(UtilMath.r(spawns.size()));
-         */
-
     public Wizards getGame() {
         return game;
+    }
+
+    public int getTeamSize() {
+        return players.size();
     }
 
     public Set<Player> getPlayers() {
         return players;
     }
 
-    public List<Location> getSpawns() {
-        return spawns;
+    public String getTeamName() {
+        return teamName;
     }
 }

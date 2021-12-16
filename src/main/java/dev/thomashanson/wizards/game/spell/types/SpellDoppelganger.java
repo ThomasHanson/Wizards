@@ -5,6 +5,7 @@ import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.events.PacketContainer;
 import com.comphenix.protocol.wrappers.BlockPosition;
 import com.comphenix.protocol.wrappers.EnumWrappers;
+import dev.thomashanson.wizards.game.Wizard;
 import dev.thomashanson.wizards.game.loot.ChestLoot;
 import dev.thomashanson.wizards.game.spell.Spell;
 import dev.thomashanson.wizards.game.spell.SpellType;
@@ -105,6 +106,11 @@ public class SpellDoppelganger extends Spell implements Spell.Cancellable {
                 fakePlayer.setEquipment(onlinePlayer, EnumWrappers.ItemSlot.MAINHAND, randomItem);
 
         setProgress(1.0);
+
+        Wizard wizard = getWizard(player);
+
+        if (wizard != null)
+            wizard.setManaRate(0F, true); // Disable mana regeneration
     }
 
     @Override
@@ -126,6 +132,22 @@ public class SpellDoppelganger extends Spell implements Spell.Cancellable {
         handleNPC(player);
     }
 
+    public void updateNPCs(int tick, Player... players) {
+
+        for (Player player : players) {
+
+            NPC clone = clones.get(player.getUniqueId());
+
+            if (clone != null)
+                continue;
+
+            Wizard wizard = getWizard(player);
+
+            if (tick % 20 == 0)
+                wizard.setMana(Math.max(0, wizard.getMana() - (6.0F - wizard.getLevel(getSpell()))));
+        }
+    }
+
     private void handleNPC(Player player) {
 
         if (!clones.containsKey(player.getUniqueId()))
@@ -145,6 +167,11 @@ public class SpellDoppelganger extends Spell implements Spell.Cancellable {
 
         player.removePotionEffect(PotionEffectType.INVISIBILITY);
         player.sendMessage("You are no longer invisible.");
+
+        Wizard wizard = getWizard(player);
+
+        if (wizard != null)
+            wizard.revert();
     }
 
     private void showChestAnimation(Player player, Block block, boolean open) {
@@ -160,6 +187,7 @@ public class SpellDoppelganger extends Spell implements Spell.Cancellable {
 
         try {
             ProtocolLibrary.getProtocolManager().sendServerPacket(player, blockAction, true);
+            block.getWorld().playSound(block.getLocation(), open ? Sound.BLOCK_CHEST_OPEN : Sound.BLOCK_CHEST_CLOSE, 1.0F, 1.0F);
 
         } catch (InvocationTargetException ex) {
             throw new IllegalStateException("Unable to send packet " + blockAction, ex);

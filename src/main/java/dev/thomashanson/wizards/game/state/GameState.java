@@ -5,6 +5,7 @@ import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
 
 import java.time.Instant;
+import java.util.List;
 
 public abstract class GameState {
 
@@ -26,6 +27,8 @@ public abstract class GameState {
         if (getListenerProvider() != null)
             getListenerProvider().onDisable();
     }
+
+    public abstract List<String> getScoreboardLines();
 
     protected abstract StateListenerProvider getListenerProvider();
 

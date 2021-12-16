@@ -5,9 +5,11 @@ import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.state.GameState;
 import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
 import dev.thomashanson.wizards.map.LocalGameMap;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
+
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * Represents the state at the end of the game,
@@ -30,12 +32,32 @@ public class ResetState extends GameState {
         LocalGameMap gameMap = game.getActiveMap();
 
         for (Player player : gameMap.getWorld().getPlayers())
-            player.teleport(new Location(Bukkit.getWorld("world"), 0.5, 3, 0.5));
+            player.kickPlayer(ChatColor.RED + "Server is in the process of resetting!");
 
         if (gameMap.isLoaded())
             gameMap.unload();
 
         plugin.getGameManager().setActiveGame(null);
+    }
+
+    @Override
+    public List<String> getScoreboardLines() {
+
+        Wizards game = getGame();
+
+        return Arrays.asList (
+
+                ChatColor.RESET + "Players left: " +
+                        ChatColor.GREEN + game.getPlayers(true).size(),
+
+                ChatColor.RESET + "Teams left: " +
+                        ChatColor.GREEN + game.getTeams().size(),
+
+                "",
+
+                ChatColor.RESET + "Kills: " + ChatColor.GREEN + "0",
+                ChatColor.RESET + "Assists: " + ChatColor.GREEN + "0"
+        );
     }
 
     @Override

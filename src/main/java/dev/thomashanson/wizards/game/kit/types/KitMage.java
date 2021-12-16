@@ -3,6 +3,7 @@ package dev.thomashanson.wizards.game.kit.types;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.WandElement;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -15,7 +16,7 @@ public class KitMage extends WizardsKit {
     public KitMage() {
 
         super (
-                "Mage", ChatColor.DARK_GREEN,
+                "Mage", ChatColor.DARK_GREEN, Color.GREEN,
 
                 Collections.singletonList (
                         "10-20% cooldown decrease on all spells."
@@ -32,7 +33,7 @@ public class KitMage extends WizardsKit {
     }
 
     @Override
-    public void playIntro(Player player, Location location) {
+    public void playIntro(Player player, Location location, int ticks) {
 
     }
 }

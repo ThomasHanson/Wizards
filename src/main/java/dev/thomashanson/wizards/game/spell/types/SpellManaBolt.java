@@ -41,7 +41,9 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
 
             private void burst(boolean hitEntity) {
 
-                for (Entity worldEntity : Objects.requireNonNull(missileLocation.getWorld()).getEntities()) {
+                Validate.notNull(missileLocation.getWorld());
+
+                for (Entity worldEntity : missileLocation.getWorld().getEntities()) {
 
                     if (
                             worldEntity.equals(player) || !(worldEntity instanceof LivingEntity) ||
@@ -52,9 +54,6 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
                     LivingEntity entity = (LivingEntity) worldEntity;
 
                     Location entityLocation = entity.getLocation();
-                            //entity instanceof Player ?
-                            //getGame().getTargetLocation((Player) entity) :
-                            //entity.getLocation();
 
                     // If they are less than 0.5 blocks away
                     if (entityLocation.clone().add(0, missileLocation.getY() - entityLocation.getY(), 0).distance(missileLocation) <= 0.7) {
@@ -84,7 +83,7 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
 
                 for (int i = 0; i < 120; i++) {
 
-                    Vector vector = new Vector(
+                    Vector vector = new Vector (
                             ThreadLocalRandom.current().nextFloat() - 0.5F,
                             ThreadLocalRandom.current().nextFloat() - 0.5F,
                             ThreadLocalRandom.current().nextFloat() - 0.5F
@@ -98,12 +97,10 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
                     Location location = missileLocation.clone();
                     location.add(vector.multiply(2));
 
-                    Validate.notNull(location.getWorld());
-
-                    location.getWorld().spawnParticle (
-                                    Particle.REDSTONE, location, 0, 0.001, 1, 0, 1,
-                                    new Particle.DustOptions(Color.fromRGB(104, 171, 177), 1)
-                            );
+                    player.getWorld().spawnParticle (
+                            Particle.REDSTONE, location, 0, 0.001, 1, 0, 1,
+                            new Particle.DustOptions(Color.fromRGB(104, 171, 177), 1)
+                    );
                 }
 
                 missileLocation.getWorld().playSound(missileLocation, Sound.ENTITY_BAT_TAKEOFF, 1.2F, 1F);
@@ -126,12 +123,12 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
                         Player closestPlayer = null;
                         double distance = 0;
 
-                        for (Player closest : Bukkit.getOnlinePlayers()) {
-
-                            if (getWizard(closest) == null)
-                                continue;
+                        for (Player closest : getGame().getPlayers(true)) {
 
                             GameTeam.TeamRelation relation = getGame().getRelation(closest, player);
+
+                            if (relation == GameTeam.TeamRelation.SOLO || relation == GameTeam.TeamRelation.ALLY)
+                                continue;
 
                             Location location = closest.getLocation();
 
@@ -160,12 +157,15 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
 
                         if (closestPlayer != null) {
 
-                            Vector newDirection = closestPlayer.getLocation()
-                                    .add(0, 1, 0).toVector()
+                            Vector newDirection = closestPlayer.getLocation().add(0, 1, 0)
+                                    .toVector()
                                     .subtract(missileLocation.toVector());
 
                             direction.add(newDirection.normalize().multiply(0.01)).normalize().multiply(0.3);
                             direction.multiply(multiplier);
+
+                            if (isDeflected())
+                                direction.multiply(-1);
                         }
 
                         missileLocation.add(direction);
@@ -210,10 +210,10 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
 
                                     burst(true);
 
-                                    if (!isShield(entity))
-                                        getWizard(player).addAccuracy(true, false);
+                                    if (isShield(entity) && !isDeflected())
+                                        setDeflected(true, player);
                                     else
-                                        deflectSpell(player, level, direction.clone().multiply(-1));
+                                        getWizard(player).addAccuracy(true, false);
 
                                     return;
                                 }
@@ -239,9 +239,7 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
     }
 
     @Override
-    public void deflectSpell(Player player, int level, Vector direction) {
-
-    }
+    public void deflectSpell(Player player, int level, Vector direction) {}
 
     private void playParticle(Location start, Location end) {
 
@@ -256,11 +254,12 @@ public class SpellManaBolt extends Spell implements Spell.Deflectable {
 
                 for (Location location : locations) {
 
-                    Objects.requireNonNull(location.getWorld())
-                            .spawnParticle (
-                                    Particle.REDSTONE, location, 0, 0.001, 1, 0, 1,
-                                    new Particle.DustOptions(Color.fromRGB(104, 171, 177), 1)
-                            );
+                    Validate.notNull(location.getWorld());
+
+                    location.getWorld().spawnParticle (
+                            Particle.REDSTONE, location, 0, 0.001, 1, 0, 1,
+                            new Particle.DustOptions(Color.fromRGB(104, 171, 177), 1)
+                    );
                 }
 
                 if (timesRan++ > 1)

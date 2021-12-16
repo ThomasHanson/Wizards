@@ -81,7 +81,12 @@ public class SpellIcePrison extends Spell implements CustomProjectile {
 
         double radius = data.getEntity().getMetadata("Radius").get(0).asDouble();
         Wizard originalWizard = (Wizard) data.getEntity().getMetadata("Wizard").get(0).value();
-        int multiplier = getGame().isOvertime() && getGame().getDisaster() instanceof DisasterHail ? 2 : 1;
+
+        int multiplier = 1;
+
+        if (getGame().isOvertime())
+            if (getGame().getDisaster() instanceof DisasterHail)
+                multiplier = 2;
 
         Map<Block, Double> blocks = BlockUtil.getInRadius(location.getBlock(), radius, true);
 

@@ -11,10 +11,7 @@ import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class SpellImplode extends Spell implements Spell.SpellBlock {
@@ -35,23 +32,27 @@ public class SpellImplode extends Spell implements Spell.SpellBlock {
         final List<Block> affectedBlocks = new ArrayList<>();
         int size = (int) (1.5F + (level * 0.7F));
 
-        if (getGame().isOvertime() && getGame().getDisaster() instanceof DisasterEarthquake)
-            size *= 3;
+        if (getGame().isOvertime())
+            if (getGame().getDisaster() instanceof DisasterEarthquake)
+                size *= 3;
 
         for (int x = -size * 2; x <= size * 2; x++) {
             for (int y = -size * 2; y <= size * 2; y++) {
                 for (int z = -size * 2; z <= size * 2; z++) {
 
                     Block affectedBlock = block.getRelative(x, y, z);
+                    Material material = affectedBlock.getType();
 
-                    if (affectedBlock.getType() == Material.AIR || affectedBlock.getType() == Material.BEDROCK || affectedBlocks.contains(affectedBlock))
+                    if (material == Material.AIR || material == Material.BEDROCK || material == Material.BARRIER)
+                        continue;
+
+                    if (affectedBlocks.contains(affectedBlock))
                         continue;
 
                     if (
                             (centerLocation.distance(affectedBlock.getLocation().add(0.5, 0.5, 0.5)) + Math.abs(y / 4D))
                                     <= ((size * 2) + ThreadLocalRandom.current().nextFloat())
                     ) {
-
                         affectedBlocks.add(affectedBlock);
                     }
                 }

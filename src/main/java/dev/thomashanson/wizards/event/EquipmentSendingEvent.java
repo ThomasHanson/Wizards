@@ -14,7 +14,7 @@ public class EquipmentSendingEvent extends PlayerEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
-    private LivingEntity visibleEntity;
+    private final LivingEntity visibleEntity;
     private FakeEquipment.EquipmentSlot slot;
     private ItemStack equipment;
 

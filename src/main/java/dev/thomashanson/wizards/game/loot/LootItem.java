@@ -12,7 +12,7 @@ class LootItem {
     private final int min;
     private final int max;
 
-    public LootItem(ItemStack item, int rarity, int min, int max) {
+    LootItem(ItemStack item, int rarity, int min, int max) {
         this.item = item;
         this.rarity = rarity;
         this.min = min;
@@ -28,20 +28,14 @@ class LootItem {
     }
 
     private LootItem(Material material, int amount, int min) {
-
         this.item = new ItemStack(material);
-
         this.rarity = amount;
         this.min = min;
         this.max = 1;
     }
 
     ItemStack getItemStack() {
-
-        item.setAmount (
-                (ThreadLocalRandom.current().nextInt(Math.max(1, (max - min) + 1)) + min)
-        );
-
+        item.setAmount((ThreadLocalRandom.current().nextInt(Math.max(1, (max - min) + 1)) + min));
         return item;
     }
 

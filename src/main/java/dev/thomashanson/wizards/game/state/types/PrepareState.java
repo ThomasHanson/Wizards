@@ -1,7 +1,9 @@
 package dev.thomashanson.wizards.game.state.types;
 
 import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.manager.GameManager;
+import dev.thomashanson.wizards.game.mode.GameTeam;
 import dev.thomashanson.wizards.game.mode.WizardsMode;
 import dev.thomashanson.wizards.game.state.GameState;
 import dev.thomashanson.wizards.game.state.listener.PrepareListener;
@@ -11,13 +13,14 @@ import dev.thomashanson.wizards.util.MathUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
-import org.bukkit.Sound;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * Represents the preparation state when players
@@ -49,34 +52,54 @@ public class PrepareState extends GameState {
 
         WizardsMode mode = getGame().getCurrentMode();
 
+        assignTeams(getGame());
+
         Bukkit.getOnlinePlayers().forEach(player -> {
 
-            player.teleport(plugin.getMapManager().getActiveMap().getSpectatorLocation());
+            player.leaveVehicle();
+            player.eject();
 
-            announce(player);
+            GameTeam team = getGame().getTeam(player);
+            player.teleport(team.getSpawn());
+
+            plugin.getGameManager().gameAnnounce(player, true, INTRO_MESSAGES);
 
             if (!player.hasMetadata(GameManager.SPECTATING_KEY))
                 getGame().setupWizard(player);
         });
 
-        this.actionBarTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
+        this.actionBarTask = new BukkitRunnable() {
 
-            double percentage = (Duration.between(getStartTime(), Instant.now()).toSeconds()) / mode.getPreparationSecs();
+            int numTicks = 0;
 
-            for (Player player : Bukkit.getOnlinePlayers()) {
+            @Override
+            public void run() {
 
-                EntityUtil.displayProgress(player, "Game Start", percentage,
+                double percentage = ((double) Duration.between(getStartTime(), Instant.now()).toSeconds()) / mode.getPreparationSecs();
 
-                        MathUtil.formatTime (
-                                Math.max(0, mode.getPreparationSecs() - Duration.between(Instant.now(), getStartTime()).toMillis()),
-                                1
-                        )
-                );
+                for (Player player : Bukkit.getOnlinePlayers()) {
+
+                    getGame().getKit(player).playIntro(player, player.getLocation(), numTicks++);
+
+                    EntityUtil.displayProgress(player, "Game Start", percentage,
+
+                            MathUtil.formatTime (
+                                    Math.max(0, mode.getPreparationSecs() - Duration.between(Instant.now(), getStartTime()).toMillis()),
+                                    1
+                            )
+                    );
+                }
             }
 
-        }, 0L, 1L);
+        }.runTaskTimer(plugin, 0L, 1L);
 
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> setState(new ActiveState()), mode.getPreparationSecs() * 20L);
+    }
+
+    private void assignTeams(Wizards game) {
+
+        if (game.getCurrentMode().isTeamMode())
+            game.getPlayers(true).forEach(player -> game.getRandomTeam(game.getCurrentMode()).addPlayer(player));
     }
 
     @Override
@@ -91,34 +114,26 @@ public class PrepareState extends GameState {
                 player.setGameMode(GameMode.SURVIVAL);
     }
 
-    private void announce(Player player) {
+    @Override
+    public List<String> getScoreboardLines() {
 
-        player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 2F, 1F);
+        Wizards game = getGame();
 
-        for (int i = 0; i < 6 - INTRO_MESSAGES.length; i++)
-            player.sendMessage("");
+        return Arrays.asList (
 
-        player.sendMessage(LINE_BREAK);
+                "",
 
-        player.sendMessage(ChatColor.WHITE.toString() + ChatColor.BOLD + "Wizards");
+                ChatColor.RESET + "Players left: " +
+                        ChatColor.GREEN + game.getPlayers(true).size(),
 
-        player.sendMessage("");
-        Arrays.stream(INTRO_MESSAGES).forEach(message -> player.sendMessage(ChatColor.YELLOW.toString() + ChatColor.BOLD + message));
-        player.sendMessage("");
+                ChatColor.RESET + "Teams left: " +
+                        ChatColor.GREEN + game.getTeams().size(),
 
-        player.sendMessage (
+                "",
 
-                ChatColor.GREEN.toString() + ChatColor.BOLD + "Map: " +
-                        ChatColor.YELLOW.toString() + ChatColor.BOLD + getGame().getActiveMap().getName() +
-
-                        ChatColor.GRAY + " created by " +
-                        ChatColor.YELLOW.toString() + ChatColor.BOLD + getGame().getActiveMap().getAuthors()
+                ChatColor.RESET + "Kills: " + ChatColor.GREEN + "0",
+                ChatColor.RESET + "Assists: " + ChatColor.GREEN + "0"
         );
-
-        player.sendMessage(LINE_BREAK);
-
-        for (int i = 0; i < 6 - INTRO_MESSAGES.length; i++)
-            player.sendMessage("");
     }
 
     @Override

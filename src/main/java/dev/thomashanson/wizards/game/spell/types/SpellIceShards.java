@@ -49,7 +49,7 @@ public class SpellIceShards extends Spell implements CustomProjectile, Spell.Def
                     }
 
                     shoot(player);
-                    setProgress(finalI / level);
+                    setProgress((float) finalI / level);
                 }
 
             }.runTaskLater(getGame().getPlugin(), i * 5);
@@ -93,8 +93,11 @@ public class SpellIceShards extends Spell implements CustomProjectile, Spell.Def
 
                     Block block = location.clone().add(x, y, z).getBlock();
 
-                    if (block.getType() == Material.FIRE)
+                    if (block.getType() == Material.FIRE) {
+
                         block.setType(Material.AIR);
+                        // achievement
+                    }
                 }
             }
         }

@@ -137,6 +137,7 @@ public class DamageListener implements Listener {
                         attacker = (LivingEntity) projectile.getShooter();
                         distance = attacker.getLocation().distance(entity.getLocation());
                     }
+
                 } else if ((damager instanceof TNTPrimed)) {
 
                     damageTick = new BlockDamageTick (

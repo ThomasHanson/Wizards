@@ -15,6 +15,11 @@ public class PotionFrozen extends Potion {
     @Override
     public void activate(Wizard wizard) {}
 
+    @Override
+    public void deactivate(Wizard wizard) {
+        super.deactivate(wizard);
+    }
+
     @EventHandler
     public void onDamage(CustomDamageEvent event) {
 

@@ -9,15 +9,30 @@ import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 
 import java.util.*;
 
 public class SpellTrapRune extends Spell {
 
-    private Map<UUID, List<TrapRune>> runes = new HashMap<>();
+    private static BukkitTask updateTask;
+    private final Map<UUID, List<TrapRune>> runes = new HashMap<>();
 
     @Override
     public void castSpell(Player player, int level) {
+
+        if (updateTask == null) {
+
+            updateTask = new BukkitRunnable() {
+
+                @Override
+                public void run() {
+                    for (List<TrapRune> runes : runes.values())
+                        runes.removeIf(TrapRune::updateRune);
+                }
+            }.runTaskTimer(getGame().getPlugin(), 0L, 1L);
+        }
 
         List<Block> list = player.getLastTwoTargetBlocks(null, (level * 4) + 4);
 
@@ -62,16 +77,25 @@ public class SpellTrapRune extends Spell {
         }
     }
 
-    public static class TrapRune {
+    @Override
+    public void cleanup() {
 
-        private Wizards game;
+        updateTask.cancel();
+        updateTask = null;
 
-        private Location location;
-        private float size;
-        private Player owner;
+        runes.clear();
+    }
+
+    static class TrapRune {
+
+        private final Wizards game;
+
+        private final Location location;
+        private final float size;
+        private final Player owner;
         private int ticksLived;
 
-        public boolean updateRune() {
+        boolean updateRune() {
 
             if (!owner.isOnline() || owner.getGameMode() == GameMode.SPECTATOR) {
                 return true;
@@ -86,12 +110,8 @@ public class SpellTrapRune extends Spell {
                     if (ticksLived % 15 == 0)
                         createParticles();
 
-                    if (ticksLived == 100) {
-
-                        //UtilParticle.PlayParticle(ParticleType.FIREWORKS_SPARK, location, 0, size / 4, 0, size / 4,
-                        //      (int) (size * 10),
-                        //    ViewDist.LONG, UtilServer.getPlayers());
-                    }
+                    if (ticksLived == 100)
+                        owner.getWorld().spawnParticle (Particle.FIREWORKS_SPARK, location, (int) (size * 10), 0, size / 4, 0, size / 4);
 
                 } else {
 

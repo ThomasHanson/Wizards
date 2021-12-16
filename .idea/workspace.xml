@@ -6,7 +6,107 @@
     </artifacts-to-build>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="af273a0f-0106-4254-aae8-0e679ab0b940" name="Default Changelist" comment="" />
+    <list default="true" id="af273a0f-0106-4254-aae8-0e679ab0b940" name="Default Changelist" comment="93 modified, 2 added files that updated nearly every component of the game.">
+      <change afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/event/ArmorEquipEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/listener/ArmorListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/artifacts/Wizards.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/artifacts/Wizards.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/thomashanson.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/thomashanson.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/damage/DamageTick.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/damage/DamageTick.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/damage/KillAssist.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/damage/KillAssist.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/event/CustomDeathEvent.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/event/CustomDeathEvent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/event/EquipmentSendingEvent.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/event/EquipmentSendingEvent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/Wizard.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/Wizard.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/Wizards.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/Wizards.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/WizardsKit.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/WizardsKit.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitEnchantress.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitEnchantress.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitLich.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitLich.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitMage.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitMage.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitMystic.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitMystic.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitScholar.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitScholar.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitSorcerer.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitSorcerer.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitWarlock.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/kit/types/KitWarlock.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/listener/DamageListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/listener/DamageListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/listener/DeathListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/listener/DeathListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/listener/WorldListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/listener/WorldListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/loot/LootItem.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/loot/LootItem.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/manager/GameManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/manager/GameManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/manager/MapManager.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/manager/MapManager.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/mode/GameTeam.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/mode/GameTeam.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/Disaster.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/Disaster.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/types/DisasterEarthquake.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/types/DisasterEarthquake.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/types/DisasterHail.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/types/DisasterHail.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/types/DisasterManaStorm.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/overtime/types/DisasterManaStorm.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/Potion.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/Potion.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/PotionType.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/PotionType.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionFrozen.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionFrozen.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionGambler.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionGambler.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionIron.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionIron.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionLuck.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionLuck.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionMana.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionMana.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionRegeneration.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionRegeneration.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionRusher.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionRusher.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionSight.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionSight.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionVolatile.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionVolatile.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionWisdom.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/potion/types/PotionWisdom.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/Spell.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/Spell.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellDoppelganger.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellDoppelganger.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellDroom.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellDroom.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFireball.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFireball.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFlash.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFlash.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFocus.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFocus.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFrostBarrier.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFrostBarrier.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFrostbite.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellFrostbite.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellGrapplingBeam.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellGrapplingBeam.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellHeal.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellHeal.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellIcePrison.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellIcePrison.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellIceShards.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellIceShards.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellImplode.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellImplode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellLightShield.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellLightShield.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellLightningStrike.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellLightningStrike.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellManaBolt.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellManaBolt.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellNapalm.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellNapalm.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellRainbowBeam.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellRainbowBeam.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellRumble.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellRumble.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellSplash.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellSplash.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellSummonWolves.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellSummonWolves.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellTornado.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellTornado.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellTrapRune.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellTrapRune.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellWizardsCompass.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/spell/types/SpellWizardsCompass.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/GameState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/GameState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/listener/PrepareListener.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/listener/PrepareListener.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/ActiveState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/ActiveState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/LobbyState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/LobbyState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/OvertimeState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/OvertimeState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/PrepareState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/PrepareState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/ResetState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/ResetState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/SetupState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/SetupState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/ThanosState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/ThanosState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/WinnerState.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/game/state/types/WinnerState.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/map/LocalGameMap.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/map/LocalGameMap.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/map/default.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/map/default.yml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/projectile/ProjectileData.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/projectile/ProjectileData.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/scoreboard/WizardsScoreboard.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/StatTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/StatTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/AssistsTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/AssistsTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/DeathsTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/DeathsTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/DmgDealtTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/DmgDealtTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/DmgTakenTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/DmgTakenTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/LossTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/LossTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/WinsTracker.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/stats/types/WinsTracker.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/BlockUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/BlockUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/EntityUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/EntityUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/FakeEquipment.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/FakeEquipment.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/LocationUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/LocationUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/MathUtil.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/MathUtil.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/menu/InventoryMenuBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/menu/InventoryMenuBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/menu/ItemBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/menu/ItemBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/menu/MenuBuilder.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/menu/MenuBuilder.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/npc/NPC.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/npc/NPC.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/npc/NPCMetadata.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/dev/thomashanson/wizards/util/npc/NPCMetadata.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/plugin.yml" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/plugin.yml" afterDir="false" />
+    </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -38,6 +138,9 @@
         <option value="Class" />
       </list>
     </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MavenImportPreferences">
     <option name="importingSettings">
@@ -127,11 +230,38 @@
       <workItem from="1631305247101" duration="485000" />
       <workItem from="1631414184880" duration="68000" />
       <workItem from="1633051533448" duration="4711000" />
-      <workItem from="1633140055729" duration="1945000" />
+      <workItem from="1633140055729" duration="2545000" />
+      <workItem from="1634778587061" duration="378000" />
+      <workItem from="1634779871160" duration="490000" />
+      <workItem from="1634785827943" duration="571000" />
+      <workItem from="1635546584692" duration="512000" />
+      <workItem from="1636991148656" duration="53000" />
+      <workItem from="1638458056899" duration="426000" />
+      <workItem from="1639412819002" duration="18000000" />
+      <workItem from="1639452548913" duration="2192000" />
+      <workItem from="1639593704606" duration="15938000" />
+      <workItem from="1639614843695" duration="7968000" />
     </task>
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="1" />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="COLUMN_ORDER" />
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="93 modified, 2 added files that updated nearly every component of the game." />
+    <option name="LAST_COMMIT_MESSAGE" value="93 modified, 2 added files that updated nearly every component of the game." />
   </component>
 </project>

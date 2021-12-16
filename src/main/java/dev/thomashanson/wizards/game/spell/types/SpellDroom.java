@@ -1,5 +1,6 @@
 package dev.thomashanson.wizards.game.spell.types;
 
+import dev.thomashanson.wizards.game.overtime.types.DisasterEarthquake;
 import dev.thomashanson.wizards.game.spell.Spell;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
@@ -16,29 +17,34 @@ import java.util.List;
 
 public class SpellDroom extends Spell {
 
-    private List<FallingBlock> fallingBlocks = new ArrayList<>();
+    private final List<FallingBlock> fallingBlocks = new ArrayList<>();
 
     @Override
     public void castSpell(final Player player, int level) {
 
+        List<Player> targets = new ArrayList<>();
+
+        // Spawn anvil above player's head
+        targets.add(player);
+
         final int radius = 4 + (level * 2); //(int) getValue(player, "Radius");
 
         player.getNearbyEntities(radius, radius * 3, radius).forEach(entity -> {
+            if (entity instanceof Player && getWizard(player) != null)
+                targets.add((Player) entity);
+        });
 
-            if (!(entity instanceof Player))
-                return;
+        List<FallingBlock> curFalling = new ArrayList<>();
 
-            Player target = (Player) entity;
+        for (Player target : targets) {
 
-            player.getWorld().spawnParticle(Particle.SMOKE_LARGE, player.getLocation(), 1, 0, 0, 0, 0, 0);
+            target.getWorld().spawnParticle(Particle.SMOKE_LARGE, player.getLocation(), 1, 0, 0, 0, 0, 0);
 
             Location location = target.getLocation().clone().add(0, 15 + (level * 3), 0);
             int lowered = 0;
 
-            while (lowered < 5 && location.getBlock().getType() != Material.AIR) {
-                lowered++;
+            while (lowered++ < 5 && location.getBlock().getType() != Material.AIR)
                 location = location.subtract(0, 1, 0);
-            }
 
             if (location.getBlock().getType() == Material.AIR) {
 
@@ -51,10 +57,12 @@ public class SpellDroom extends Spell {
                 anvil.setMetadata("SL", new FixedMetadataValue(getGame().getPlugin(), level));
 
                 anvil.getWorld().playSound(anvil.getLocation(), Sound.BLOCK_ANVIL_USE, 1.9F, 0F);
-
-                fallingBlocks.add(anvil);
+                curFalling.add(anvil);
             }
-        });
+        }
+
+        if (!curFalling.isEmpty())
+            fallingBlocks.addAll(curFalling);
     }
 
     private void createExplosion(Entity entity) {
@@ -64,8 +72,13 @@ public class SpellDroom extends Spell {
 
         int spellLevel = entity.getMetadata("SL").get(0).asInt();
 
-        entity.getWorld().createExplosion(entity.getLocation(), 1 + (spellLevel / 2F));
-        // TODO: 8/12/21 change to twice explosion power during earthquake disaster
+        float explosionPower = 1 + (spellLevel / 2F);
+
+        if (getGame().isOvertime())
+            if (getGame().getDisaster() instanceof DisasterEarthquake)
+                explosionPower *= 2;
+
+        entity.getWorld().createExplosion(entity.getLocation(), explosionPower);
 
         /*
         CustomExplosion explosion = new CustomExplosion(Wizards.getArcadeManager().GetDamage(), Wizards.getArcadeManager().GetExplosion(), entity.getLocation(), 1 + (spellLevel / 2F), "Anvil Drop");
@@ -107,7 +120,7 @@ public class SpellDroom extends Spell {
     }
 
     @EventHandler
-    public void onPlace(EntityChangeBlockEvent event) {
+    public void onChange(EntityChangeBlockEvent event) {
 
         if (!(event.getEntity() instanceof FallingBlock))
             return;

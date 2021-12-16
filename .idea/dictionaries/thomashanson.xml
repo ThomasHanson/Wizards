@@ -19,6 +19,7 @@
       <w>hotbar</w>
       <w>invis</w>
       <w>javadocs</w>
+      <w>jordanosterberg</w>
       <w>knockback</w>
       <w>levelup</w>
       <w>lich</w>
@@ -33,6 +34,8 @@
       <w>teleport</w>
       <w>teleported</w>
       <w>thanos</w>
+      <w>thomashanson</w>
+      <w>unequip</w>
     </words>
   </dictionary>
 </component>

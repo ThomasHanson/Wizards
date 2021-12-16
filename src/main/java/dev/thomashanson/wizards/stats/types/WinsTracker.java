@@ -1,4 +1,4 @@
 package dev.thomashanson.wizards.stats.types;
 
-public class WinsTracker {
+class WinsTracker {
 }

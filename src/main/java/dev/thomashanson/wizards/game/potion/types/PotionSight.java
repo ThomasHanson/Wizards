@@ -22,6 +22,7 @@ public class PotionSight extends Potion {
     @Override
     public void deactivate(Wizard wizard) {
 
+        super.deactivate(wizard);
     }
 
     public void setGlow(Entity entity, Player target, boolean glow) {

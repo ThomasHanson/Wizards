@@ -171,7 +171,7 @@ public class LocalGameMap implements GameMap {
         return dataFile.getConfigurationSection("core");
     }
 
-    public ConfigurationSection getLocations() {
+    private ConfigurationSection getLocations() {
         return dataFile.getConfigurationSection("locations");
     }
 

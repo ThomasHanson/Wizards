@@ -30,8 +30,8 @@ public class SpellSummonWolves extends Spell implements Spell.SpellBlock {
 
     @Override
     public void castSpell(Player player, int level) {
-
         Block block = player.getLocation().getBlock().getRelative(BlockFace.DOWN);
+        castSpell(player, block, level);
     }
 
     @Override
@@ -51,21 +51,22 @@ public class SpellSummonWolves extends Spell implements Spell.SpellBlock {
 
                     Wolf.class, spawnedWolf -> {
 
-                spawnedWolf.setCustomName(player.getName() + "'s Wolf");
+                        spawnedWolf.setCustomName(player.getName() + "'s Wolf");
 
-                spawnedWolf.setTamed(true);
-                spawnedWolf.setOwner(player);
+                        spawnedWolf.setTamed(true);
+                        spawnedWolf.setOwner(player);
 
-                AttributeInstance healthAttribute = spawnedWolf.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+                        AttributeInstance healthAttribute = spawnedWolf.getAttribute(Attribute.GENERIC_MAX_HEALTH);
 
-                if (healthAttribute != null) {
-                    healthAttribute.setBaseValue(2.0);
-                    spawnedWolf.setHealth(healthAttribute.getBaseValue());
-                }
+                        if (healthAttribute != null) {
+                            healthAttribute.setBaseValue(2.0);
+                            spawnedWolf.setHealth(healthAttribute.getBaseValue());
+                        }
 
-                spawnedWolf.setBreed(false);
-                spawnedWolf.setRemoveWhenFarAway(false);
-            });
+                        spawnedWolf.setBreed(false);
+                        spawnedWolf.setRemoveWhenFarAway(false);
+                    }
+            );
 
             wolf.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20 * SPELL_LENGTH, level - 1));
             player.getWorld().playSound(player.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 1.2F, 1);
@@ -182,7 +183,6 @@ public class SpellSummonWolves extends Spell implements Spell.SpellBlock {
     public void onDeath(EntityDeathEvent event) {
 
         // Disable standard death message on wolf death
-
         if (event.getEntity() instanceof Wolf) {
             event.getEntity().remove();
         }

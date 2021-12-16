@@ -11,7 +11,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.FoodLevelChangeEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.metadata.FixedMetadataValue;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -25,14 +24,34 @@ import java.util.Map;
 
 public class SpellFocus extends Spell {
 
-    private BukkitTask updateTask;
+    private static BukkitTask updateTask;
     private final Map<Wizard, Instant> focused = new HashMap<>();
 
     @Override
     public void castSpell(Player player, int level) {
 
-        if (updateTask == null)
-            startUpdates();
+        if (updateTask == null) {
+
+            updateTask = new BukkitRunnable() {
+
+                @Override
+                public void run() {
+
+                    for (Wizard wizard : focused.keySet()) {
+
+                        Instant start = focused.get(wizard);
+                        Duration between = Duration.between(start, Instant.now());
+
+                        if (between.toSeconds() >= 30) {
+                            endFocus(wizard);
+                            return;
+                        }
+                    }
+
+                    // update particles
+                }
+            }.runTaskTimer(getGame().getPlugin(), 0L, 1L);
+        }
 
         focused.put(getWizard(player), Instant.now());
 
@@ -47,29 +66,6 @@ public class SpellFocus extends Spell {
         updateTask = null;
 
         focused.clear();
-    }
-
-    private void startUpdates() {
-
-        updateTask = new BukkitRunnable() {
-
-            @Override
-            public void run() {
-
-                for (Wizard wizard : focused.keySet()) {
-
-                    Instant start = focused.get(wizard);
-                    Duration between = Duration.between(start, Instant.now());
-
-                    if (between.toSeconds() >= 30) {
-                        endFocus(wizard);
-                        return;
-                    }
-                }
-
-                // update particles
-            }
-        }.runTaskTimer(getGame().getPlugin(), 0L, 1L);
     }
 
     @EventHandler
@@ -156,15 +152,13 @@ public class SpellFocus extends Spell {
         if (wizard == null || !focused.containsKey(wizard))
             return;
 
-        ItemStack item = event.getItem();
-
-        if (item.getType().isEdible())
+        if (event.getItem().getType().isEdible())
             event.setCancelled(true);
     }
 
     private double getMultiplier(Instant from) {
-        long betweenSecs = Duration.between(from, Instant.now()).toSeconds();
-        return betweenSecs >= 10 ? 2 : betweenSecs >= 5 ? 1.5 : betweenSecs >= 2 ? 1.2 : 0;
+        long focusLength = Duration.between(from, Instant.now()).toSeconds();
+        return focusLength >= 10 ? 2 : focusLength >= 5 ? 1.5 : focusLength >= 2 ? 1.2 : 0;
     }
 
     private void endFocus(Wizard wizard) {

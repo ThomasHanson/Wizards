@@ -23,7 +23,7 @@ public class MapManager {
     }
 
     public void registerListeners() {
-        this.worldListener = new WorldListener(this);
+        this.worldListener = new WorldListener();
         plugin.getServer().getPluginManager().registerEvents(worldListener, plugin);
     }
 

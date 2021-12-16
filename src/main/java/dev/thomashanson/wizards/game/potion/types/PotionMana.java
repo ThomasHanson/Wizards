@@ -11,5 +11,7 @@ public class PotionMana extends Potion {
     }
 
     @Override
-    public void deactivate(Wizard wizard) {}
+    public void deactivate(Wizard wizard) {
+        super.deactivate(wizard);
+    }
 }

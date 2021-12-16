@@ -21,7 +21,7 @@ public abstract class Potion implements Listener {
         return wizard.getActivePotion().equals(potion);
     }
 
-    public Wizards getGame() {
+    protected Wizards getGame() {
         return game;
     }
 
@@ -29,7 +29,7 @@ public abstract class Potion implements Listener {
         this.game = game;
     }
 
-    public PotionType getPotion() {
+    protected PotionType getPotion() {
         return potion;
     }
 

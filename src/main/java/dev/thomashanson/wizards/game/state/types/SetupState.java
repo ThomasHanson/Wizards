@@ -2,11 +2,14 @@ package dev.thomashanson.wizards.game.state.types;
 
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.mode.GameTeam;
+import dev.thomashanson.wizards.game.mode.WizardsMode;
 import dev.thomashanson.wizards.game.state.GameState;
 import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
 import dev.thomashanson.wizards.map.LocalGameMap;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
@@ -14,6 +17,9 @@ import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.server.ServerListPingEvent;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Represents the server preparation state. This will
@@ -56,7 +62,7 @@ public class SetupState extends GameState implements Listener {
 
         plugin.getMapManager().getAllMaps().forEach(map -> Bukkit.getLogger().info(map.getName()));
 
-        LocalGameMap randomMap = null;// = plugin.getMapManager().getAllMaps().get(ThreadLocalRandom.current().nextInt(numMaps)); // NULL WHEN WE ENABLE THE REST;
+        LocalGameMap randomMap = plugin.getMapManager().getAllMaps().get(ThreadLocalRandom.current().nextInt(numMaps)); // NULL WHEN WE ENABLE THE REST;
 
         for (LocalGameMap map : plugin.getMapManager().getAllMaps())
             if (map.getName().equalsIgnoreCase("Hogwarts"))
@@ -86,7 +92,30 @@ public class SetupState extends GameState implements Listener {
         plugin.getGameManager().setActiveGame(new Wizards(plugin));
         plugin.getServer().getPluginManager().registerEvents(plugin.getGameManager().getActiveGame(), plugin);
 
-        //plugin.getGameManager().getActiveGame().setCurrentMode(wizardsMode);
+        Wizards game = plugin.getGameManager().getActiveGame();
+        //game.setCurrentMode(wizardsMode);
+
+        WizardsMode mode = game.getCurrentMode();
+
+        if (mode.isTeamMode()) {
+
+            for (int i = 0; i < mode.getNumTeams(); i++) {
+
+                List<Location> spawnLocations = randomMap.getSpawnLocations();
+
+                GameTeam newTeam = new GameTeam(game, "" + (i + 1), spawnLocations);
+                game.getTeams().add(newTeam);
+
+                Bukkit.getLogger().info("Team " + newTeam.getTeamName() + " created.");
+            }
+
+        } else {
+
+            GameTeam newTeam = new GameTeam(game, "Wizards", randomMap.getSpawnLocations());
+            game.getTeams().add(newTeam);
+
+            Bukkit.getLogger().info("Solo team created.");
+        }
 
         plugin.getMapManager().registerListeners();
     }
@@ -117,6 +146,15 @@ public class SetupState extends GameState implements Listener {
 
         if (selectedMap != null)
             event.setMotd(ChatColor.YELLOW + "Map Selected: " + ChatColor.GOLD + selectedMap.getName());
+    }
+
+    @Override
+    public List<String> getScoreboardLines() {
+
+        return Arrays.asList (
+                ChatColor.YELLOW + "Preparing Server",
+                ChatColor.RED + "Please wait!"
+        );
     }
 
     @Override

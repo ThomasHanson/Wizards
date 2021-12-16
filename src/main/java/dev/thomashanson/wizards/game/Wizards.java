@@ -8,15 +8,13 @@ import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.damage.DamageTick;
 import dev.thomashanson.wizards.damage.types.PlayerDamageTick;
 import dev.thomashanson.wizards.damage.types.VoidDamageTick;
-import dev.thomashanson.wizards.event.PotionConsumeEvent;
-import dev.thomashanson.wizards.event.SpellCastEvent;
-import dev.thomashanson.wizards.event.SpellCollectEvent;
-import dev.thomashanson.wizards.event.WandGainEvent;
+import dev.thomashanson.wizards.event.*;
 import dev.thomashanson.wizards.game.kit.KitSelectMenu;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.kit.types.*;
 import dev.thomashanson.wizards.game.loot.ChestLoot;
 import dev.thomashanson.wizards.game.manager.DamageManager;
+import dev.thomashanson.wizards.game.manager.GameManager;
 import dev.thomashanson.wizards.game.mode.GameTeam;
 import dev.thomashanson.wizards.game.mode.WizardsMode;
 import dev.thomashanson.wizards.game.overtime.Disaster;
@@ -26,10 +24,7 @@ import dev.thomashanson.wizards.game.potion.PotionType;
 import dev.thomashanson.wizards.game.spell.*;
 import dev.thomashanson.wizards.game.spell.types.SpellDoppelganger;
 import dev.thomashanson.wizards.game.state.GameState;
-import dev.thomashanson.wizards.game.state.types.ActiveState;
-import dev.thomashanson.wizards.game.state.types.LobbyState;
-import dev.thomashanson.wizards.game.state.types.OvertimeState;
-import dev.thomashanson.wizards.game.state.types.PrepareState;
+import dev.thomashanson.wizards.game.state.types.*;
 import dev.thomashanson.wizards.map.LocalGameMap;
 import dev.thomashanson.wizards.util.EntityUtil;
 import dev.thomashanson.wizards.util.LocationUtil;
@@ -62,6 +57,7 @@ import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.*;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.LeatherArmorMeta;
 import org.bukkit.inventory.meta.PotionMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
@@ -77,6 +73,7 @@ public class Wizards implements Listener {
     private final WizardsPlugin plugin;
 
     private final Set<Wizard> wizards = new HashSet<>();
+    private final List<GameTeam> teams = new ArrayList<>();
 
     private WizardsMode currentMode = WizardsMode.SOLO_NORMAL;
     private final List<GameTeam> gameTeams = new ArrayList<>();
@@ -100,7 +97,7 @@ public class Wizards implements Listener {
     private final Map<SpellType, Spell> spells = new HashMap<>();
 
     private final Map<PotionType, Potion> potions = new HashMap<>();
-    private Map<UUID, Map<PotionType, Instant>> potionTimes = new HashMap<>();
+    private final Map<UUID, Map<PotionType, Instant>> potionTimes = new HashMap<>();
 
     /**
      * Represents the last time when a power surge
@@ -209,8 +206,6 @@ public class Wizards implements Listener {
                 player.getInventory().addItem(builder.get());
             }
         }
-
-        getKit(player).playIntro(player, player.getLocation());
 
         updateWandTitle(player);
     }
@@ -389,26 +384,7 @@ public class Wizards implements Listener {
         if (wizard == null)
             return;
 
-        if (event.getMessage().equals("newChest")) {
-
-            Set<Location> allChests = getActiveMap().getChestLocations();
-            Set<Location> openedChests = wizard.getChestsLooted();
-
-            for (Location allLocations : allChests) {
-
-                if (!openedChests.contains(allLocations)) {
-
-                    Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
-                        player.teleport(allLocations);
-                        player.sendMessage(ChatColor.GREEN + "Teleported to a new chest!");
-                    }, 1L);
-
-                }
-            }
-
-            event.setCancelled(true);
-
-        } else if (event.getMessage().equals("max")) {
+        if (event.getMessage().equals("max")) {
 
             Bukkit.getScheduler().scheduleSyncDelayedTask(plugin, () -> {
 
@@ -786,6 +762,43 @@ public class Wizards implements Listener {
 
     public void updateGame(AtomicInteger atomicInteger) {
 
+        if (isLive()) {
+
+            if (!currentMode.isTeamMode()) {
+
+                if (getPlayers(true).size() <= 1) {
+
+                    getGameManager().setState(new WinnerState("Someone won the game!"));
+                }
+
+            } else {
+
+                ArrayList<GameTeam> teamsAlive = new ArrayList<>();
+
+                for (GameTeam team : teams)
+                    if (team.getPlayers(true).size() > 0)
+                        teamsAlive.add(team);
+
+                if (teamsAlive.size() <= 1) {
+
+                    String formattedTeam = "";
+
+                    if (teamsAlive.size() > 0) {
+
+                        GameTeam winningTeam = teamsAlive.get(0);
+
+                        List<String> playerNames = new ArrayList<>(winningTeam.getPlayers().size());
+                        winningTeam.getPlayers().forEach(player -> playerNames.add(player.getName()));
+
+                        String playerNameText = String.join(",", playerNames);
+                        formattedTeam = playerNameText + " won the game!";
+                    }
+
+                    getGameManager().setState(new WinnerState(formattedTeam));
+                }
+            }
+        }
+
         for (Player player : getPlayers(true)) {
 
             updateMana(player);
@@ -830,13 +843,13 @@ public class Wizards implements Listener {
                 );
 
                 // Find the tick before void damage (to award player kills)
-                DamageTick lastLoggedTick = getPlugin().getDamageManager().getLastLoggedTick(player.getUniqueId());
+                DamageTick lastLoggedTick = plugin.getDamageManager().getLastLoggedTick(player.getUniqueId());
 
                 // Create new void damage tick with reference to previous damage tick
                 VoidDamageTick borderTick = new VoidDamageTick(4.0, "Border", lastLoggedTick, Instant.now());
 
                 // Log void damage
-                getPlugin().getDamageManager().damage(player, borderTick);
+                plugin.getDamageManager().damage(player, borderTick);
 
                 for (int i = 0; i < 2; i++)
                     player.getWorld().playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 2F, 1F);
@@ -869,8 +882,8 @@ public class Wizards implements Listener {
             lastSurge = Instant.now();
 
             plugin.getGameManager().announce("");
-            plugin.getGameManager().announce(ChatColor.YELLOW.toString() + ChatColor.BOLD + "Power surges through the battlefield!", true);
-            plugin.getGameManager().announce(ChatColor.YELLOW.toString() + ChatColor.BOLD + "Mana cost and spell cooldown has been lowered!");
+            plugin.getGameManager().announce("Power surges through the battlefield!", true);
+            plugin.getGameManager().announce("Mana cost and spell cooldown has been lowered!");
             plugin.getGameManager().announce("");
 
             wizard.decreaseCooldown();
@@ -951,7 +964,7 @@ public class Wizards implements Listener {
 
             if (!potionDuration.isZero()) {
                 wizard.getPotionStatusBar().setTitle(wizard.getPotionBarTitle());
-                wizard.getPotionStatusBar().setProgress(1 - (potionDuration.toSeconds() / potionType.getDuration().toSeconds()));
+                wizard.getPotionStatusBar().setProgress(1 - (double) (potionDuration.toSeconds() / potionType.getDuration().toSeconds()));
 
             } else {
                 wizard.getPotionStatusBar().removePlayer(player);
@@ -1051,9 +1064,11 @@ public class Wizards implements Listener {
 
                     ItemMeta meta = item.getItemMeta();
 
-                    meta.setUnbreakable(true);
-                    meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
-                    meta.setCustomModelData(2);
+                    if (meta != null) {
+                        meta.setUnbreakable(true);
+                        meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+                        meta.setCustomModelData(2);
+                    }
 
                     item.setItemMeta(meta);
                     player.getInventory().setItem(newSlot, item);
@@ -1251,7 +1266,6 @@ public class Wizards implements Listener {
                             ((Spell.SpellBlock) spell).castSpell(player, (Block) interacted, getLevel(player, spellType));
 
                     spell.charge(player, spellCastEvent.getManaMultiplier());
-                    // TODO: 8/11/21 might have to change back to old function
 
                 } else {
 
@@ -1305,6 +1319,18 @@ public class Wizards implements Listener {
                 LocationUtil.getRightSide(player.getEyeLocation(), 0.45).subtract(0, 0.6, 0);
 
         kit.playSpellEffect(player, location);
+    }
+
+    @EventHandler
+    public void onSpellCollect(SpellCollectEvent event) {
+
+        Player player = event.getPlayer();
+        Wizard wizard = getWizard(player);
+
+        if (wizard.getKnownSpells().size() >= SpellType.values().length) {
+            // achievement
+            player.sendMessage("Achievement");
+        }
     }
 
     @EventHandler
@@ -1441,7 +1467,16 @@ public class Wizards implements Listener {
             droppedSpells.add(type);
         }
 
-        getItems(player).forEach(item -> player.getWorld().dropItemNaturally(player.getLocation(), item));
+        getItems(player).forEach(item -> {
+
+            // Remove the dyed leather armor
+            if (item.getItemMeta() != null && item.getItemMeta() instanceof LeatherArmorMeta) {
+                ItemMeta meta = Bukkit.getItemFactory().getItemMeta(item.getType());
+                item.setItemMeta(meta);
+            }
+
+            player.getWorld().dropItemNaturally(player.getLocation(), item);
+        });
 
         droppedSpells.forEach(droppedSpell -> {
 
@@ -1485,7 +1520,7 @@ public class Wizards implements Listener {
                         .get()
         );
 
-        // TODO: 7/1/21 NETHER STAR NEEDS BOUNTY AMOUNT
+        // TODO: 7/1/21 add bounty amount to nether star
 
         Collections.shuffle(droppedItems, ThreadLocalRandom.current());
 
@@ -1512,16 +1547,15 @@ public class Wizards implements Listener {
         ItemStack item = event.getEntity().getItemStack();
         SpellType spell = getSpell(item);
 
-        String hologramText = "";
-
-        if (!droppedItems.contains(event.getEntity()))
-            return;
-
         /*
          * Prevent player item drops from being
          * burned by Lightning Strike spell.
          */
-        event.getEntity().setInvulnerable(true);
+
+        if (droppedItems.contains(event.getEntity()))
+            event.getEntity().setInvulnerable(true);
+
+        String hologramText = "";
 
         /*
          * Add holograms to game items.
@@ -1554,7 +1588,7 @@ public class Wizards implements Listener {
             //holo.setRemoveOnEntityDeath();
             //holo.setViewDistance(16);
             //holo.start();
-            //_droppedWandsBooks.add(event.getEntity());
+            droppedItems.add(event.getEntity());
         }
     }
 
@@ -1626,22 +1660,6 @@ public class Wizards implements Listener {
 
         event.setDamage(0);
     }
-
-    /*
-    @EventHandler
-    public void onRegen(EntityRegainHealthEvent event) {
-
-        EntityRegainHealthEvent.RegainReason reason = event.getRegainReason();
-
-        if (
-                reason == EntityRegainHealthEvent.RegainReason.EATING ||
-                        reason == EntityRegainHealthEvent.RegainReason.SATIATED
-        ) {
-
-            event.setAmount(event.getAmount() * 0.50); // 50% regeneration speed
-        }
-    }
-    */
 
     @EventHandler
     public void onItemConsume(PlayerItemConsumeEvent event) {
@@ -1757,6 +1775,28 @@ public class Wizards implements Listener {
     }
 
     @EventHandler
+    public void onArmorEquip(ArmorEquipEvent event) {
+
+        Player player = event.getPlayer();
+
+        ItemStack item = event.getNewArmorPiece();
+        ItemMeta itemMeta = item.getItemMeta();
+
+        if (!(itemMeta instanceof LeatherArmorMeta))
+            return;
+
+        ArmorEquipEvent.EquipMethod method = event.getMethod();
+
+        Wizard wizard = getWizard(player);
+
+        if (wizard == null)
+            return;
+
+        WizardsKit kit = getKit(player);
+        ((LeatherArmorMeta) itemMeta).setColor(kit.getColor());
+    }
+
+    @EventHandler
     public void onJoin(PlayerJoinEvent event) {
 
         Player player = event.getPlayer();
@@ -1810,7 +1850,7 @@ public class Wizards implements Listener {
         return fakePlayer.getLocation();
     }
 
-    public boolean hasDoppelganger(Player player) {
+    private boolean hasDoppelganger(Player player) {
 
         if (getWizard(player) == null)
             return false;
@@ -1850,7 +1890,7 @@ public class Wizards implements Listener {
         NamespacedKey key = new NamespacedKey(plugin, "time");
         ItemMeta itemMeta = finalStack.getItemMeta();
 
-        if (finalStack.hasItemMeta())
+        if (itemMeta != null)
             itemMeta.getPersistentDataContainer().set(key, PersistentDataType.LONG, System.nanoTime());
 
         finalStack.setItemMeta(itemMeta);
@@ -1859,7 +1899,7 @@ public class Wizards implements Listener {
 
     public SpellType getSpell(ItemStack item) {
 
-        if (item.hasItemMeta()) {
+        if (item.getItemMeta() != null) {
             if (item.getItemMeta().hasDisplayName()) {
 
                 String title = item.getItemMeta().getDisplayName();
@@ -1942,7 +1982,7 @@ public class Wizards implements Listener {
         return spell.getMaxLevel();
     }
 
-    private GameTeam getTeam(Player player) {
+    public GameTeam getTeam(Player player) {
 
         for (GameTeam team : gameTeams)
             if (team.isOnTeam(player))
@@ -1957,10 +1997,24 @@ public class Wizards implements Listener {
 
         for (Player player : Bukkit.getOnlinePlayers()) {
 
-            if (!alive)
+            if (alive) {
+
+                if (isLive()) {
+
+                    // Preparation stage is over - all wizards already setup
+                    if (getWizard(player) != null)
+                        players.add(player);
+
+                } else {
+
+                    // Preparation phase - players not fully setup yet
+                    if (!player.hasMetadata(GameManager.SPECTATING_KEY))
+                        players.add(player);
+                }
+
+            } else {
                 players.add(player);
-            else if (getWizard(player) != null)
-                players.add(player);
+            }
         }
 
         return players;
@@ -2030,7 +2084,7 @@ public class Wizards implements Listener {
         this.lastSurge = lastSurge;
     }
 
-    private Pair<String, Instant> getNextEvent() {
+    public Pair<String, Instant> getNextEvent() {
 
         String nextEvent;
         Instant nextEventInstant;
@@ -2089,6 +2143,21 @@ public class Wizards implements Listener {
         return wizards;
     }
 
+    public List<GameTeam> getTeams() {
+        return teams;
+    }
+
+    public GameTeam getRandomTeam(WizardsMode mode) {
+
+        GameTeam team = null;
+
+        for (GameTeam gameTeam : teams)
+            if (team == null || gameTeam.getTeamSize() < mode.getNumPlayers())
+                team = gameTeam;
+
+        return team;
+    }
+
     public WizardsMode getCurrentMode() {
         return currentMode;
     }
@@ -2120,6 +2189,10 @@ public class Wizards implements Listener {
 
     public KitSelectMenu getKitSelectMenu() {
         return kitSelectMenu;
+    }
+
+    private GameManager getGameManager() {
+        return plugin.getGameManager();
     }
 
     public WizardsPlugin getPlugin() {

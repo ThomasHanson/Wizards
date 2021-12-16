@@ -34,14 +34,13 @@ public class SpellTornado extends Spell {
 
                         double radius = y * RADIUS_INCREASE;
 
-                        double x = Math.cos(Math.toRadians(360 / LINES * i + y * 25 - angle)) * radius;
-                        double z = Math.sin(Math.toRadians(360 / LINES * i + y * 25 - angle)) * radius;
+                        double x = Math.cos(Math.toRadians((double) (360 / LINES) * i + y * 25 - angle)) * radius;
+                        double z = Math.sin(Math.toRadians((double) (360 / LINES) * i + y * 25 - angle)) * radius;
+
                         Location tornadoLocation = new Location(player.getWorld(), x, y, z);
 
-                        // TODO: 2020-06-20 throw players, blocks, etc.
-
                         if (tornadoLocation.getBlock().getType().isSolid()) {
-                            // TODO: 2020-06-19 destroy
+                            // destroy
                             return;
                         }
 

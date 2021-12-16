@@ -1,7 +1,9 @@
 package dev.thomashanson.wizards.game.state.types;
 
 import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.manager.GameManager;
+import dev.thomashanson.wizards.game.mode.WizardsMode;
 import dev.thomashanson.wizards.game.state.GameState;
 import dev.thomashanson.wizards.game.state.listener.LobbyListener;
 import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
@@ -59,10 +61,12 @@ public class LobbyState extends GameState {
 
             if (lastTip == null || Duration.between(lastTip, Instant.now()).toSeconds() >= 20) {
 
-                tipColor = tipColor == ChatColor.YELLOW ? ChatColor.GOLD : ChatColor.YELLOW;
+                tipColor = tipColor == ChatColor.YELLOW ?
+                        ChatColor.GOLD : ChatColor.YELLOW;
+
                 lastTip = Instant.now();
 
-                String message = ChatColor.WHITE.toString() + ChatColor.BOLD + "TIP> " + ChatColor.RESET + tipColor + gameTips.get(tipIndex).getText();
+                String message = ChatColor.WHITE.toString() + ChatColor.BOLD + "TIP: " + ChatColor.RESET + tipColor + gameTips.get(tipIndex).getText();
 
                 for (Player player : Bukkit.getOnlinePlayers()) {
                     player.playSound(player.getLocation(), Sound.ENTITY_CHICKEN_EGG, 1F, 1F);
@@ -114,7 +118,7 @@ public class LobbyState extends GameState {
 
     private void createRandomChests(LocalGameMap gameMap) {
 
-        Set<Material> ignore = new HashSet<>(
+        Set<Material> ignore = new HashSet<> (
 
                 Arrays.asList (
                         Material.ACACIA_LEAVES,
@@ -131,7 +135,7 @@ public class LobbyState extends GameState {
 
         int done = 0;
 
-        while (done < 40) {
+        while (done++ < 40) {
 
             Block block = gameMap.getWorld().getHighestBlockAt (
                     (int) (gameMap.getMinX() + ThreadLocalRandom.current().nextInt(xDiff)),
@@ -148,10 +152,32 @@ public class LobbyState extends GameState {
             BlockFace randomDirection = BlockUtil.AXIS[ThreadLocalRandom.current().nextInt(numValues)];
 
             ((Directional) block.getBlockData()).setFacing(randomDirection);
-
             getGame().fillChest(block);
-            done++;
         }
+    }
+
+    @Override
+    public List<String> getScoreboardLines() {
+
+        Wizards game = getGame();
+        WizardsMode mode = game.getCurrentMode();
+
+        int playerCount = Bukkit.getOnlinePlayers().size();
+        int maxPlayers = mode.getMaxPlayers();
+
+        return Arrays.asList (
+
+                ChatColor.RESET + "Players: " +
+                        ChatColor.GREEN + playerCount + "/" + maxPlayers,
+
+                "",
+
+                starting ?
+                        ChatColor.RESET + "Starting in " +
+                                ChatColor.GREEN + timeUntilStart + "s" :
+
+                        ChatColor.RESET + "Waiting for players!"
+        );
     }
 
     @Override

@@ -26,7 +26,7 @@ public class MathUtil {
         if (trim != 0) {
 
             text =
-                    (unit == TimeUnit.MINUTES) ? (num = trim(trim, time / (60 * 1000))) + " minute" :
+                    (unit == TimeUnit.MINUTES) ? (num = trim(trim, time / (float) (60 * 1000))) + " minute" :
                             (unit == TimeUnit.SECONDS) ? (num = trim(trim, time) / 1000) + " second" :
                                     (int) (num = (int) trim(0, time)) + " millisecond";
         }
@@ -49,7 +49,7 @@ public class MathUtil {
         return getTrajectory(from.toVector(), to.toVector());
     }
 
-    public static Vector getTrajectory(Vector from, Vector to)
+    private static Vector getTrajectory(Vector from, Vector to)
     {
         return to.subtract(from).normalize();
     }
@@ -62,7 +62,7 @@ public class MathUtil {
         return getTrajectory2D(from.toVector(), to.toVector());
     }
 
-    public static Vector getTrajectory2D(Vector from, Vector to)
+    private static Vector getTrajectory2D(Vector from, Vector to)
     {
         return to.subtract(from).setY(0).normalize();
     }
@@ -71,7 +71,7 @@ public class MathUtil {
         return getOffset2D(a.toVector(), b.toVector());
     }
 
-    public static double getOffset2D(Vector a, Vector b) {
+    private static double getOffset2D(Vector a, Vector b) {
         a.setY(0);
         b.setY(0);
         return a.subtract(b).length();
@@ -81,7 +81,7 @@ public class MathUtil {
         return u.clone().subtract(getProjection(onto, u));
     }
 
-    public static Vector getProjection(Vector onto, Vector u) {
+    private static Vector getProjection(Vector onto, Vector u) {
         return onto.clone().multiply(onto.dot(u) / onto.lengthSquared());
     }
 
@@ -101,9 +101,8 @@ public class MathUtil {
         vector.multiply(strength);
         vector.setY(Math.min(vector.getY() + yAdd, yMax));
 
-        if (groundBoost)
-            if (entity.isOnGround())
-                vector.setY(vector.getY() + 0.2);
+        if (groundBoost && entity.isOnGround())
+            vector.setY(vector.getY() + 0.2);
 
         entity.setFallDistance(0F);
         entity.setVelocity(vector);

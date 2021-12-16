@@ -3,6 +3,7 @@ package dev.thomashanson.wizards.game.kit.types;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.WandElement;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -15,7 +16,7 @@ public class KitSorcerer extends WizardsKit {
     public KitSorcerer() {
 
         super (
-                "Sorcerer", ChatColor.YELLOW,
+                "Sorcerer", ChatColor.YELLOW, Color.YELLOW,
 
                 Arrays.asList (
                         "Along with 3 starting wands, can have 6 wands at the max.",
@@ -33,7 +34,7 @@ public class KitSorcerer extends WizardsKit {
     }
 
     @Override
-    public void playIntro(Player player, Location location) {
+    public void playIntro(Player player, Location location, int ticks) {
 
     }
 }

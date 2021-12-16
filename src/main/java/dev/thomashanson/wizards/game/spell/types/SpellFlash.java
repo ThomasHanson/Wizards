@@ -13,7 +13,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.UUID;
 
 public class SpellFlash extends Spell {
@@ -37,7 +36,7 @@ public class SpellFlash extends Spell {
 
             currentRange += 0.2;
 
-            Objects.requireNonNull(newTarget.getWorld()).spawnParticle(Particle.FIREWORKS_SPARK, newTarget, 1, 0, 0.5, 0);
+            player.getWorld().spawnParticle(Particle.FIREWORKS_SPARK, newTarget, 1, 0, 0.5, 0);
         }
 
         currentRange = Math.max(0, currentRange - 0.4);

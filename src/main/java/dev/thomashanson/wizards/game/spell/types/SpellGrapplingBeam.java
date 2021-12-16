@@ -177,7 +177,7 @@ public class SpellGrapplingBeam extends Spell {
 
     public static class ThrowableBlock implements CustomProjectile {
 
-        private Wizard wizard;
+        private final Wizard wizard;
 
         ThrowableBlock(Wizard wizard) {
             this.wizard = wizard;

@@ -11,7 +11,7 @@ import java.util.Objects;
 
 public class ProjectileData {
 
-    private Wizards game;
+    private final Wizards game;
 
     private final Entity entity;
     private final LivingEntity thrower;
@@ -29,7 +29,7 @@ public class ProjectileData {
             volume,
             pitch;
 
-    private double hitboxExpansion;
+    private final double hitboxExpansion;
 
     public ProjectileData (
 
@@ -104,7 +104,7 @@ public class ProjectileData {
         this(game, entity, thrower, callback, hitPlayer, hitBlock, particle, sound, volume, pitch, 0);
     }
 
-    public ProjectileData (
+    private ProjectileData(
 
             Wizards game,
 

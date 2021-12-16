@@ -9,6 +9,7 @@ import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.WandElement;
 import dev.thomashanson.wizards.util.menu.ItemBuilder;
 import org.bukkit.ChatColor;
+import org.bukkit.Color;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.enchantments.Enchantment;
@@ -30,7 +31,7 @@ public class KitLich extends WizardsKit {
     public KitLich(Wizards game) {
 
         super (
-                "Lich", ChatColor.BLACK,
+                "Lich", ChatColor.BLACK, Color.BLACK,
 
                 Arrays.asList (
                         "Gain 10 mana per heart dealt.",
@@ -51,7 +52,7 @@ public class KitLich extends WizardsKit {
     }
 
     @Override
-    public void playIntro(Player player, Location location) {
+    public void playIntro(Player player, Location location, int ticks) {
         Objects.requireNonNull(player.getEquipment()).setHelmet(SKULL);
     }
 

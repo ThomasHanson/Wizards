@@ -15,6 +15,7 @@ import org.bukkit.scheduler.BukkitTask;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -84,6 +85,26 @@ public class OvertimeState extends GameState implements Listener {
         event.setMotd (
                 ChatColor.RED + extra + " - Overtime\n" +
                         ChatColor.RED + "Disaster: " + disaster.getName()
+        );
+    }
+
+    @Override
+    public List<String> getScoreboardLines() {
+
+        Wizards game = getGame();
+
+        return Arrays.asList (
+
+                ChatColor.RESET + "Players left: " +
+                        ChatColor.GREEN + game.getPlayers(true).size(),
+
+                ChatColor.RESET + "Teams left: " +
+                        ChatColor.GREEN + game.getTeams().size(),
+
+                "",
+
+                ChatColor.RESET + "Kills: " + ChatColor.GREEN + "0",
+                ChatColor.RESET + "Assists: " + ChatColor.GREEN + "0"
         );
     }
 

@@ -5,10 +5,7 @@ import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 
 public class LocationUtil {
 
@@ -36,7 +33,7 @@ public class LocationUtil {
         return location.clone().add(new Vector(Math.cos(angle), 0, Math.sin(angle)).normalize().multiply(distance));
     }
 
-    public static Location getLocationNearPlayers(List<Location> locations, Set<Player> players, List<Player> noOverlap) {
+    public static Location getLocationNearPlayers(List<Location> locations, List<Player> players, List<Player> noOverlap) {
 
         Location target = null;
         double bestDistance = 0;
@@ -63,7 +60,7 @@ public class LocationUtil {
             if (!valid)
                 continue;
 
-            //Find closest player
+            // Find closest player
             for (Player player : players) {
 
                 if (!player.getWorld().equals(location.getWorld()))

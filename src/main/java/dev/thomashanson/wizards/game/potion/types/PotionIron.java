@@ -12,7 +12,7 @@ import java.util.UUID;
 
 public class PotionIron extends Potion {
 
-    private Map<UUID, Float> originalSpeeds = new HashMap<>();
+    private final Map<UUID, Float> originalSpeeds = new HashMap<>();
 
     @Override
     public void activate(Wizard wizard) {
@@ -27,6 +27,8 @@ public class PotionIron extends Potion {
 
     @Override
     public void deactivate(Wizard wizard) {
+
+        super.deactivate(wizard);
 
         if (!originalSpeeds.containsKey(wizard.getUniqueId()))
             return;

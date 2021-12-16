@@ -1,6 +1,7 @@
 package dev.thomashanson.wizards.game.spell;
 
 import dev.thomashanson.wizards.damage.DamageTick;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
 import dev.thomashanson.wizards.game.Wizard;
 import dev.thomashanson.wizards.game.Wizards;
 import org.bukkit.block.Block;
@@ -9,7 +10,10 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.NPC;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.util.Vector;
+
+import java.time.Instant;
 
 public abstract class Spell implements Listener {
 
@@ -30,11 +34,9 @@ public abstract class Spell implements Listener {
     }
 
     /**
-     * Represents a spell that is able to be
-     * deflected. This is currently only used
-     * for the Light Shield spell. If a spell
-     * collides with the shield, it will be
-     * deflected.
+     * Represents a spell that is able to be deflected. This is currently
+     * only used for the Light Shield spell. If a spell collides with the
+     * shield, it will be deflected.
      */
     public interface Deflectable {
 
@@ -54,21 +56,18 @@ public abstract class Spell implements Listener {
     public interface Cancellable {
 
         /**
-         * Gets called when a spell gets cancelled.
-         * This is typically called if a player swaps
-         * wands during the use of a spell and if the
-         * spell hits a certain percentage complete.
+         * Gets called when a spell gets cancelled. This is typically
+         * called if a player swaps wands during the use of a spell and
+         * if the spell hits a certain percentage complete.
          * @param player The player who cast the spell.
          */
         void cancelSpell(Player player);
     }
 
     /**
-     * Represents some spell data that is
-     * associated when you cast a spell.
-     * This data includes the slot it was
-     * cast from, the spell that was cast,
-     * and whether or not the user quick
+     * Represents some spell data that is associated when you cast
+     * a spell. This data includes the slot it was cast from, the
+     * spell that was cast, and whether or not the user quick
      * casted the spell or not.
      */
     public static class SpellData {
@@ -225,8 +224,23 @@ public abstract class Spell implements Listener {
         return deflected;
     }
 
-    public void setDeflected(boolean deflected) {
+    // TODO: 12/15/21 add field for damage to be done to the shield too
+    public void setDeflected(boolean deflected, Player shieldUser) {
+
         this.deflected = deflected;
+
+        if (deflected && shieldUser != null) {
+
+            CustomDamageTick damageTick = new CustomDamageTick (
+                    0.5,
+                    EntityDamageEvent.DamageCause.CONTACT,
+                    "Shield Deflection",
+                    Instant.now(),
+                    shieldUser
+            );
+
+            damage(shieldUser, damageTick);
+        }
     }
 
     protected boolean isCancelled() {

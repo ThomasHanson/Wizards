@@ -20,7 +20,7 @@ public abstract class MenuBuilder<T> {
     /**
      * Builds the menu
      */
-    public abstract <T> T build();
+    public abstract T build();
 
     public abstract void dispose();
 }

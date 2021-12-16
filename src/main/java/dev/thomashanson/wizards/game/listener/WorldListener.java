@@ -1,39 +1,45 @@
 package dev.thomashanson.wizards.game.listener;
 
-import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.game.manager.MapManager;
+import org.bukkit.entity.Hanging;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBurnEvent;
 import org.bukkit.event.block.BlockIgniteEvent;
 import org.bukkit.event.block.LeavesDecayEvent;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.hanging.HangingBreakEvent;
+import org.bukkit.event.hanging.HangingPlaceEvent;
 
 public class WorldListener implements Listener {
 
-    private final Wizards game;
-
-    public WorldListener(MapManager mapManager) {
-        this.game = mapManager.getPlugin().getGameManager().getActiveGame();
-    }
-
     @EventHandler
     public void onBlockBurn(BlockBurnEvent event) {
-
-        if (game != null)
-            event.setCancelled(true);
+        event.setCancelled(true);
     }
 
     @EventHandler
     public void onIgnite(BlockIgniteEvent event) {
-
-        if (game != null)
-            event.setCancelled(true);
+        event.setCancelled(true);
     }
 
     @EventHandler
     public void onDecay(LeavesDecayEvent event) {
+        event.setCancelled(true);
+    }
 
-        if (game != null)
+    @EventHandler
+    public void onHangingBreak(HangingBreakEvent event) {
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onHangingPlace(HangingPlaceEvent event) {
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onDamageHanging(EntityDamageEvent event) {
+        if (event.getEntity() instanceof Hanging)
             event.setCancelled(true);
     }
 }

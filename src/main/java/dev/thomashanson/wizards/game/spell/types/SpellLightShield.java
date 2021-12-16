@@ -99,9 +99,9 @@ public class SpellLightShield extends Spell {
     @Override
     public void castSpell(Player player, int level) {
 
-        shields.put(player.getUniqueId(), new ShieldData(player.getLocation()));
-
         Bukkit.getScheduler().scheduleSyncRepeatingTask(getGame().getPlugin(), () -> updateParticles(player), 0L, 1L);
+
+        shields.put(player.getUniqueId(), new ShieldData(player.getLocation()));
     }
 
     private void damageShield(Player player, double damage) {
@@ -154,7 +154,7 @@ public class SpellLightShield extends Spell {
             return;
 
         int ticksLived = stand.getTicksLived();
-        int maxTime = getSpellLevel(player) * 3; //(int) getValue(player, "Length (secs)");
+        int maxTime = getSpellLevel(player) * 3;
 
         if ((ticksLived / 20) >= maxTime) {
             stand.remove();
@@ -201,7 +201,7 @@ public class SpellLightShield extends Spell {
 
     private void updateDisplay(Player player) {
 
-        // TODO: 8/18/21 might want to use packets for this too tbh
+        // potentially use packets to prevent health mismatching
 
         player.setAbsorptionAmount (
                 !shields.containsKey(player.getUniqueId()) ? 0 : shields.get(player.getUniqueId()).getHealth()

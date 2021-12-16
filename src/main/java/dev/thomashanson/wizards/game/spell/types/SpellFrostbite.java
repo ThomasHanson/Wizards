@@ -36,7 +36,7 @@ import java.util.concurrent.ThreadLocalRandom;
 public class SpellFrostbite extends Spell implements CustomProjectile {
 
     private BukkitTask updateTask;
-    private Map<Block, Instant> snowBlocks = new HashMap<>();
+    private final Map<Block, Instant> snowBlocks = new HashMap<>();
 
     @Override
     public void castSpell(Player player, int level) {

@@ -3,7 +3,6 @@ package dev.thomashanson.wizards.game.overtime.types;
 import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.overtime.Disaster;
 import dev.thomashanson.wizards.game.spell.SpellType;
-import org.bukkit.GameMode;
 import org.bukkit.entity.Player;
 
 import java.util.Arrays;
@@ -36,9 +35,8 @@ public class DisasterManaStorm extends Disaster {
     @Override
     public void strike() {
 
-        for (Player player : getGame().getActiveMap().getWorld().getPlayers())
-            if (player.getGameMode() != GameMode.SPECTATOR)
-                player.getWorld().strikeLightning(player.getLocation());
+        for (Player player : getGame().getPlayers(true))
+            player.getWorld().strikeLightning(player.getLocation());
     }
 
     @Override

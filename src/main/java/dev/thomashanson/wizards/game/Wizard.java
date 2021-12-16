@@ -128,7 +128,7 @@ public class Wizard {
                         )
                 );
 
-        if (hasActiveSpite(uniqueId))
+        if (hasActiveSpite())
             cost += 8;
 
         return cost;
@@ -202,7 +202,7 @@ public class Wizard {
         assignedWands[slot] = spell;
     }
 
-    public void decreaseCooldown() {
+    void decreaseCooldown() {
         this.cooldownModifier -= 0.1F;
     }
 
@@ -256,7 +256,7 @@ public class Wizard {
         return "";
     }
 
-    public Wizards getGame() {
+    private Wizards getGame() {
         return game;
     }
 
@@ -404,14 +404,14 @@ public class Wizard {
         return chestsLooted;
     }
 
-    private boolean hasActiveSpite(UUID uuid) {
+    private boolean hasActiveSpite() {
 
-        // Spite spell is not active
+        // Spite is not active
         if (!game.getSpells().containsKey(SpellType.SPITE))
             return false;
 
         SpellSpite spite = (SpellSpite) game.getSpells().get(SpellType.SPITE);
-        return spite.getSpited().containsKey(uuid);
+        return spite.getSpited().containsKey(uniqueId);
     }
 
     SpellType getDisabledSpell() {
