@@ -2,21 +2,29 @@ package dev.thomashanson.wizards.game.mode;
 
 public enum WizardsMode {
 
-    SOLO_NORMAL (1, 16),
-    SOLO_BRAWL (1, 24),
-    SOLO_TOURNEY (1, 40),
+    // Added a 3rd parameter for preparation time in seconds
+    SOLO_NORMAL(1, 16, 10),
+    SOLO_BRAWL(1, 24, 15),
+    SOLO_TOURNEY(1, 40, 10),
 
-    DOUBLES_NORMAL (8, 2),
-    DOUBLES_BRAWL (12, 2),
-    DOUBLES_TOURNEY (20, 2);
-
-    WizardsMode(int numTeams, int numPlayers) {
-        this.numTeams = numTeams;
-        this.numPlayers = numPlayers;
-    }
+    DOUBLES_NORMAL(8, 2, 10),
+    DOUBLES_BRAWL(12, 2, 15),
+    DOUBLES_TOURNEY(20, 2, 10);
 
     private final int numTeams;
-    private final int numPlayers;
+    private final int numPlayersPerTeam;
+    private final int preparationSecs;
+
+    WizardsMode(int numTeams, int numPlayersPerTeam, int preparationSecs) {
+        this.numTeams = numTeams;
+        this.numPlayersPerTeam = numPlayersPerTeam;
+        this.preparationSecs = preparationSecs; // Set the new field
+    }
+
+    // This method is now just a simple getter, with no hard-coded logic.
+    public int getPreparationSecs() {
+        return preparationSecs;
+    }
 
     public boolean isTeamMode() {
         return numTeams > 1;
@@ -26,23 +34,19 @@ public enum WizardsMode {
         return this == SOLO_BRAWL || this == DOUBLES_BRAWL;
     }
 
-    public boolean isTourney() {
-        return this == SOLO_TOURNEY || this == DOUBLES_TOURNEY;
+    public int getMinPlayers() {
+        return (int) (0.75 * numTeams * numPlayersPerTeam);
     }
 
     public int getMaxPlayers() {
-        return numTeams * numPlayers;
+        return numTeams * numPlayersPerTeam;
     }
 
     public int getNumTeams() {
         return numTeams;
     }
 
-    public int getNumPlayers() {
-        return numPlayers;
-    }
-
-    public int getPreparationSecs() {
-        return isBrawl() ? 15 : 10;
+    public int getNumPlayersPerTeam() {
+        return numPlayersPerTeam;
     }
 }

@@ -1,96 +1,154 @@
 package dev.thomashanson.wizards.game.state.types;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.bukkit.Bukkit;
+import org.bukkit.GameMode;
+import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.scheduler.BukkitTask;
+
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.kit.WizardsKit;
+import dev.thomashanson.wizards.game.loot.LootManager;
 import dev.thomashanson.wizards.game.manager.GameManager;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
 import dev.thomashanson.wizards.game.mode.WizardsMode;
 import dev.thomashanson.wizards.game.state.GameState;
 import dev.thomashanson.wizards.game.state.listener.LobbyListener;
 import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
 import dev.thomashanson.wizards.map.LocalGameMap;
-import dev.thomashanson.wizards.util.BlockUtil;
 import dev.thomashanson.wizards.util.EntityUtil;
-import net.md_5.bungee.api.chat.TextComponent;
-import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.block.data.Directional;
-import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitTask;
-
-import java.time.Duration;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.format.TextDecoration;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class LobbyState extends GameState {
 
     private LobbyListener listener;
+    private LanguageManager lang;
     private BukkitTask updateLobbyTask;
-
-    private final List<TextComponent> gameTips = Arrays.asList (
-            new TextComponent("If you level up a spell to its maximum, obtaining more of the same spell will grant you additional mana."),
-            new TextComponent("\"Quick-Cast\" a spell by right-clicking it in your spellbook! This allows you to use a spell without using a wand slot."),
-            new TextComponent("Using multiple spells in combination can lead to devastating results... unless you miss."),
-            new TextComponent("On death, players will drop their soul. Picking one up will increase your mana regeneration rate!"),
-            new TextComponent("Careful management of both your mana and spell cooldowns is the key to success."),
-            new TextComponent("Bend the map to your whim! You can freely place or break blocks in Wizards."),
-            new TextComponent("Looking for other wizards? Use Wizard's Compass to track their locations."),
-            new TextComponent("Expand your magical arsenal by looting spells and wands from chests!"),
-            new TextComponent("Do not take too long as you eliminate your foes. At a certain point, Overtime will kick in, triggering death from above!"),
-            new TextComponent("The more wands a player has, the higher chance they'll drop one on death.")
-    );
 
     private Instant lastTip;
     private int tipIndex = 0;
-    private ChatColor tipColor = ChatColor.YELLOW;
+    private NamedTextColor tipColor = NamedTextColor.YELLOW;
 
     private boolean starting = false;
-    private int timeUntilStart = 10;
+    private int countdownTime;
+    private int timeUntilStart;
 
     @Override
     public void onEnable(WizardsPlugin plugin) {
 
         this.listener = new LobbyListener(plugin);
+        this.lang = plugin.getLanguageManager();
         super.onEnable(plugin);
+
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            listener.setupLobbyPlayer(player);
+        }
+
+        GameManager gameManager = getPlugin().getGameManager();
+        GameState previousState = gameManager.getPreviousState();
+
+        // Check if we arrived here from a completed game
+        if (previousState instanceof ResetState) {
+            Bukkit.getLogger().info("Previous game has ended! Returning to the lobby.");
+        }
+
+        gameManager.getPreviousStates().clear();
+
+        ConfigurationSection lobbyConfig = plugin.getConfig().getConfigurationSection("lobby");
+        this.countdownTime = lobbyConfig.getInt("countdown-seconds", 30);
+        final int tipInterval = lobbyConfig.getInt("tip-interval-seconds", 20);
+        final List<String> gameTipKeys = lobbyConfig.getStringList("game-tips");
 
         updateLobbyTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
 
-            if (lastTip == null || Duration.between(lastTip, Instant.now()).toSeconds() >= 20) {
+            plugin.getGameManager().getScoreboard().updateAllScoreboards();
 
-                tipColor = tipColor == ChatColor.YELLOW ?
-                        ChatColor.GOLD : ChatColor.YELLOW;
+            if (lastTip == null || Duration.between(lastTip, Instant.now()).toSeconds() >= tipInterval) {
 
+                // Alternate the text color
+                tipColor = (tipColor == NamedTextColor.YELLOW) ? NamedTextColor.GOLD : NamedTextColor.YELLOW;
                 lastTip = Instant.now();
 
-                String message = ChatColor.WHITE.toString() + ChatColor.BOLD + "TIP: " + ChatColor.RESET + tipColor + gameTips.get(tipIndex).getText();
+                // Get the key for the current tip
+                String tipKey = gameTipKeys.get(tipIndex);
+                
+                // Build the "TIP: " prefix as a Component
+                Component prefix = Component.text("TIP: ", NamedTextColor.WHITE, TextDecoration.BOLD);
 
+                // Broadcast to all players
                 for (Player player : Bukkit.getOnlinePlayers()) {
+                    
+                    // Translate the tip for each player
+                    Component translatedTip = lang.getTranslated(player, tipKey);
+                    
+                    // Combine the prefix with the colored, translated tip
+                    Component finalMessage = prefix.append(translatedTip.color(tipColor));
+
                     player.playSound(player.getLocation(), Sound.ENTITY_CHICKEN_EGG, 1F, 1F);
-                    player.sendMessage(message);
+                    player.sendMessage(finalMessage);
                 }
 
-                tipIndex = (tipIndex + 1) % gameTips.size();
+                // Move to the next tip for the next broadcast
+                tipIndex = (tipIndex + 1) % gameTipKeys.size();
+            }
+            
+            // If the countdown is starting AND there is no active game, create one!
+            if (getGame() == null) {
+                
+                Wizards newGame = new Wizards(plugin);
+                gameManager.setActiveGame(newGame);
+                newGame.setCurrentMode(gameManager.getNextGameMode());
+
+                // Select a new random map from the manager
+                List<LocalGameMap> maps = plugin.getMapManager().getAllMaps(newGame.getCurrentMode());
+
+                if (maps.isEmpty()) {
+                    Bukkit.getLogger().severe(String.format("No maps found for mode %s! Aborting game start.", newGame.getCurrentMode()));
+                    gameManager.setActiveGame(null); // Abort
+                    return;
+                }
+
+                LocalGameMap randomMap = maps.get(ThreadLocalRandom.current().nextInt(maps.size()));
+                plugin.getMapManager().setActiveMap(randomMap);
+
+                // Verify that the map actually loaded before continuing
+                if (plugin.getMapManager().getActiveMap() == null || !plugin.getMapManager().getActiveMap().isLoaded()) {
+                    Bukkit.getLogger().severe(String.format("Failed to load map %s! Aborting game start.", randomMap.getName()));
+                    gameManager.setActiveGame(null); // Abort
+                    return;
+                }
+
+                newGame.getTeamManager().setupTeams();
+                plugin.getServer().getPluginManager().registerEvents(newGame, plugin);
+                Bukkit.getLogger().info(String.format("New game instance created. Map is '%s'.", randomMap.getName()));
             }
 
-            if (!plugin.getGameManager().canStart()) {
-                starting = false;
-                timeUntilStart = 10;
+            if (!gameManager.canStart()) {
+                if (starting) { // If countdown was running but players left
+                    starting = false;
+                    Bukkit.broadcast(lang.getTranslated(null, "wizards.game.startCancelled"));
+                }
+                timeUntilStart = countdownTime; // Reset timer
                 return;
             }
 
             if (timeUntilStart <= 0) {
-                plugin.getGameManager().setState(new PrepareState());
+                gameManager.setState(new PrepareState());
 
             } else {
-
                 if (timeUntilStart == 10 || timeUntilStart <= 5) {
-
-                    Bukkit.broadcastMessage(ChatColor.GREEN + "Starting in " + timeUntilStart + "...");
-
+                    Bukkit.broadcast(Component.text("Starting in " + timeUntilStart + "...", NamedTextColor.GREEN));
                     for (Player player : Bukkit.getOnlinePlayers())
                         player.playSound(player.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 1F, 1F);
                 }
@@ -111,73 +169,71 @@ public class LobbyState extends GameState {
             updateLobbyTask.cancel();
 
         for (Player player : Bukkit.getOnlinePlayers())
-            EntityUtil.resetPlayer(player, !player.hasMetadata(GameManager.SPECTATING_KEY) ? GameMode.ADVENTURE : GameMode.SPECTATOR);
+            EntityUtil.resetPlayer(player, GameMode.ADVENTURE);
 
+        Wizards game = getGame();
+
+        if (game == null) return;
+
+        LootManager lootManager = game.getLootManager();
+        LocalGameMap selectedMap = game.getActiveMap();
+        WizardsMode wizardsMode = game.getCurrentMode();
+
+        lootManager.populateMapWithLoot(selectedMap, wizardsMode);
         //createRandomChests(getGame().getActiveMap());
     }
 
-    private void createRandomChests(LocalGameMap gameMap) {
-
-        Set<Material> ignore = new HashSet<> (
-
-                Arrays.asList (
-                        Material.ACACIA_LEAVES,
-                        Material.BIRCH_LEAVES,
-                        Material.DARK_OAK_LEAVES,
-                        Material.JUNGLE_LEAVES,
-                        Material.OAK_LEAVES,
-                        Material.SPRUCE_LEAVES
-                )
-        );
-
-        int xDiff = (int) (gameMap.getMaxX() - gameMap.getMinX());
-        int zDiff = (int) (gameMap.getMaxZ() - gameMap.getMinZ());
-
-        int done = 0;
-
-        while (done++ < 40) {
-
-            Block block = gameMap.getWorld().getHighestBlockAt (
-                    (int) (gameMap.getMinX() + ThreadLocalRandom.current().nextInt(xDiff)),
-                    (int) (gameMap.getMinZ() + ThreadLocalRandom.current().nextInt(zDiff))
-            );
-
-            while (block.getY() > 0 && (!block.getType().isSolid() || (ignore.contains(block.getType()))))
-                block = block.getRelative(BlockFace.DOWN);
-
-            block = block.getRelative(BlockFace.UP);
-            block.setType(Material.CHEST);
-
-            int numValues = BlockUtil.AXIS.length;
-            BlockFace randomDirection = BlockUtil.AXIS[ThreadLocalRandom.current().nextInt(numValues)];
-
-            ((Directional) block.getBlockData()).setFacing(randomDirection);
-            getGame().fillChest(block);
-        }
+    public void cancelCountdown() {
+        this.countdownTime = 0;
     }
 
     @Override
-    public List<String> getScoreboardLines() {
+    public List<Component> getScoreboardComponents(Player player) {
+        LanguageManager lang = getPlugin().getLanguageManager();
+        List<Component> components = new ArrayList<>();
 
         Wizards game = getGame();
+
+        // If no game has been created yet, show a default lobby board.
+        if (game == null) {
+            int playerCount = Bukkit.getOnlinePlayers().size();
+            // A default max players, or you can get it from config
+            // TODO: Change this later (set the mode again)
+            int maxPlayers = getPlugin().getConfig().getInt("defaultMaxPlayers", 24); 
+
+            components.add(lang.getTranslated(player, "wizards.scoreboard.lobby.players",
+                Placeholder.unparsed("players", playerCount + "/" + maxPlayers)
+            ));
+            components.add(Component.text(""));
+            components.add(lang.getTranslated(player, "wizards.scoreboard.lobby.waiting"));
+            return components;
+        }
+
         WizardsMode mode = game.getCurrentMode();
-
         int playerCount = Bukkit.getOnlinePlayers().size();
-        int maxPlayers = mode.getMaxPlayers();
+        String playersText = playerCount + "/" + mode.getMaxPlayers();
 
-        return Arrays.asList (
+        WizardsKit selectedKit = getPlugin().getGameManager().getKitManager().getKit(player);
 
-                ChatColor.RESET + "Players: " +
-                        ChatColor.GREEN + playerCount + "/" + maxPlayers,
+        components.add(lang.getTranslated(player, "wizards.scoreboard.lobby.players",
+            Placeholder.unparsed("players", playersText)
+        ));
+        components.add(Component.text("")); // Spacer
 
-                "",
+        if (starting) {
+            components.add(lang.getTranslated(player, "wizards.scoreboard.lobby.startingIn",
+                Placeholder.unparsed("time", String.valueOf(timeUntilStart))
+            ));
+        } else {
+            components.add(lang.getTranslated(player, "wizards.scoreboard.lobby.waiting"));
+        }
+        components.add(Component.text("")); // Spacer
 
-                starting ?
-                        ChatColor.RESET + "Starting in " +
-                                ChatColor.GREEN + timeUntilStart + "s" :
-
-                        ChatColor.RESET + "Waiting for players!"
-        );
+        components.add(lang.getTranslated(player, "wizards.scoreboard.lobby.kit",
+            Placeholder.component("kit", lang.getTranslated(player, selectedKit.getNameKey()))
+        ));
+        
+        return components;
     }
 
     @Override

@@ -37,12 +37,10 @@ public class MathUtil {
         return text;
     }
 
-    public static double trim(int degree, double decimal) {
-
-        DecimalFormatSymbols formatSymbols = new DecimalFormatSymbols(Locale.US);
-        DecimalFormat decimalFormat = new DecimalFormat("#.#" + "#".repeat(Math.max(0, degree - 1)), formatSymbols);
-
-        return Double.parseDouble(decimalFormat.format(decimal));
+    public static double trim(int degree, double value) {
+        DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.US);
+        DecimalFormat twoDForm = new DecimalFormat("#.#" + "#".repeat(Math.max(0, degree - 1)), symbols);
+        return Double.parseDouble(twoDForm.format(value));
     }
 
     public static Vector getTrajectory(Location from, Location to) {

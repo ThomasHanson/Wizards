@@ -10,20 +10,13 @@ import dev.thomashanson.wizards.game.potion.Potion;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 
-import java.lang.reflect.InvocationTargetException;
-
 public class PotionSight extends Potion {
 
     @Override
-    public void activate(Wizard wizard) {
-
-    }
+    public void onActivate(Wizard wizard) {}
 
     @Override
-    public void deactivate(Wizard wizard) {
-
-        super.deactivate(wizard);
-    }
+    public void onDeactivate(Wizard wizard) {}
 
     public void setGlow(Entity entity, Player target, boolean glow) {
 
@@ -40,11 +33,7 @@ public class PotionSight extends Potion {
 
         packet.getWatchableCollectionModifier().write(0, watcher.getWatchableObjects());
 
-        try {
-            pm.sendServerPacket(target, packet);
+        pm.sendServerPacket(target, packet);
 
-        } catch (InvocationTargetException e) {
-            e.printStackTrace();
-        }
     }
 }

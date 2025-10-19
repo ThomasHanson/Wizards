@@ -1,226 +1,183 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.util.BlockUtil;
-import net.md_5.bungee.api.chat.TranslatableComponent;
-import org.apache.commons.lang.Validate;
-import org.bukkit.*;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.*;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
 
-public class SpellTrapRune extends Spell {
+public class SpellTrapRune extends Spell implements Tickable {
 
-    private static BukkitTask updateTask;
-    private final Map<UUID, List<TrapRune>> runes = new HashMap<>();
+    private final List<TrapRune> activeRunes = new ArrayList<>();
+
+    public SpellTrapRune(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
+    }
 
     @Override
-    public void castSpell(Player player, int level) {
+    public boolean cast(Player player, int level) {
+        StatContext context = StatContext.of(level);
+        int range = (int) getStat("range", level);
+        List<Block> targetBlocks = player.getLastTwoTargetBlocks(null, range);
 
-        if (updateTask == null) {
-
-            updateTask = new BukkitRunnable() {
-
-                @Override
-                public void run() {
-                    for (List<TrapRune> runes : runes.values())
-                        runes.removeIf(TrapRune::updateRune);
-                }
-            }.runTaskTimer(getGame().getPlugin(), 0L, 1L);
+        // We need two blocks: the one before the target (air) and the target (solid).
+        if (targetBlocks.size() < 2 || !targetBlocks.get(1).getType().isSolid()) {
+            return false;
         }
 
-        List<Block> list = player.getLastTwoTargetBlocks(null, (level * 4) + 4);
+        Block targetBlock = targetBlocks.get(1); // The solid block the player is looking at.
+        Block adjacentBlock = targetBlocks.get(0); // The air block just in front of the target.
 
-        if (list.size() > 1) {
+        // Correctly determine the face of the solid block that was hit.
+        BlockFace hitFace = targetBlock.getFace(adjacentBlock);
 
-            Location location = list.get(0).getLocation().add(0.5, 0, 0.5);
+        // The rune should be placed in the air block adjacent to the face that was hit.
+        // We add a small 0.1 Y-offset to place it just above the ground.
+        Location location = targetBlock.getRelative(hitFace).getLocation().add(0.5, 0.1, 0.5);
 
-            if (location.getBlock().getRelative(BlockFace.DOWN).getType() == Material.AIR)
-                return;
+        // Enforce rune limit
+        int maxRunes = (int) getStat("max-runes", level);
+        List<TrapRune> playerRunes = activeRunes.stream()
+                .filter(rune -> rune.owner.equals(player))
+                .collect(Collectors.toList());
 
-            TrapRune newRune = new TrapRune(getGame(), player, location, level);
-
-            if (newRune.isInvalid()) {
-
-                TranslatableComponent invalidRune = new TranslatableComponent("wizards.invalidRune");
-                player.spigot().sendMessage(invalidRune);
-
-                return;
-            }
-
-            newRune.createParticles();
-
-            List<TrapRune> existingRunes = runes.getOrDefault(player.getUniqueId(), new ArrayList<>());
-
-            if (existingRunes.size() >= 3)
-                existingRunes.remove(0);
-
-            for (TrapRune existingRune : existingRunes) {
-
-                if (existingRune.equals(newRune))
-                    continue;
-
-                if (newRune.location.distance(existingRune.location) <= newRune.size) {
-                    newRune.explodeTrap();
-                    existingRune.explodeTrap();
-                    return;
-                }
-            }
-
-            existingRunes.add(newRune);
-            runes.put(player.getUniqueId(), existingRunes);
+        if (playerRunes.size() >= maxRunes) {
+            playerRunes.get(0).cleanup();
+            activeRunes.remove(playerRunes.get(0));
         }
+
+        activeRunes.add(new TrapRune(this, player, location, level));
+        return true;
+    }
+
+    @Override
+    public void tick(long gameTick) {
+        if (activeRunes.isEmpty()) return;
+        activeRunes.removeIf(TrapRune::tick);
     }
 
     @Override
     public void cleanup() {
-
-        updateTask.cancel();
-        updateTask = null;
-
-        runes.clear();
+        activeRunes.forEach(TrapRune::cleanup);
+        activeRunes.clear();
     }
 
-    static class TrapRune {
+    private static class TrapRune {
+        enum State { ARMING, ACTIVE }
 
-        private final Wizards game;
+        final SpellTrapRune parent;
+        final Player owner;
+        final Location location;
+        final int level;
 
-        private final Location location;
-        private final float size;
-        private final Player owner;
-        private int ticksLived;
+        // Configurable stats
+        final double size;
+        final int armingTicks;
+        final int lifespanTicks;
+        final double damage;
+        final double knockback;
 
-        boolean updateRune() {
+        private State state = State.ARMING;
+        private int ticksLived = 0;
 
-            if (!owner.isOnline() || owner.getGameMode() == GameMode.SPECTATOR) {
-                return true;
-
-            } else if (ticksLived++ > 2000) {
-                return true;
-
-            } else {
-
-                if (ticksLived <= 100) {
-
-                    if (ticksLived % 15 == 0)
-                        createParticles();
-
-                    if (ticksLived == 100)
-                        owner.getWorld().spawnParticle (Particle.FIREWORKS_SPARK, location, (int) (size * 10), 0, size / 4, 0, size / 4);
-
-                } else {
-
-                    if (isInvalid()) {
-
-                        explodeTrap();
-                        return true;
-
-                    } else {
-
-                        for (Player player : game.getPlayers(true)) {
-
-                            if (isInTrap(player.getLocation())) {
-                                explodeTrap();
-                                return true;
-                            }
-                        }
-                    }
-                }
-            }
-
-            return false;
-        }
-
-        TrapRune(Wizards game, Player owner, Location location, int spellLevel) {
-            this.game = game;
+        TrapRune(SpellTrapRune parent, Player owner, Location location, int level) {
+            this.parent = parent;
             this.owner = owner;
             this.location = location;
-            this.size = Math.max(1, spellLevel * 0.8F);
+            this.level = level;
+
+            StatContext context = StatContext.of(level);
+            this.size = parent.getStat("rune-size", level);
+            this.armingTicks = (int) parent.getStat("arming-ticks", level);
+            this.lifespanTicks = (int) parent.getStat("lifespan-ticks", level);
+            this.damage = parent.getStat("damage", level);
+            this.knockback = parent.getStat("knockback-strength", level);
         }
 
-        void createParticles() {
-
-            for (Location location : getBox())
-                for (double y = 0; y < 1; y += 0.2)
-                    if (location.getWorld() != null)
-                        location.getWorld().spawnParticle(Particle.SMOKE_NORMAL, location, 1);
-        }
-
-        List<Location> getBox() {
-
-            List<Location> boxCorners = getBoxCorners();
-            List<Location> returns = new ArrayList<>();
-
-            for (int i = 0; i < boxCorners.size(); i++) {
-
-                int a = i + 1 >= boxCorners.size() ? 0 : i + 1;
-
-                returns.addAll(BlockUtil.getLinesDistancedPoints(boxCorners.get(i), boxCorners.get(a), 0.3));
-                returns.add(boxCorners.get(i));
+        boolean tick() {
+            ticksLived++;
+            if (!owner.isOnline() || ticksLived > lifespanTicks) {
+                cleanup();
+                return true;
             }
 
-            return returns;
-        }
-
-        List<Location> getBoxCorners() {
-
-            List<Location> boxPoints = new ArrayList<>();
-
-            boxPoints.add(location.clone().add(-size, 0, -size));
-            boxPoints.add(location.clone().add(-size, 0, size));
-            boxPoints.add(location.clone().add(size, 0, -size));
-            boxPoints.add(location.clone().add(size, 0, size));
-
-            return boxPoints;
-        }
-
-        boolean isInTrap(Location location) {
-
-            if (location.getX() >= this.location.getX() - size && location.getX() <= this.location.getX() + size)
-                if (location.getZ() >= this.location.getZ() - size && location.getZ() <= this.location.getZ() + size)
-                    return location.getY() >= this.location.getY() - 0.1 && location.getY() <= this.location.getY() + 0.9;
-
+            if (state == State.ARMING) {
+                tickArming();
+            } else {
+                return tickActive();
+            }
             return false;
         }
 
-        boolean isInvalid() {
-            return !location.getBlock().getType().isSolid() &&
-                    !location.getBlock().getRelative(BlockFace.DOWN).getType().isSolid();
+        void tickArming() {
+            if (ticksLived % 15 == 0) renderRune();
+            if (ticksLived >= armingTicks) {
+                state = State.ACTIVE;
+                location.getWorld().playSound(location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1.0F, 0.5F);
+            }
         }
 
-        void explodeTrap() {
+        boolean tickActive() {
+            for (Player player : parent.plugin.getServer().getOnlinePlayers()) {
+                if (player.getWorld().equals(location.getWorld()) && location.distanceSquared(player.getLocation()) < size * size) {
+                    explode();
+                    return true;
+                }
+            }
+            return false;
+        }
 
-            Validate.notNull(location.getWorld());
+        void explode() {
+            location.getWorld().playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 1.5F, 1.2F);
+            location.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, location, 1);
 
-            location.getWorld().playSound(location, Sound.ENTITY_WITHER_SHOOT, 5, size * 2);
+            for (LivingEntity target : location.getWorld().getNearbyLivingEntities(location, size)) {
+                double distance = target.getLocation().distance(location);
+                double falloff = Math.max(0, 1.0 - (distance / size));
+                
+                parent.damage(target, new CustomDamageTick(damage * falloff, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, parent.getKey(), Instant.now(), owner, null));
+                
+                Vector direction = target.getLocation().toVector().subtract(location.toVector()).normalize();
+                if (direction.lengthSquared() < 0.01) direction.setY(1);
+                target.setVelocity(direction.multiply(knockback * falloff));
+            }
+            cleanup();
+        }
 
-            /*
-            CustomExplosion explosion = new CustomExplosion(game.getArcadeManager().GetDamage(), game.getArcadeManager()
-                    .GetExplosion(), location.clone().add(0, 0.3, 0), (float) size * 1.2F, "Trap Rune");
+        void renderRune() {
+            for (Location point : getRuneCorners()) {
+                location.getWorld().spawnParticle(Particle.TOWN_AURA, point, 1, 0, 0, 0, 0);
+            }
+        }
 
-            explosion.setPlayer(owner, true);
+        List<Location> getRuneCorners() {
+            List<Location> corners = new ArrayList<>();
+            corners.add(location.clone().add(-size, 0, -size));
+            corners.add(location.clone().add(size, 0, -size));
+            corners.add(location.clone().add(size, 0, size));
+            corners.add(location.clone().add(-size, 0, size));
+            return corners;
+        }
 
-            explosion.setBlockExplosionSize((float) size * 2F);
-
-            explosion.setFallingBlockExplosion(true);
-
-            explosion.setDropItems(false);
-
-            explosion.setMaxDamage((spellLevel * 4) + 6);
-
-            explosion.explode();
-
-             */
-
-            for (Location location : getBox())
-                for (double y = 0; y < 1; y += 0.2)
-                    if (location.getWorld() != null)
-                        location.getWorld().playEffect(location, Effect.SMOKE, 1, 30);
+        void cleanup() {
+            // Can add a fade-out particle effect here
         }
     }
 }

@@ -1,22 +1,22 @@
 package dev.thomashanson.wizards.util;
 
+import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
+import com.comphenix.protocol.events.PacketAdapter;
 import com.comphenix.protocol.events.PacketContainer;
+import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.google.common.collect.MapMaker;
+import com.comphenix.protocol.wrappers.Pair;
 import dev.thomashanson.wizards.event.EquipmentSendingEvent;
-import org.bukkit.Material;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.Map;
-
-import static com.comphenix.protocol.PacketType.Play.Server.ENTITY_EQUIPMENT;
+import java.util.*;
 
 /**
  * Modify player equipment.
@@ -24,105 +24,21 @@ import static com.comphenix.protocol.PacketType.Play.Server.ENTITY_EQUIPMENT;
  */
 public abstract class FakeEquipment {
 
-    public enum EquipmentSlot {
-
-        HELD(0),
-        HELD_OFFHAND(1),
-        BOOTS(2),
-        LEGGINGS(3),
-        CHESTPLATE(4),
-        HELMET(5);
-
-        private final int id;
-
-        EquipmentSlot(int id) {
-            this.id = id;
-        }
-
-        /**
-         * Retrieve the entity's equipment in the current slot.
-         * @param entity - the entity.
-         * @return The equipment.
-         */
-        ItemStack getEquipment(LivingEntity entity) {
-
-            if (entity.getEquipment() == null)
-                return null;
-
-            switch (this) {
-                case HELD: return entity.getEquipment().getItemInMainHand();
-                case BOOTS: return entity.getEquipment().getBoots();
-                case LEGGINGS: return entity.getEquipment().getLeggings();
-                case CHESTPLATE: return entity.getEquipment().getChestplate();
-                case HELMET: return entity.getEquipment().getHelmet();
-                default: throw new IllegalArgumentException("Unknown slot: " + this);
-            }
-        }
-
-        /**
-         * Determine if the entity has an equipment in the current slot.
-         * @param entity - the entity.
-         * @return True if it is empty, false otherwise.
-         */
-        public boolean isEmpty(LivingEntity entity) {
-            ItemStack stack = getEquipment(entity);
-            return stack != null && stack.getType() == Material.AIR;
-        }
-
-        /**
-         * Retrieve the underlying equipment slot ID.
-         * @return The ID.
-         */
-        int getId() {
-            return id;
-        }
-
-        EnumWrappers.ItemSlot toWrapper() {
-
-            switch (this) {
-
-                case BOOTS: return EnumWrappers.ItemSlot.FEET;
-                case LEGGINGS: return EnumWrappers.ItemSlot.LEGS;
-                case CHESTPLATE: return EnumWrappers.ItemSlot.CHEST;
-                case HELMET: return EnumWrappers.ItemSlot.HEAD;
-
-                case HELD_OFFHAND: return EnumWrappers.ItemSlot.OFFHAND;
-                default: return EnumWrappers.ItemSlot.MAINHAND;
-            }
-        }
-
-        /**
-         * Find the corresponding equipment slot.
-         * @param id - the slot ID.
-         * @return The equipment slot.
-         */
-        public static EquipmentSlot fromId(int id) {
-
-            for (EquipmentSlot slot : values())
-                if (slot.getId() == id)
-                    return slot;
-
-            throw new IllegalArgumentException("Cannot find slot id: " + id);
-        }
-    }
-
-    // Necessary to detect duplicate
-    private Map<Object, EquipmentSlot> processedPackets = new MapMaker().weakKeys().makeMap();
+    private Map<Object, EnumWrappers.ItemSlot> processedPackets = new WeakHashMap<>();
 
     private final Plugin plugin;
     private final ProtocolManager manager;
 
     private PacketListener listener;
 
-    protected FakeEquipment(Plugin plugin) {
+    public FakeEquipment(Plugin plugin) {
 
         this.plugin = plugin;
         this.manager = ProtocolLibrary.getProtocolManager();
 
-        /*
         manager.addPacketListener (
 
-                listener = new PacketAdapter(plugin, ENTITY_EQUIPMENT, NAMED_ENTITY_SPAWN) {
+                listener = new PacketAdapter(plugin, PacketType.Play.Server.ENTITY_EQUIPMENT, PacketType.Play.Server.NAMED_ENTITY_SPAWN) {
 
                     @Override
                     public void onPacketSending(PacketEvent event) {
@@ -130,11 +46,56 @@ public abstract class FakeEquipment {
                         PacketContainer packet = event.getPacket();
                         PacketType type = event.getPacketType();
 
-                        // The entity that is being displayed on the player's screen
                         LivingEntity visibleEntity = (LivingEntity) packet.getEntityModifier(event).read(0);
+
                         Player observingPlayer = event.getPlayer();
 
-                        if (ENTITY_EQUIPMENT.equals(type)) {
+                        if (type == PacketType.Play.Server.ENTITY_EQUIPMENT) {
+
+                            Pair<EnumWrappers.ItemSlot, ItemStack> pair = packet.getSlotStackPairLists().read(0).get(0);
+
+                            EnumWrappers.ItemSlot slot = pair.getFirst();
+                            ItemStack equipment = pair.getSecond();
+
+                            EquipmentSendingEvent sendingEvent = new EquipmentSendingEvent(observingPlayer, visibleEntity, slot, equipment);
+
+                            if (sendingEvent.isCancelled())
+                                return;
+
+                            EnumWrappers.ItemSlot previous = processedPackets.get(packet.getHandle());
+
+                            if (previous != null) {
+
+                                // Clone it - otherwise, we'll lose the old modification
+                                packet = event.getPacket().deepClone();
+                                sendingEvent.setSlot(previous);
+
+                                sendingEvent.setEquipment(Objects.requireNonNull(visibleEntity.getEquipment()).getItem(EquipmentSlot.HAND));
+                            }
+
+                            if (onEquipmentSending(sendingEvent))
+                                processedPackets.put(packet.getHandle(), previous != null ? previous : slot);
+
+                            // Save changes
+                            if (slot != sendingEvent.getSlot()) {
+
+                                List<Pair<EnumWrappers.ItemSlot, ItemStack>> pairList = new ArrayList<>();
+                                pairList.add(new Pair<>(slot, Objects.requireNonNull(visibleEntity.getEquipment()).getItem(getSlot(slot))));
+
+                                packet.getSlotStackPairLists().write(0, pairList);
+                            }
+
+                            if (equipment != sendingEvent.getEquipment()) {
+
+                                List<Pair<EnumWrappers.ItemSlot, ItemStack>> pairList = new ArrayList<>();
+                                pairList.add(new Pair<>(sendingEvent.getSlot(), sendingEvent.getEquipment()));
+
+                                packet.getSlotStackPairLists().write(0, pairList);
+                            }
+                        }
+
+                        /*
+                        if (type == PacketType.Play.Server.ENTITY_EQUIPMENT) {
 
                             EquipmentSlot slot = EquipmentSlot.fromId(packet.getIntegers().read(1));
                             ItemStack equipment = packet.getItemModifier().read(0);
@@ -165,17 +126,20 @@ public abstract class FakeEquipment {
                             if (equipment != sendingEvent.getEquipment())
                                 packet.getItemModifier().write(0, sendingEvent.getEquipment());
 
-                        } else if (NAMED_ENTITY_SPAWN.equals(type)) {
+                        } else {
 
                             // Trigger updates?
                             onEntitySpawn(observingPlayer, visibleEntity);
-
-                        } else {
-                            throw new IllegalArgumentException("Unknown packet type:" + type);
                         }
+                        */
                     }
-                });
-         */
+
+                    @Override
+                    public void onPacketReceiving(PacketEvent event) {
+                        DebugUtil.debugMessage("Hey", event.getPlayer());
+                    }
+                }
+        );
     }
 
     /**
@@ -196,6 +160,19 @@ public abstract class FakeEquipment {
      */
     protected abstract boolean onEquipmentSending(EquipmentSendingEvent equipmentEvent);
 
+    public EquipmentSlot getSlot(EnumWrappers.ItemSlot slot) {
+
+        switch (slot) {
+
+            case MAINHAND: return EquipmentSlot.HAND;
+            case OFFHAND: return EquipmentSlot.OFF_HAND;
+            case FEET: return EquipmentSlot.FEET;
+            case LEGS: return EquipmentSlot.LEGS;
+            case CHEST: return EquipmentSlot.CHEST;
+            default: return EquipmentSlot.HEAD;
+        }
+    }
+
     /**
      * Update the given slot.
      * @param client - the observing client.
@@ -207,22 +184,18 @@ public abstract class FakeEquipment {
         if (listener == null)
             throw new IllegalStateException("FakeEquipment has closed.");
 
-        final PacketContainer equipmentPacket = new PacketContainer(ENTITY_EQUIPMENT);
+        final PacketContainer equipmentPacket = new PacketContainer(PacketType.Play.Server.ENTITY_EQUIPMENT);
 
         equipmentPacket.getIntegers().write(0, visibleEntity.getEntityId());
 
+        /*
         equipmentPacket.getItemSlots().write(0, slot.toWrapper());
         equipmentPacket.getItemModifier().write(0, slot.getEquipment(visibleEntity));
+         */
 
         // We have to send the packet AFTER named entity spawn has been sent
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> {
-
-            try {
-                ProtocolLibrary.getProtocolManager().sendServerPacket(client, equipmentPacket);
-
-            } catch (InvocationTargetException e) {
-                throw new RuntimeException("Unable to update slot.", e);
-            }
+            ProtocolLibrary.getProtocolManager().sendServerPacket(client, equipmentPacket);
         });
     }
 
@@ -235,5 +208,9 @@ public abstract class FakeEquipment {
             manager.removePacketListener(listener);
             listener = null;
         }
+    }
+
+    public PacketListener getListener() {
+        return listener;
     }
 }

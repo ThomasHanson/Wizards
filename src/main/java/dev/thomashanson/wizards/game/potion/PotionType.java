@@ -1,16 +1,31 @@
 package dev.thomashanson.wizards.game.potion;
 
-import dev.thomashanson.wizards.game.potion.types.*;
-import dev.thomashanson.wizards.util.menu.ItemBuilder;
-import net.md_5.bungee.api.ChatColor;
-import org.bukkit.Color;
-import org.bukkit.Material;
-import org.bukkit.inventory.ItemStack;
-
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import org.bukkit.Color;
+import org.bukkit.Material;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.persistence.PersistentDataType;
+
+import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.potion.types.PotionFrozen;
+import dev.thomashanson.wizards.game.potion.types.PotionGambler;
+import dev.thomashanson.wizards.game.potion.types.PotionIron;
+import dev.thomashanson.wizards.game.potion.types.PotionLuck;
+import dev.thomashanson.wizards.game.potion.types.PotionMana;
+import dev.thomashanson.wizards.game.potion.types.PotionRegeneration;
+import dev.thomashanson.wizards.game.potion.types.PotionRusher;
+import dev.thomashanson.wizards.game.potion.types.PotionSight;
+import dev.thomashanson.wizards.game.potion.types.PotionVolatile;
+import dev.thomashanson.wizards.game.potion.types.PotionWisdom;
+import dev.triumphteam.gui.builder.item.ItemBuilder;
+import net.kyori.adventure.text.Component;
+import net.md_5.bungee.api.ChatColor;
 
 public enum PotionType {
 
@@ -131,28 +146,29 @@ public enum PotionType {
 
     public ItemStack createPotion() {
 
-        ItemBuilder builder = new ItemBuilder(Material.POTION);
-        List<String> potionLore = new ArrayList<>();
+        List<Component> potionLore = new ArrayList<>();
 
-        builder.withName(ChatColor.RESET + potionName);
+        potionLore.add(Component.text(""));
+        Arrays.stream(description).forEach(line -> potionLore.add(Component.text(ChatColor.GRAY + line)));
+        
+        ItemStack potionItem  = ItemBuilder
+                .from(Material.POTION)
+                .name(Component.text(ChatColor.WHITE + potionName + (!duration.isZero() ? (" (" + duration.toSeconds() + " seconds" + ")") : "")))
+                .lore(potionLore)
+                .build();
 
-        potionLore.add("");
-        Arrays.stream(description).forEach(line -> potionLore.add(ChatColor.GRAY + line));
-        potionLore.add("");
+        ItemMeta itemMeta = potionItem .getItemMeta();
 
-        if (duration.toSeconds() > 0) {
-
-            potionLore.add (
-                    ChatColor.GRAY + "Duration: " +
-                            ChatColor.RED + "" + ChatColor.BOLD + duration.toSeconds() +
-                            ChatColor.GRAY + " seconds"
-            );
+        if (itemMeta != null) {
+                itemMeta.getPersistentDataContainer().set(Wizards.POTION_ID_KEY, PersistentDataType.STRING, this.name());
+                
+                PotionMeta potionMeta = (PotionMeta) itemMeta;
+                potionMeta.setColor(color);
+                
+                potionItem.setItemMeta(potionMeta);
         }
 
-        builder.withLore(potionLore);
-        builder.withPotionColor(color);
-
-        return builder.hideAttributes().get();
+        return potionItem;
     }
 
     public String getPotionName() {
@@ -166,5 +182,4 @@ public enum PotionType {
     public Class<? extends Potion> getPotionClass() {
         return potionClass;
     }
-
 }

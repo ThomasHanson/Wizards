@@ -1,9 +1,5 @@
 package dev.thomashanson.wizards.game.state.listener;
 
-import dev.thomashanson.wizards.WizardsPlugin;
-import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.map.LocalGameMap;
-import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -18,6 +14,13 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.inventory.Inventory;
+
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
+import dev.thomashanson.wizards.map.LocalGameMap;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class PrepareListener extends StateListenerProvider {
 
@@ -50,6 +53,7 @@ public class PrepareListener extends StateListenerProvider {
     public void onServerPing(ServerListPingEvent event) {
 
         Wizards game = plugin.getGameManager().getActiveGame();
+        LanguageManager lang = plugin.getLanguageManager();
 
         event.setMaxPlayers(game.getCurrentMode().getMaxPlayers());
 
@@ -58,12 +62,16 @@ public class PrepareListener extends StateListenerProvider {
         if (selectedMap == null)
             return;
 
-        String extra = game.getCurrentMode().toString();
+        String modeName = game.getCurrentMode().toString();
 
-        event.setMotd (
-                ChatColor.GOLD + extra + " - Preparing Map\n" +
-                        ChatColor.YELLOW + "Map Selected: " + ChatColor.GOLD + selectedMap.getName()
+        Component motd = lang.getTranslated(
+                null,
+                "wizards.motd.preparing",
+                Placeholder.unparsed("mode", modeName),
+                Placeholder.unparsed("map_name", selectedMap.getName())
         );
+
+        event.motd(motd);
     }
 
     @EventHandler
@@ -90,9 +98,6 @@ public class PrepareListener extends StateListenerProvider {
                 from = event.getFrom(),
                 to = event.getTo();
 
-        if (to == null)
-            return;
-
         if (from.toVector().distanceSquared(to.toVector()) <= 0)
             return;
 
@@ -101,6 +106,8 @@ public class PrepareListener extends StateListenerProvider {
 
         event.setTo(from);
     }
+
+
 
     @EventHandler
     public void onDamage(EntityDamageEvent event) {

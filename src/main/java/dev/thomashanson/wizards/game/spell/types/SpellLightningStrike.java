@@ -1,145 +1,96 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.damage.types.CustomDamageTick;
-import dev.thomashanson.wizards.game.Wizard;
-import dev.thomashanson.wizards.game.overtime.types.DisasterLightning;
-import dev.thomashanson.wizards.game.spell.Spell;
-import org.apache.commons.lang.Validate;
-import org.bukkit.*;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
+import java.time.Instant;
+import java.util.UUID;
+
+import org.bukkit.Bukkit;
+import org.bukkit.FluidCollisionMode;
+import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.LightningStrike;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.util.Vector;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.RayTraceResult;
+import org.jetbrains.annotations.NotNull;
 
-import java.time.Instant;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
+import dev.thomashanson.wizards.util.ExplosionUtil;
 
 public class SpellLightningStrike extends Spell {
 
-    private static final int MAX_RANGE = 150;
+    private final NamespacedKey lightningKey;
+    private final NamespacedKey casterKey;
+    private final NamespacedKey damageKey;
+
+    public SpellLightningStrike(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
+        this.lightningKey = new NamespacedKey(plugin, "lightning_spell");
+        this.casterKey = new NamespacedKey(plugin, "lightning_caster");
+        this.damageKey = new NamespacedKey(plugin, "lightning_damage");
+    }
 
     @Override
-    public void castSpell(Player player, int level) {
+    public boolean cast(Player player, int level) {
+        StatContext context = StatContext.of(level);
+        double maxRange = getStat("max-range", level);
 
-        double currentRange = 0;
-        long delay = 25L;
+        RayTraceResult rayTrace = player.getWorld().rayTraceBlocks(player.getEyeLocation(), player.getEyeLocation().getDirection(), maxRange, FluidCollisionMode.NEVER, true);
+        Location strikeLocation = (rayTrace != null && rayTrace.getHitBlock() != null) ? rayTrace.getHitPosition().toLocation(player.getWorld()) : player.getEyeLocation().add(player.getEyeLocation().getDirection().multiply(maxRange));
 
-        if (getGame().isOvertime())
-            if (getGame().getDisaster() instanceof DisasterLightning)
-                delay /= 2;
+        strikeLocation.getWorld().spawnParticle(Particle.VILLAGER_ANGRY, strikeLocation.clone().add(0, 1.3, 0), 7, 0.5, 0.3, 0.5);
+        strikeLocation.getWorld().playSound(strikeLocation, Sound.ENTITY_CAT_HISS, 1F, 1F);
 
-        while (currentRange <= MAX_RANGE) {
+        long strikeDelay = (long) getStat("strike-delay-ticks", level);
 
-            Location newTarget = player.getEyeLocation()
-                    .add(new Vector(0, 0.2, 0))
-                    .add(player.getLocation().getDirection().multiply(currentRange));
+        plugin.getServer().getScheduler().runTaskLater(plugin, () -> {
+            double distance = player.getLocation().distance(strikeLocation);
+            StatContext distanceContext = StatContext.of(level, distance);
+            double damage = getStats().get("damage").calculate(distanceContext);
 
-            if (newTarget.getBlock().getType().isSolid() || newTarget.getBlock().getRelative(BlockFace.UP).getType().isSolid())
-                break;
+            LightningStrike lightning = strikeLocation.getWorld().strikeLightning(strikeLocation);
+            PersistentDataContainer pdc = lightning.getPersistentDataContainer();
+            pdc.set(lightningKey, PersistentDataType.BYTE, (byte) 1);
+            pdc.set(casterKey, PersistentDataType.STRING, player.getUniqueId().toString());
+            pdc.set(damageKey, PersistentDataType.DOUBLE, damage);
 
-            currentRange += 0.02;
+            float explosionRadius = (float) getStat("explosion-radius", level);
+            ExplosionUtil.createExplosion(plugin, strikeLocation, explosionRadius, getStat("sets-fire", level) > 0, true);
 
-            if (currentRange < 2)
-                return;
+        }, strikeDelay);
 
-            final Location location = player.getLocation().add(player.getLocation().getDirection().multiply(currentRange).add(new Vector(0, 0.4, 0)));
-
-            while (location.getBlock().getRelative(BlockFace.UP).getType().isSolid())
-                location.add(0, 1, 0);
-
-            Validate.notNull(location.getWorld());
-
-            location.getWorld().spawnParticle(Particle.VILLAGER_ANGRY, location.clone().add(0, 1.3, 0), 7, 0.5, 0.3, 0.5, 0);
-            location.getWorld().playSound(location, Sound.ENTITY_CAT_HISS, 1F, 1F);
-
-            double finalRange = currentRange;
-
-            Bukkit.getScheduler().scheduleSyncDelayedTask(getGame().getPlugin(), () -> {
-
-                LightningStrike lightning = player.getWorld().strikeLightning(location);
-
-                lightning.setMetadata("Wizard", new FixedMetadataValue(getGame().getPlugin(), getWizard(player)));
-                lightning.setMetadata("SL", new FixedMetadataValue(getGame().getPlugin(), level));
-                lightning.setMetadata("Range", new FixedMetadataValue(getGame().getPlugin(), finalRange));
-
-                Block block = location.getWorld().getHighestBlockAt(location);
-                block = block.getRelative(BlockFace.DOWN);
-
-                Set<Block> fire = new HashSet<>(),
-                        explosion = new HashSet<>();
-
-                for (int x = -1; x <= 1; x++) {
-                    for (int y = -1; y <= 1; y++) {
-                        for (int z = -1; z <= 1; z++) {
-
-                            if (x == 0 || (Math.abs(x) != Math.abs(z) || ThreadLocalRandom.current().nextInt(3) == 0)) {
-
-                                Block relative = block.getRelative(x, y, z);
-
-                                if ((y == 0 || (x == 0 && z == 0)) && relative.getType() != Material.AIR && relative.getType() != Material.BEDROCK) {
-
-                                    if (y == 0 || ThreadLocalRandom.current().nextBoolean()) {
-                                        explosion.add(relative);
-                                        fire.add(relative);
-                                    }
-
-                                } else if (relative.getType() == Material.AIR) {
-                                    fire.add(relative);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                //Wizards.getArcadeManager().GetExplosion().BlockExplosion(toExplode, b.getLocation(), false);
-
-                for (Block relative : fire)
-                    if (ThreadLocalRandom.current().nextBoolean())
-                        relative.setType(Material.FIRE);
-
-            }, delay);
-        }
+        return true;
     }
 
     @EventHandler
-    public void onEntityDamage(EntityDamageByEntityEvent event) {
-
-        if (!(event.getDamager() instanceof LightningStrike))
-            return;
-
-        if (!(event.getEntity() instanceof LivingEntity))
-            return;
+    public void onEntityDamageByLightning(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof LightningStrike) || !(event.getEntity() instanceof LivingEntity)) return;
 
         LightningStrike lightning = (LightningStrike) event.getDamager();
-        LivingEntity entity = (LivingEntity) event.getEntity();
-
-        if (!lightning.hasMetadata("Wizard"))
-            return;
+        PersistentDataContainer pdc = lightning.getPersistentDataContainer();
+        if (!pdc.has(lightningKey, PersistentDataType.BYTE)) return;
 
         event.setCancelled(true);
 
-        Wizard wizard = (Wizard) lightning.getMetadata("Wizard").get(0).value();
+        String casterUUIDString = pdc.get(casterKey, PersistentDataType.STRING);
+        Double damageAmount = pdc.get(damageKey, PersistentDataType.DOUBLE);
+        if (casterUUIDString == null || damageAmount == null) return;
 
-        int spellLevel = lightning.getMetadata("SL").get(0).asInt();
-        int range = lightning.getMetadata("Range").get(0).asInt();
+        Player caster = Bukkit.getPlayer(UUID.fromString(casterUUIDString));
+        if (caster == null) return;
 
-        CustomDamageTick damageTick = new CustomDamageTick (
-                ((spellLevel * 2) + 1) * (1 - ((double) range / (MAX_RANGE * 2))),
-                EntityDamageEvent.DamageCause.CUSTOM,
-                getSpell().getSpellName(),
-                Instant.now(),
-                wizard != null ? wizard.getPlayer() : null
-        );
-
-        damage(entity, damageTick);
-        entity.setFireTicks(80);
+        LivingEntity target = (LivingEntity) event.getEntity();
+        damage(target, new CustomDamageTick(damageAmount, EntityDamageEvent.DamageCause.LIGHTNING, getKey(), Instant.now(), caster, null));
+        target.setFireTicks((int) getStat("fire-ticks-on-hit", 0));
     }
 }

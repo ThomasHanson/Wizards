@@ -1,8 +1,8 @@
 package dev.thomashanson.wizards.event;
 
 
+import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.google.common.base.Preconditions;
-import dev.thomashanson.wizards.util.FakeEquipment;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -15,12 +15,12 @@ public class EquipmentSendingEvent extends PlayerEvent implements Cancellable {
     private static final HandlerList HANDLERS = new HandlerList();
 
     private final LivingEntity visibleEntity;
-    private FakeEquipment.EquipmentSlot slot;
+    private EnumWrappers.ItemSlot slot;
     private ItemStack equipment;
 
     private boolean cancelled;
 
-    public EquipmentSendingEvent(Player client, LivingEntity visibleEntity, FakeEquipment.EquipmentSlot slot, ItemStack equipment) {
+    public EquipmentSendingEvent(Player client, LivingEntity visibleEntity, EnumWrappers.ItemSlot slot, ItemStack equipment) {
 
         super(client);
 
@@ -56,7 +56,7 @@ public class EquipmentSendingEvent extends PlayerEvent implements Cancellable {
      * Retrieve the slot of this equipment.
      * @return The slot.
      */
-    public FakeEquipment.EquipmentSlot getSlot() {
+    public EnumWrappers.ItemSlot getSlot() {
         return slot;
     }
 
@@ -64,8 +64,8 @@ public class EquipmentSendingEvent extends PlayerEvent implements Cancellable {
      * Set the slot of this equipment.
      * @param slot - the slot.
      */
-    public void setSlot(FakeEquipment.EquipmentSlot slot) {
-        this.slot = Preconditions.checkNotNull(slot, "slot cannot be NULL");
+    public void setSlot(EnumWrappers.ItemSlot slot) {
+        this.slot = Preconditions.checkNotNull(slot, "slot cannot be null");
     }
 
     @Override

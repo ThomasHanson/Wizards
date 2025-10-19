@@ -1,19 +1,16 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.damage.DamageTick;
-import dev.thomashanson.wizards.damage.types.MonsterDamageTick;
-import dev.thomashanson.wizards.event.CustomDamageEvent;
-import dev.thomashanson.wizards.game.mode.GameTeam;
-import dev.thomashanson.wizards.game.spell.Spell;
-import org.bukkit.Bukkit;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.bukkit.Location;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
-import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
-import org.bukkit.entity.AnimalTamer;
-import org.bukkit.entity.LivingEntity;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Wolf;
 import org.bukkit.event.EventHandler;
@@ -21,170 +18,108 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.EntityTargetLivingEntityEvent;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.concurrent.ThreadLocalRandom;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.MonsterDamageTick;
+import dev.thomashanson.wizards.event.CustomDamageEvent;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.mode.GameTeam;
+import dev.thomashanson.wizards.game.spell.Spell;
 
-public class SpellSummonWolves extends Spell implements Spell.SpellBlock {
+public class SpellSummonWolves extends Spell implements Tickable {
 
-    private static final int SPELL_LENGTH = 30;
+    private final List<SummonedWolf> activeWolves = new ArrayList<>();
 
-    @Override
-    public void castSpell(Player player, int level) {
-        Block block = player.getLocation().getBlock().getRelative(BlockFace.DOWN);
-        castSpell(player, block, level);
+    public SpellSummonWolves(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
     }
 
     @Override
-    public void castSpell(Player player, Block block, int level) {
+    public boolean cast(Player player, int level) {
+        int wolfCount = (int) getStat("wolf-count", level, 3.0);
+        long durationMillis = (long) (getStat("duration-seconds", level, 30.0) * 1000L);
 
-        Location location = block.getLocation().add(0.5, 0.5, 0.5);
-
-        for (int i = 0; i < level + 2; i++) {
-
-            Wolf wolf = player.getWorld().spawn (
-
-                    location.clone().add (
-                            ThreadLocalRandom.current().nextFloat() - 0.5F,
-                            0.5,
-                            ThreadLocalRandom.current().nextFloat() - 0.5F
-                    ),
-
-                    Wolf.class, spawnedWolf -> {
-
-                        spawnedWolf.setCustomName(player.getName() + "'s Wolf");
-
-                        spawnedWolf.setTamed(true);
-                        spawnedWolf.setOwner(player);
-
-                        AttributeInstance healthAttribute = spawnedWolf.getAttribute(Attribute.GENERIC_MAX_HEALTH);
-
-                        if (healthAttribute != null) {
-                            healthAttribute.setBaseValue(2.0);
-                            spawnedWolf.setHealth(healthAttribute.getBaseValue());
-                        }
-
-                        spawnedWolf.setBreed(false);
-                        spawnedWolf.setRemoveWhenFarAway(false);
-                    }
+        for (int i = 0; i < wolfCount; i++) {
+            Location spawnLoc = player.getLocation().add(
+                    ThreadLocalRandom.current().nextDouble(-1, 1), 0.5,
+                    ThreadLocalRandom.current().nextDouble(-1, 1)
             );
 
-            wolf.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 20 * SPELL_LENGTH, level - 1));
-            player.getWorld().playSound(player.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 1.2F, 1);
-
-            Bukkit.getScheduler().scheduleSyncDelayedTask(getGame().getPlugin(), wolf::remove, SPELL_LENGTH * 20);
-
-            /*
-             * Change the color of the wolf's collar based
-             * off the team each player is on
-             */
-
-            /*
-            PacketAdapter adapter = new PacketAdapter(getGame().getPlugin(), ListenerPriority.NORMAL, PacketType.Play.Server.ENTITY_METADATA) {
-
-                @Override
-                public void onPacketSending(PacketEvent event) {
-
-                    PacketContainer packet = event.getPacket();
-
-                    Player receiver = event.getPlayer();
-                    Entity entity = packet.getEntityModifier(receiver.getWorld()).read(0);
-
-                    if (!(entity instanceof Wolf))
-                        return;
-
-                    Wolf wolf = (Wolf) entity;
-
-                    if (wolf.getOwner() == null || (!(wolf.getOwner() instanceof Player)))
-                        return;
-
-                    packet = event.getPacket().deepClone();
-                    event.setPacket(packet);
-
-                    WrappedDataWatcher watcher = WrappedDataWatcher.getEntityWatcher(wolf);
-
-                    WrappedDataWatcher.Serializer serializer = WrappedDataWatcher.Registry.get(Integer.class);
-                    WrappedDataWatcher.WrappedDataWatcherObject object = new WrappedDataWatcher.WrappedDataWatcherObject(19, serializer);
-
-                    // Color collar
-                    watcher.setObject(object, receiver.getUniqueId().equals(wolf.getOwner().getUniqueId()) ? DyeColor.GREEN.getDyeData() : DyeColor.RED.getDyeData());
-
-                    // Entity name
-
-                    serializer = WrappedDataWatcher.Registry.getChatComponentSerializer(true);
-                    object = new WrappedDataWatcher.WrappedDataWatcherObject(2, serializer);
-
-                    Optional<?> optional = Optional.of (
-                            WrappedChatComponent.fromChatMessage (
-
-                                    receiver.getUniqueId().equals(wolf.getOwner().getUniqueId()) ?
-                                            ChatColor.GREEN + "Your Wolf" :
-                                            ChatColor.RED + wolf.getName()
-
-                            )[0].getHandle()
-                    );
-
-                    watcher.setObject(object, optional);
-                }
-            };
-
-            ProtocolLibrary.getProtocolManager().addPacketListener(adapter);
-             */
+            Wolf wolf = player.getWorld().spawn(spawnLoc, Wolf.class, newWolf -> configureWolf(newWolf, player, level));
+            activeWolves.add(new SummonedWolf(wolf, Instant.now().plusMillis(durationMillis)));
         }
+
+        player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WOLF_HOWL, 1.2F, 1.0F);
+        return true;
+    }
+
+    private void configureWolf(Wolf wolf, Player owner, int level) {
+        wolf.setOwner(owner);
+        wolf.setTamed(true);
+        wolf.setSitting(false);
+        wolf.setBreed(false);
+
+        AttributeInstance healthAttr = Objects.requireNonNull(wolf.getAttribute(Attribute.GENERIC_MAX_HEALTH));
+        healthAttr.setBaseValue(getStat("wolf-health", level, 4.0));
+        wolf.setHealth(healthAttr.getBaseValue());
+
+        int speedAmplifier = (int) getStat("wolf-speed-amplifier", level, 1.0) - 1;
+        int durationTicks = (int) (getStat("duration-seconds", level, 30.0) * 20);
+        if (speedAmplifier >= 0) {
+            wolf.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, durationTicks, speedAmplifier));
+        }
+    }
+
+    @Override
+    public void tick(long gameTick) {
+        activeWolves.removeIf(summon -> {
+            if (!summon.wolf.isValid() || Instant.now().isAfter(summon.expiry)) {
+                if (summon.wolf.isValid()) summon.wolf.remove();
+                return true;
+            }
+            return false;
+        });
+    }
+
+    @Override
+    public void cleanup() {
+        activeWolves.forEach(summon -> {
+            if (summon.wolf.isValid()) summon.wolf.remove();
+        });
+        activeWolves.clear();
     }
 
     @EventHandler
     public void onDamage(CustomDamageEvent event) {
-
-        DamageTick tick = event.getDamageTick();
-
-        if (!(tick instanceof MonsterDamageTick))
-            return;
-
-        MonsterDamageTick monsterDamageTick = (MonsterDamageTick) tick;
-        LivingEntity entity = monsterDamageTick.getEntity();
-
-        if (entity instanceof Wolf) {
-
-            Wolf wolf = (Wolf) entity;
-            monsterDamageTick.addDamage("Summoned Wolf", 0.3);
-
-            AnimalTamer tamer = wolf.getOwner();
-
-            if (tamer instanceof Player) {
-                monsterDamageTick.setEntity((Player) tamer);
-                monsterDamageTick.setKnockbackOrigin(wolf.getLocation());
+        if (!(event.getDamageTick() instanceof MonsterDamageTick tick) || !(tick.getEntity() instanceof Wolf wolf)) return;
+        
+        activeWolves.stream().filter(summon -> summon.wolf.equals(wolf)).findFirst().ifPresent(summon -> {
+            tick.addDamageModifier("Summoned Wolf", getStat("damage-modifier", 0, 0.3));
+            if (wolf.getOwner() instanceof Player owner) {
+                tick.setEntity(owner);
             }
-        }
+        });
     }
 
     @EventHandler
     public void onTarget(EntityTargetLivingEntityEvent event) {
+        if (!(event.getEntity() instanceof Wolf wolf) || !(event.getTarget() instanceof Player target)) return;
+        if (!(wolf.getOwner() instanceof Player owner)) return;
 
-        if (!(event.getEntity() instanceof Wolf))
-            return;
-
-        Wolf wolf = (Wolf) event.getEntity();
-
-        if (!(event.getTarget() instanceof Player))
-            return;
-
-        Player target = (Player) event.getTarget();
-
-        if (!getGame().getCurrentMode().isTeamMode())
-            return;
-
-        Player owner = (Player) wolf.getOwner();
-
-        if (getGame().getRelation(owner, target) == GameTeam.TeamRelation.ALLY)
-            event.setCancelled(true);
+        getGame().ifPresent(game -> {
+            if (game.getRelation(owner, target) == GameTeam.TeamRelation.ALLY) {
+                event.setCancelled(true);
+            }
+        });
     }
 
     @EventHandler
     public void onDeath(EntityDeathEvent event) {
-
-        // Disable standard death message on wolf death
         if (event.getEntity() instanceof Wolf) {
-            event.getEntity().remove();
+            activeWolves.removeIf(summon -> summon.wolf.equals(event.getEntity()));
         }
     }
+
+    private record SummonedWolf(Wolf wolf, Instant expiry) {}
 }

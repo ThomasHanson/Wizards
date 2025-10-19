@@ -1,42 +1,45 @@
 package dev.thomashanson.wizards.game.potion.types;
 
-import dev.thomashanson.wizards.event.CustomDamageEvent;
-import dev.thomashanson.wizards.game.Wizard;
-import dev.thomashanson.wizards.game.potion.Potion;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+
+import dev.thomashanson.wizards.event.CustomDamageEvent;
+import dev.thomashanson.wizards.game.Wizard;
+import dev.thomashanson.wizards.game.potion.Potion;
 
 public class PotionIron extends Potion {
 
     private final Map<UUID, Float> originalSpeeds = new HashMap<>();
 
     @Override
-    public void activate(Wizard wizard) {
+    public void onActivate(Wizard wizard) {
 
         Player player = wizard.getPlayer();
 
         if (player != null) {
-            originalSpeeds.put(wizard.getUniqueId(), player.getWalkSpeed());
-            player.setWalkSpeed(player.getWalkSpeed() / 2F);
+            float originalSpeed = player.getWalkSpeed();
+            originalSpeeds.put(wizard.getUniqueId(), originalSpeed);
+            float newSpeed = player.getWalkSpeed() / 2F;
+            player.setWalkSpeed(newSpeed); 
         }
     }
 
     @Override
-    public void deactivate(Wizard wizard) {
-
-        super.deactivate(wizard);
+    public void onDeactivate(Wizard wizard) {
 
         if (!originalSpeeds.containsKey(wizard.getUniqueId()))
             return;
 
         Player player = wizard.getPlayer();
 
-        if (player != null)
-            player.setWalkSpeed(originalSpeeds.get(wizard.getUniqueId()));
+        if (player != null) {
+            float originalSpeed = originalSpeeds.get(wizard.getUniqueId());
+            player.setWalkSpeed(originalSpeed);         
+        }
     }
 
     @Override

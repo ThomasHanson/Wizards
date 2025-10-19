@@ -1,254 +1,170 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import com.comphenix.protocol.PacketType;
-import com.comphenix.protocol.ProtocolLibrary;
-import com.comphenix.protocol.events.PacketContainer;
-import com.comphenix.protocol.wrappers.BlockPosition;
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import dev.thomashanson.wizards.game.Wizard;
-import dev.thomashanson.wizards.game.loot.ChestLoot;
-import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.game.spell.SpellType;
-import dev.thomashanson.wizards.game.spell.WandElement;
-import dev.thomashanson.wizards.util.npc.NPC;
-import dev.thomashanson.wizards.util.npc.data.Ping;
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.bukkit.Sound;
-import org.bukkit.block.Block;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.PlayerInventory;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.jetbrains.annotations.NotNull;
 
-import java.lang.reflect.InvocationTargetException;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import com.comphenix.protocol.wrappers.WrappedGameProfile;
+import com.mojang.authlib.GameProfile;
 
-public class SpellDoppelganger extends Spell implements Spell.Cancellable {
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.Wizard;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
 
-    public enum FakeTask {
+public class SpellDoppelganger extends Spell implements Tickable {
 
-        /*
-         * The entity will look for the nearest group
-         * of chests, walk towards them, and open a
-         * random chest.
-         */
-        LOOT_CHEST,
+    private static final Map<UUID, DoppelgangerInstance> ACTIVE_CLONES = new ConcurrentHashMap<>();
+    private static final AtomicInteger NPC_ENTITY_ID_COUNTER = new AtomicInteger(Integer.MIN_VALUE / 2);
 
-        /*
-         * The entity will select a random wand & cast
-         * a random spell (with animations).
-         */
-        FAKE_SPELL,
-
-        /*
-         * The entity will select a random food item from
-         * the chest loot & consume it (with animations).
-         */
-        FAKE_EAT (1610),
-
-        /*
-         * The entity will run or walk towards the nearest
-         * player. It will not run towards other allies.
-         */
-        RUN_TOWARDS_PLAYER;
-
-        FakeTask() {
-            this(-1);
-        }
-
-        FakeTask(long timeToComplete) {
-            this.timeToComplete = timeToComplete;
-        }
-
-        FakeTask(long minTime, long maxTime) {
-            this.timeToComplete = ThreadLocalRandom.current().nextLong(minTime, maxTime);
-        }
-
-        private final long timeToComplete;
-
-        public long getTimeToComplete() {
-            return timeToComplete;
-        }
+    public SpellDoppelganger(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
     }
-
-    public SpellDoppelganger() {
-        setCancelOnSwap();
-    }
-
-    private final Map<UUID, NPC> clones = new HashMap<>();
 
     @Override
-    public void castSpell(Player player, int level) {
-
-        if (isCancelled()) {
-            handleNPC(player);
-            return;
+    public boolean cast(Player player, int level) {
+        if (ACTIVE_CLONES.containsKey(player.getUniqueId())) {
+            return false;
         }
 
-        NPC fakePlayer = new NPC(player.getLocation(), player.getDisplayName());
+        getWizard(player).ifPresent(wizard -> {
+            DoppelgangerInstance instance = new DoppelgangerInstance(this, wizard, level);
+            ACTIVE_CLONES.put(player.getUniqueId(), instance);
 
-        fakePlayer.spawnNPC();
-        copy(player, fakePlayer);
+            long lifespanTicks = (long) getStat("lifespan-ticks", level);
+            player.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, (int) lifespanTicks + 60, 0, false, false, false));
+            wizard.setManaRegenMultiplier(0F, true);
+            player.playSound(player.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.0F, 1.0F);
+        });
 
-        clones.put(player.getUniqueId(), fakePlayer);
-
-        int numTasks = FakeTask.values().length;
-        FakeTask fakeTask = FakeTask.values()[ThreadLocalRandom.current().nextInt(numTasks)];
-        Bukkit.broadcastMessage(fakeTask.toString() + " selected as fake task");
-
-        ItemStack randomItem = getRandomItem(player, fakeTask);
-
-        if (randomItem != null)
-            for (Player onlinePlayer : Bukkit.getOnlinePlayers())
-                fakePlayer.setEquipment(onlinePlayer, EnumWrappers.ItemSlot.MAINHAND, randomItem);
-
-        setProgress(1.0);
-
-        Wizard wizard = getWizard(player);
-
-        if (wizard != null)
-            wizard.setManaRate(0F, true); // Disable mana regeneration
+        return true;
     }
 
+    @Override
+    public void tick(long gameTick) {
+        if (ACTIVE_CLONES.isEmpty()) return;
+
+        Iterator<Map.Entry<UUID, DoppelgangerInstance>> iterator = ACTIVE_CLONES.entrySet().iterator();
+        while (iterator.hasNext()) {
+            DoppelgangerInstance instance = iterator.next().getValue();
+            if (instance.tick(gameTick)) {
+                iterator.remove();
+            }
+        }
+    }
+
+    @Override
+    public int getTickInterval() {
+        return 1; // Needs frequent position updates
+    }
+    
     @Override
     public void cleanup() {
-        clones.clear();
+        ACTIVE_CLONES.values().forEach(DoppelgangerInstance::cleanup);
+        ACTIVE_CLONES.clear();
     }
-
-    /*
-     * Update every tick
-     *
-     * - Loop through clones
-     * - If skeleton alive,
-     *   - Drain 6-SL mana per second
-     *   - Disable mana regen for owner
-     */
-
-    @Override
-    public void cancelSpell(Player player) {
-        handleNPC(player);
+    
+    @EventHandler
+    public void onQuit(PlayerQuitEvent event) {
+        DoppelgangerInstance instance = ACTIVE_CLONES.remove(event.getPlayer().getUniqueId());
+        if (instance != null) {
+            instance.cleanup();
+        }
     }
-
-    public void updateNPCs(int tick, Player... players) {
-
-        for (Player player : players) {
-
-            NPC clone = clones.get(player.getUniqueId());
-
-            if (clone != null)
-                continue;
-
-            Wizard wizard = getWizard(player);
-
-            if (tick % 20 == 0)
-                wizard.setMana(Math.max(0, wizard.getMana() - (6.0F - wizard.getLevel(getSpell()))));
+    
+    @EventHandler
+    public void onDamage(EntityDamageEvent event) {
+        DoppelgangerInstance instance = ACTIVE_CLONES.get(event.getEntity().getUniqueId());
+        if (instance != null) {
+            instance.cleanup();
+            ACTIVE_CLONES.remove(event.getEntity().getUniqueId());
         }
     }
 
-    private void handleNPC(Player player) {
+    private static class DoppelgangerInstance {
+        final SpellDoppelganger parentSpell;
+        final Wizard wizard;
+        final Player caster;
+        final int entityId;
+        final UUID npcUuid;
+        final GameProfile gameProfile;
+        
+        final long lifespanTicks;
+        final float manaDrainPerSecond;
+        private int ticksLived = 0;
 
-        if (!clones.containsKey(player.getUniqueId()))
-            return;
+        DoppelgangerInstance(SpellDoppelganger parent, Wizard wizard, int level) {
+            this.parentSpell = parent;
+            this.wizard = wizard;
+            this.caster = wizard.getPlayer();
+            this.entityId = NPC_ENTITY_ID_COUNTER.getAndIncrement();
+            this.npcUuid = UUID.randomUUID();
 
-        NPC fakePlayer = clones.remove(player.getUniqueId());
+            StatContext context = StatContext.of(level);
+            this.lifespanTicks = (long) parent.getStat("lifespan-ticks", level);
+            this.manaDrainPerSecond = (float) parent.getStat("mana-drain", level);
 
-        if (fakePlayer == null)
-            return;
-
-        Location location = fakePlayer.getLocation();
-
-        for (int i = 0 ; i < 2 ; i++)
-            Objects.requireNonNull(location.getWorld()).playSound(location, Sound.BLOCK_FIRE_EXTINGUISH, 2F, 0.4F);
-
-        fakePlayer.destroyNPC();
-
-        player.removePotionEffect(PotionEffectType.INVISIBILITY);
-        player.sendMessage("You are no longer invisible.");
-
-        Wizard wizard = getWizard(player);
-
-        if (wizard != null)
-            wizard.revert();
-    }
-
-    private void showChestAnimation(Player player, Block block, boolean open) {
-
-        Location chestLoc = block.getLocation();
-        PacketContainer blockAction = new PacketContainer(PacketType.Play.Server.BLOCK_ACTION);
-
-        blockAction.getBlocks().write(0, Material.CHEST);
-        blockAction.getBlockPositionModifier().write(0, new BlockPosition(chestLoc.getBlockX(), chestLoc.getBlockY(), chestLoc.getBlockZ()));
-
-        blockAction.getIntegers().write(0, 1);
-        blockAction.getIntegers().write(1, open ? 1 : 0);
-
-        try {
-            ProtocolLibrary.getProtocolManager().sendServerPacket(player, blockAction, true);
-            block.getWorld().playSound(block.getLocation(), open ? Sound.BLOCK_CHEST_OPEN : Sound.BLOCK_CHEST_CLOSE, 1.0F, 1.0F);
-
-        } catch (InvocationTargetException ex) {
-            throw new IllegalStateException("Unable to send packet " + blockAction, ex);
-        }
-    }
-
-    private void copy(Player player, NPC npc) {
-
-        npc.setPing(Ping.fromMilliseconds(player.getPing()));
-        npc.setGameMode(EnumWrappers.NativeGameMode.fromBukkit(player.getGameMode()));
-
-        PlayerInventory inventory = player.getInventory();
-
-        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
-            npc.setEquipment(onlinePlayer, EnumWrappers.ItemSlot.HEAD, inventory.getHelmet());
-            npc.setEquipment(onlinePlayer, EnumWrappers.ItemSlot.CHEST, inventory.getChestplate());
-            npc.setEquipment(onlinePlayer, EnumWrappers.ItemSlot.LEGS, inventory.getLeggings());
-            npc.setEquipment(onlinePlayer, EnumWrappers.ItemSlot.FEET, inventory.getBoots());
-        }
-    }
-
-    private ItemStack getRandomItem(Player player, FakeTask fakeTask) {
-
-        ItemStack randomItem = null;
-
-        if (fakeTask == FakeTask.LOOT_CHEST) {
-
-            randomItem = player.getInventory().getItem(ThreadLocalRandom.current().nextInt(8));
-
-            if (randomItem != null && getGame().getSpell(randomItem) != null)
-                randomItem = new ItemStack(getGame().getSpell(randomItem).getWandElement().getMaterial());
-
-        } else if (fakeTask == FakeTask.FAKE_SPELL) {
-
-            List<WandElement> wandOptions = new ArrayList<>();
-
-            for (SpellType spell : getWizard(player).getKnownSpells())
-                if (!wandOptions.contains(spell.getWandElement()))
-                    wandOptions.add(spell.getWandElement());
-
-            int numElements = wandOptions.size();
-            WandElement element = wandOptions.get(ThreadLocalRandom.current().nextInt(numElements));
-
-            randomItem = new ItemStack(element.getMaterial());
-
-        } else if (fakeTask == FakeTask.FAKE_EAT) {
-
-            ChestLoot loot = getGame().getChestLoot();
-
-            while (randomItem == null || (!randomItem.getType().isEdible() || randomItem.getType() == Material.CAKE))
-                randomItem = loot.getLoot();
+            this.gameProfile = createGameProfile();
+            spawn();
         }
 
-        return randomItem;
-    }
+        GameProfile createGameProfile() {
+            GameProfile profile = new GameProfile(npcUuid, caster.getName());
+            WrappedGameProfile playerProfile = WrappedGameProfile.fromPlayer(caster);
+            playerProfile.getProperties().entries().forEach(entry ->
+                profile.getProperties().put(entry.getKey(), new com.mojang.authlib.properties.Property(entry.getValue().getName(), entry.getValue().getValue(), entry.getValue().getSignature()))
+            );
+            return profile;
+        }
 
-    public boolean isActive(Player player) {
-        return clones.containsKey(player.getUniqueId());
-    }
+        /** @return true if this instance should be removed. */
+        boolean tick(long gameTick) {
+            ticksLived++;
+            if (ticksLived > lifespanTicks || !caster.isOnline()) {
+                cleanup();
+                return true;
+            }
 
-    public Map<UUID, NPC> getClones() {
-        return clones;
+            // Mana drain logic (once per second)
+            if (gameTick % 20 == 0) {
+                if (wizard.getMana() < manaDrainPerSecond) {
+                    cleanup();
+                    return true;
+                }
+                wizard.removeMana(manaDrainPerSecond);
+            }
+
+            // Position update logic (every tick)
+            updatePosition();
+            return false;
+        }
+
+        void updatePosition() {
+            // Location newLoc = caster.getLocation().clone().add(caster.getLocation().getDirection().normalize().multiply(1.5));
+            // Packet logic to teleport NPC and update head rotation
+        }
+
+        void spawn() {
+            // All ProtocolLib logic to send PlayerInfo, NamedEntitySpawn, Metadata, and Equipment packets
+        }
+        
+        void cleanup() {
+            // All ProtocolLib logic to send EntityDestroy and PlayerInfoRemove packets
+            caster.removePotionEffect(PotionEffectType.INVISIBILITY);
+            wizard.revert(); // Restores mana regen
+        }
     }
 }

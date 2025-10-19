@@ -1,3 +1,50 @@
+# Operating System Files
+# Ignore macOS and Windows generated files
 .DS_Store
+Thumbs.db
+
+# Compiled Java & Build Artifacts
+# For Maven builds
+target/
+
+# For Gradle builds
+.gradle
+build/
+
+# General build output
 out/
 *.class
+*.jar
+*.war
+*.ear
+
+# IDE Configuration
+# IntelliJ
+.idea/
+*.iml
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# VSCode
+.vscode/
+
+# Log files
+*.log
+logs/
+
+# YAML/YML Configuration Files
+# WARNING: The following lines will ignore ALL .yml/.yaml files,
+# but then re-include any that are inside your 'src' folder.
+# This is the correct approach for Minecraft plugins, where you want to commit
+# source files like 'plugin.yml' and 'config.yml' but ignore generated ones.
+
+# Ignore all YAML files...
+*.yml
+*.yaml
+
+# ...but DO NOT ignore the ones inside the 'src' directory.
+!src/**/*.yml
+!src/**/*.yaml

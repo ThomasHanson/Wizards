@@ -1,11 +1,13 @@
 package dev.thomashanson.wizards.util;
 
+import java.util.Collection;
+import java.util.List;
+import java.util.Objects;
+
 import org.bukkit.Location;
 import org.bukkit.World;
 import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
-
-import java.util.*;
 
 public class LocationUtil {
 
@@ -84,6 +86,42 @@ public class LocationUtil {
         return target;
     }
 
+    public static Location getLocationAwayFromPlayers(List<Location> locations, List<Player> players) {
+
+        Location bestLocation = null;
+        double bestDistance = 0;
+
+        for (Location location : locations) {
+
+            double closest = -1;
+
+            for (Player player : players) {
+
+                // Different Worlds
+                if (!player.getWorld().equals(location.getWorld())) {
+                    continue;
+                }
+
+                double distance = player.getLocation().distanceSquared(location);
+
+                if (closest == -1 || distance < closest) {
+                    closest = distance;
+                }
+            }
+
+            if (closest == -1) {
+                continue;
+            }
+
+            if (bestLocation == null || closest > bestDistance) {
+                bestLocation = location;
+                bestDistance = closest;
+            }
+        }
+
+        return bestLocation;
+    }
+
     public static Location getAverageLocation(Collection<Location> locations) {
 
         if (locations.isEmpty())
@@ -106,28 +144,15 @@ public class LocationUtil {
         return vector.toLocation(Objects.requireNonNull(world));
     }
 
-    public static Location getLocationAroundCircle(Location center, double radius, double angle) {
-
-        double x = center.getX() + radius * Math.cos(angle);
-        double z = center.getZ() + radius * Math.sin(angle);
-        double y = center.getY();
-
-        Location location = new Location(center.getWorld(), x, y, z);
-        Vector difference = center.toVector().clone().subtract(location.toVector());
-        location.setDirection(difference);
-
-        return location;
-    }
-
     public static String locationToString(Location location) {
 
-        String locationString;
+        StringBuilder locationString;
 
-        locationString = location.getBlockX() + ",";
-        locationString += location.getBlockY() + ",";
-        locationString += String.valueOf(location.getBlockZ());
+        locationString = new StringBuilder(location.getX() + ",");
+        locationString.append(location.getY()).append(",");
+        locationString.append(location.getZ());
 
-        return locationString;
+        return locationString.toString();
     }
 
     public static Location locationFromConfig(World world, String input) {

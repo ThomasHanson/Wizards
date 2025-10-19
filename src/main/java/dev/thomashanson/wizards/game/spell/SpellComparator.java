@@ -2,48 +2,48 @@ package dev.thomashanson.wizards.game.spell;
 
 import java.util.Comparator;
 
-public enum SpellComparator implements Comparator<SpellType> {
-
+public enum SpellComparator implements Comparator<Spell> {
+    
     /**
-     * Represents a comparator which sorts
-     * spells by rarity first, and if they
-     * have the same rarity, it will sort
-     * alphabetically.
+     * Sorts spells by rarity first (descending), then alphabetically by name.
      */
     RARITY {
-        public int compare(SpellType o1, SpellType o2) {
-            int number = Integer.compare(o2.getRarity().getLootAmount(), o1.getRarity().getLootAmount());
-            return number == 0 ? o1.getSpellName().compareToIgnoreCase(o2.getSpellName()) : number;
+        @Override
+        public int compare(Spell s1, Spell s2) {
+            int rarityCompare = s2.getRarity().compareTo(s1.getRarity());
+            return rarityCompare == 0 ? s1.getName().compareToIgnoreCase(s2.getName()) : rarityCompare;
         }
     },
 
     /**
-     * Represents a comparator which sorts
-     * spells alphabetically.
+     * Sorts spells alphabetically by name.
      */
     NAME {
-        public int compare(SpellType o1, SpellType o2) {
-            return o1.getSpellName().compareToIgnoreCase(o2.getSpellName());
+        @Override
+        public int compare(Spell s1, Spell s2) {
+            return s1.getName().compareToIgnoreCase(s2.getName());
         }
     },
 
     /**
-     * Represents a comparator which sorts
-     * spells by mana.
+     * Sorts spells by their mana cost at level 1 (descending).
      */
     MANA {
-        public int compare(SpellType o1, SpellType o2) {
-            return Float.compare(o2.getMana(), o1.getMana());
+        @Override
+        public int compare(Spell s1, Spell s2) {
+            // Compare mana cost at level 1 as a baseline
+            return Double.compare(s2.getManaCost(1), s1.getManaCost(1));
         }
     },
 
     /**
-     * Represents a comparator which sorts
-     * spells by cooldown.
+     * Sorts spells by their cooldown at level 1 (descending).
      */
     COOLDOWN {
-        public int compare(SpellType o1, SpellType o2) {
-            return Integer.compare(o2.getCooldown(), o1.getCooldown());
+        @Override
+        public int compare(Spell s1, Spell s2) {
+            // Compare cooldown at level 1 as a baseline
+            return Double.compare(s2.getCooldown(1), s1.getCooldown(1));
         }
     }
 }

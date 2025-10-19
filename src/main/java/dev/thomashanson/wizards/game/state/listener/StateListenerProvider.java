@@ -9,6 +9,7 @@ public abstract class StateListenerProvider implements Listener {
 
     public void onEnable(WizardsPlugin plugin) {
         Bukkit.getPluginManager().registerEvents(this, plugin);
+        Bukkit.getLogger().info("Registering listener from StateListenerProvider");
     }
 
     public void onDisable() {

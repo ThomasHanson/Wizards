@@ -1,1 +1,13 @@
+# The game mode the server will run on (e.g., SOLO_NORMAL, DOUBLES_BRAWL)
 mode: "SOLO_NORMAL"
+
+# The server environment (e.g., DEV, PROD)
+environment: "DEV"
+
+# --- Database Connection Settings ---
+database:
+  host: "na04-sql.pebblehost.com"      # The IP address of your database server.
+  port: 3306             # The port for your database, 3306 is the default for MySQL.
+  database: "customer_497283_Wizards" # The name of the specific database to use.
+  username: "customer_497283_Wizards"  # The username for the database account.
+  password: "A0z@tNe9Tt58a+f73.E.sYIp"  # The password for the database account.

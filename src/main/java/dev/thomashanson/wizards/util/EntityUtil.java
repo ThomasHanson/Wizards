@@ -1,15 +1,23 @@
 package dev.thomashanson.wizards.util;
 
-import net.md_5.bungee.api.ChatColor;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
-import org.apache.commons.lang.Validate;
-import org.apache.commons.lang.WordUtils;
-import org.bukkit.*;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Objects;
+
+import org.bukkit.Bukkit;
+import org.bukkit.FireworkEffect;
+import org.bukkit.GameMode;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.entity.*;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Firework;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.FireworkMeta;
@@ -17,46 +25,44 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.util.BoundingBox;
 import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.MiniMessage;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class EntityUtil {
 
     public static String getEntityName(Entity entity) {
 
-        if (entity.getCustomName() != null) {
-            return entity.getCustomName();
+        return entity.getName();
 
-        } else {
+        // } else {
 
-            String name = entity.getType().name();
-            name = name.replace("_", " ");
-            return WordUtils.capitalizeFully(name);
-        }
+        //     String name = entity.getType().name();
+        //     name = name.replace("_", " ");
+        //     return name;
+        // }
     }
 
     public static Map<LivingEntity, Double> getInRadius(Location location, double radius) {
-
         Map<LivingEntity, Double> entities = new HashMap<>();
+        World world = location.getWorld();
+        if (world == null) return entities; // Safety check
 
-        for (Entity entity : Objects.requireNonNull(location.getWorld()).getEntities()) {
+        for (Entity entity : world.getEntities()) {
+            // Use a positive check with the pattern
+            if (entity instanceof LivingEntity livingEntity) {
+                // Check for the spectator case using another pattern
+                if (livingEntity instanceof Player player && player.getGameMode() == GameMode.SPECTATOR) {
+                    continue; // Skip spectators
+                }
 
-            if (!(entity instanceof LivingEntity))
-                continue;
-
-            if (entity instanceof Player)
-                if (((Player) entity).getGameMode() == GameMode.SPECTATOR)
-                    continue;
-
-            LivingEntity livingEntity = (LivingEntity) entity;
-
-            double offset = location.distance(livingEntity.getLocation());
-
-            if (offset < radius)
-                entities.put(livingEntity, 1 - (offset / radius));
+                // No more casting is needed here
+                double offset = location.distance(livingEntity.getLocation());
+                if (offset < radius) {
+                    entities.put(livingEntity, 1 - (offset / radius));
+                }
+            }
         }
-
         return entities;
     }
 
@@ -74,7 +80,8 @@ public class EntityUtil {
 
     public static Firework launchFirework(Location location, FireworkEffect effect, Vector vector, int power) {
 
-        Validate.notNull(location.getWorld());
+        if (location.getWorld() == null)
+            return null;
 
         Firework firework = location.getWorld().spawn(location, Firework.class);
         FireworkMeta data = firework.getFireworkMeta();
@@ -93,35 +100,24 @@ public class EntityUtil {
 
     public static void displayProgress(Player player, String prefix, double amount, String suffix) {
 
-        int bars = 24;
-        StringBuilder progressBar = new StringBuilder(ChatColor.GREEN + "");
-        boolean colorChange = false;
+        final int bars = 24;
+        int greenBars = (int) (bars * Math.min(1.0, amount)); // Ensure amount is not > 1
+        String greenSection = "\u258c".repeat(greenBars);
+        String redSection = "\u258c".repeat(bars - greenBars);
 
-        for (int i = 0; i < bars; i++) {
+        Component progressBar = MiniMessage.miniMessage().deserialize("<green>" + greenSection + "<red>" + redSection);
 
-            if (!colorChange && (float) i / (float) bars >= amount) {
-                progressBar.append(ChatColor.RED);
-                colorChange = true;
-            }
+        Component prefixComponent = prefix == null ? Component.empty() : Component.text(prefix + " ");
+        Component suffixComponent = suffix == null ? Component.empty() : Component.text(" " + suffix);
 
-            progressBar.append("\u258c");
-        }
-
-        player.spigot().sendMessage (
-
-                ChatMessageType.ACTION_BAR,
-
-                new TextComponent(
-                        (prefix == null ? "" : prefix + ChatColor.RESET + " ") + progressBar +
-                                (suffix == null ? "" : org.bukkit.ChatColor.RESET + " " + suffix)
-                )
-        );
+        player.sendActionBar(prefixComponent.append(progressBar).append(suffixComponent));
     }
 
     public static void resetPlayer(Player player, GameMode gameMode) {
 
         player.setGameMode(gameMode);
-        player.setAllowFlight(false);
+        player.setAllowFlight(gameMode == GameMode.SPECTATOR);
+        player.setWalkSpeed(0.2F);
         player.setFlySpeed(0.1F);
 
         PlayerInventory inventory = player.getInventory();
@@ -156,56 +152,54 @@ public class EntityUtil {
         for (PotionEffect potion : player.getActivePotionEffects())
             player.removePotionEffect(potion.getType());
 
+        player.setInvisible(false);
+
         player.saveData();
     }
 
-    public static Entity getEntityInSight (
+    public static Entity getEntityInSight(
             Player player, int rangeToScan, boolean avoidNonLiving,
             boolean lineOfSight, float expandBoxesPercentage
     ) {
-
         Location observerPos = player.getEyeLocation();
-
         Vector observerDir = observerPos.getDirection();
-        Vector observerStart = observerPos.toVector();
-        Vector observerEnd = observerStart.add(observerDir.multiply(rangeToScan));
+        Vector observerEnd = observerPos.toVector().add(observerDir.multiply(rangeToScan));
 
         Entity hit = null;
+        double minDistanceSquared = Double.POSITIVE_INFINITY;
 
-        for (Entity entity : player.getNearbyEntities(rangeToScan, rangeToScan, rangeToScan)) {
-
-            if (entity == player)
+        for (Entity entity : player.getNearbyEntities(observerEnd.getX(), observerEnd.getY(), observerEnd.getZ())) {
+            if (entity == player || (avoidNonLiving && !(entity instanceof LivingEntity)) || (entity instanceof Player && ((Player) entity).getGameMode() == GameMode.SPECTATOR)) {
                 continue;
+            }
 
-            if (avoidNonLiving && !(entity instanceof LivingEntity))
+            double distanceSquared = entity.getLocation().distanceSquared(observerPos);
+            if (distanceSquared > rangeToScan * rangeToScan) {
                 continue;
+            }
 
-            if (entity instanceof Player && ((Player) entity).getGameMode() == GameMode.SPECTATOR)
-                continue;
-
-            double distance = player.getEyeLocation().distance(entity.getLocation());
-
-            if (
-                    lineOfSight
-                            && player.getLastTwoTargetBlocks(BlockUtil.getNonSolidBlocks(), (int) Math.ceil(distance)).get(0)
-                            .getLocation().distance(player.getEyeLocation()) + 1 < distance
-            )
-                continue;
+            if (lineOfSight) {
+                double lastBlockDistance = player.getLastTwoTargetBlocks(BlockUtil.getNonSolidBlocks(), (int) Math.ceil(Math.sqrt(distanceSquared))).get(0).getLocation().distance(observerPos);
+                if (lastBlockDistance + 1 < Math.sqrt(distanceSquared)) {
+                    continue;
+                }
+            }
 
             Vector targetPos = entity.getLocation().toVector();
+            double width = entity.getBoundingBox().getWidthX() * expandBoxesPercentage / 1.8;
+            double height = entity.getBoundingBox().getHeight() * expandBoxesPercentage;
 
-            double width = (entity.getBoundingBox().getWidthX() / 1.8F) * expandBoxesPercentage;
-            double height = (entity.getBoundingBox().getHeight() * expandBoxesPercentage);
+            Vector minimum = targetPos.clone().subtract(new Vector(width, 0.1 / expandBoxesPercentage, width));
+            Vector maximum = targetPos.clone().add(new Vector(width, height, width));
+            BoundingBox entityBoundingBox = new BoundingBox(minimum.getX(), minimum.getY(), minimum.getZ(), maximum.getX(), maximum.getY(), maximum.getZ());
 
-            Vector minimum = targetPos.add(new Vector(-width, -0.1 / expandBoxesPercentage, -width));
-            Vector maximum = targetPos.add(new Vector(width, height, width));
-
-            BoundingBox entityBoundingBox = BoundingBox.of(minimum, maximum);
-            BoundingBox observerBoundingBox = BoundingBox.of(observerStart, observerEnd);
-
-            if (observerBoundingBox.overlaps(entityBoundingBox))
-                if (hit == null || hit.getLocation().distanceSquared(observerPos) > entity.getLocation().distanceSquared(observerPos))
+            if (entityBoundingBox.contains(observerPos.toVector())) {
+                double distanceSquaredToEntity = entity.getLocation().distanceSquared(observerPos);
+                if (distanceSquaredToEntity < minDistanceSquared) {
                     hit = entity;
+                    minDistanceSquared = distanceSquaredToEntity;
+                }
+            }
         }
 
         return hit;
@@ -224,13 +218,20 @@ public class EntityUtil {
      */
     public static double calculateDamage(double damage, double points, double toughness, int resistance, int epf) {
 
-        Bukkit.broadcastMessage("");
-        Bukkit.broadcastMessage("Damage: " + damage);
-        Bukkit.broadcastMessage("Armor Points: " + points);
-        Bukkit.broadcastMessage("Toughness: " + toughness);
-        Bukkit.broadcastMessage("Resistance: " + resistance);
-        Bukkit.broadcastMessage("EPF: " + epf);
-        Bukkit.broadcastMessage("");
+        Component debugMessage = MiniMessage.miniMessage().deserialize(
+                "<br><white>Damage: <gold><damage></gold>" +
+                "<br><white>Armor Points: <gold><points></gold>" +
+                "<br><white>Toughness: <gold><toughness></gold>" +
+                "<br><white>Resistance: <gold><resistance></gold>" +
+                "<br><white>EPF: <gold><epf></gold><br>",
+                Placeholder.unparsed("damage", String.valueOf(damage)),
+                Placeholder.unparsed("points", String.valueOf(points)),
+                Placeholder.unparsed("toughness", String.valueOf(toughness)),
+                Placeholder.unparsed("resistance", String.valueOf(resistance)),
+                Placeholder.unparsed("epf", String.valueOf(epf))
+        );
+
+        Bukkit.broadcast(debugMessage);
 
         double withArmorAndToughness = damage * (1 - Math.min(20, Math.max(points / 5, points - damage / (2 + toughness / 4))) / 25);
         double withResistance = withArmorAndToughness * (1 - (resistance * 0.2));

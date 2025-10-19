@@ -9,9 +9,11 @@ public abstract class Potion implements Listener {
     private Wizards game;
     private PotionType potion;
 
-    public abstract void activate(Wizard wizard);
+    public abstract void onActivate(Wizard wizard);
+    public abstract void onDeactivate(Wizard wizard);
 
     public void deactivate(Wizard wizard) {
+        onDeactivate(wizard);
         wizard.setActivePotion(null);
     }
 

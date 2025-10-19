@@ -6,16 +6,13 @@ import dev.thomashanson.wizards.game.potion.Potion;
 public class PotionRusher extends Potion {
 
     @Override
-    public void activate(Wizard wizard) {
-        wizard.setCooldownModifier(wizard.getCooldownModifier() * 0.8F, true);
-        wizard.setManaModifier(wizard.getManaModifier() * 1.25F, true);
+    public void onActivate(Wizard wizard) {
+        wizard.setCooldownMultiplier(0.8F, true);
+        wizard.setManaMultiplier(1.25F, true);
     }
 
     @Override
-    public void deactivate(Wizard wizard) {
-
-        super.deactivate(wizard);
-
+    public void onDeactivate(Wizard wizard) {
         wizard.revert();
     }
 }

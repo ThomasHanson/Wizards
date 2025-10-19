@@ -1,176 +1,185 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.damage.types.CustomDamageTick;
-import dev.thomashanson.wizards.event.CustomDamageEvent;
-import dev.thomashanson.wizards.game.Wizard;
-import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.game.spell.SpellType;
-import org.bukkit.entity.HumanEntity;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.entity.FoodLevelChangeEvent;
-import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
-
 import java.time.Duration;
 import java.time.Instant;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class SpellFocus extends Spell {
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.jetbrains.annotations.NotNull;
 
-    private static BukkitTask updateTask;
-    private final Map<Wizard, Instant> focused = new HashMap<>();
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.event.CustomDamageEvent;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.Wizard;
+import dev.thomashanson.wizards.game.spell.Spell;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
+
+public class SpellFocus extends Spell implements Tickable {
+
+    private final Map<UUID, FocusInstance> activeFocuses = new ConcurrentHashMap<>();
+
+    public SpellFocus(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
+    }
 
     @Override
-    public void castSpell(Player player, int level) {
-
-        if (updateTask == null) {
-
-            updateTask = new BukkitRunnable() {
-
-                @Override
-                public void run() {
-
-                    for (Wizard wizard : focused.keySet()) {
-
-                        Instant start = focused.get(wizard);
-                        Duration between = Duration.between(start, Instant.now());
-
-                        if (between.toSeconds() >= 30) {
-                            endFocus(wizard);
-                            return;
-                        }
-                    }
-
-                    // update particles
-                }
-            }.runTaskTimer(getGame().getPlugin(), 0L, 1L);
+    public boolean cast(Player player, int level) {
+        if (activeFocuses.containsKey(player.getUniqueId())) {
+            player.sendMessage(languageManager.getTranslated(player, "wizards.spell.focus.alreadyActive"));
+            return false;
         }
+        activeFocuses.put(player.getUniqueId(), new FocusInstance(this, player, level));
+        return true;
+    }
 
-        focused.put(getWizard(player), Instant.now());
+    @Override
+    public void tick(long gameTick) {
+        if (activeFocuses.isEmpty()) return;
+        activeFocuses.values().removeIf(FocusInstance::tick);
+    }
 
-        player.setMetadata("Hunger", new FixedMetadataValue(getGame().getPlugin(), player.getFoodLevel()));
-        player.setFoodLevel(6);
+    @Override
+    public int getTickInterval() {
+        return 10; // Run twice per second
     }
 
     @Override
     public void cleanup() {
-
-        updateTask.cancel();
-        updateTask = null;
-
-        focused.clear();
+        activeFocuses.values().forEach(focus -> focus.endFocus(false, true));
+        activeFocuses.clear();
     }
 
-    @EventHandler
-    public void onDamage(CustomDamageEvent event) {
-
-        if (!(event.getDamageTick() instanceof CustomDamageTick))
-            return;
-
-        CustomDamageTick customDamageTick = (CustomDamageTick) event.getDamageTick();
-
-        LivingEntity victim = event.getVictim();
-        Player damager = customDamageTick.getPlayer();
-
-        /*
-         * Check if the user has hit another player
-         * with a spell while Focus is active.
-         */
-        if (getWizard(damager) != null) {
-
-            Wizard damagerWizard = getWizard(damager);
-
-            if (!focused.containsKey(damagerWizard))
-                return;
-
-            double damageMultiplier = getMultiplier(focused.get(damagerWizard));
-            customDamageTick.setDamage(customDamageTick.getDamage() * damageMultiplier);
-        }
-
-        /*
-         * Check if the user has been hit with a spell
-         * while Focus is active.
-         */
-        if (victim instanceof Player) {
-
-            Player victimPlayer = (Player) victim;
-            Wizard wizard = getWizard(victimPlayer);
-
-            if (!focused.containsKey(wizard))
-                return;
-
-            boolean hitBySpell = false;
-
-            for (SpellType spell : SpellType.values()) {
-
-                if (customDamageTick.getReason().startsWith(spell.getSpellName())) {
-                    hitBySpell = true;
-                    break;
+    @EventHandler(priority = EventPriority.NORMAL)
+    public void onCustomDamage(CustomDamageEvent event) {
+        // --- Attacker Logic ---
+        if (event.getDamageTick() instanceof CustomDamageTick customTick) {
+            Player attacker = customTick.getPlayer();
+            if (attacker != null) {
+                FocusInstance instance = activeFocuses.remove(attacker.getUniqueId());
+                if (instance != null) {
+                    double multiplier = instance.getPowerMultiplier();
+                    event.setDamage(event.getDamage() * multiplier);
+                    attacker.sendMessage(languageManager.getTranslated(attacker, "wizards.spell.focus.unleashed",
+                        Placeholder.unparsed("power", String.format("%.1fx", multiplier))
+                    ));
+                    instance.endFocus(false, false);
                 }
             }
+        }
 
-            if (!hitBySpell)
-                return;
-
-            endFocus(wizard);
-            victimPlayer.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 40, 2));
+        // --- Victim Logic ---
+        if (event.getVictim() instanceof Player victim) {
+            FocusInstance instance = activeFocuses.get(victim.getUniqueId());
+            if (instance != null && event.getDamageTick() instanceof CustomDamageTick) {
+                victim.sendMessage(languageManager.getTranslated(victim, "wizards.spell.focus.shattered"));
+                instance.endFocus(true, false);
+                activeFocuses.remove(victim.getUniqueId());
+            }
         }
     }
 
-    /*
-     * If player is active, we disable their sprint.
-     * In doing so, we cannot let them eat food or update
-     * their hunger. So we will disable this event.
-     */
     @EventHandler
-    public void onChange(FoodLevelChangeEvent event) {
-
-        HumanEntity humanEntity = event.getEntity();
-        Player player = (Player) humanEntity;
-
-        Wizard wizard = getWizard(player);
-
-        if (wizard == null || !focused.containsKey(wizard))
-            return;
-
-        event.setCancelled(true);
+    public void onQuit(PlayerQuitEvent event) {
+        FocusInstance instance = activeFocuses.remove(event.getPlayer().getUniqueId());
+        if (instance != null) {
+            instance.endFocus(false, true);
+        }
     }
 
     @EventHandler
     public void onConsume(PlayerItemConsumeEvent event) {
-
-        Player player = event.getPlayer();
-        Wizard wizard = getWizard(player);
-
-        if (wizard == null || !focused.containsKey(wizard))
-            return;
-
-        if (event.getItem().getType().isEdible())
+        if (activeFocuses.containsKey(event.getPlayer().getUniqueId())) {
+            event.getPlayer().sendMessage(languageManager.getTranslated(event.getPlayer(), "wizards.spell.focus.cannotConsume"));
             event.setCancelled(true);
+        }
     }
 
-    private double getMultiplier(Instant from) {
-        long focusLength = Duration.between(from, Instant.now()).toSeconds();
-        return focusLength >= 10 ? 2 : focusLength >= 5 ? 1.5 : focusLength >= 2 ? 1.2 : 0;
-    }
+    private static class FocusInstance {
+        final SpellFocus parent;
+        final Player player;
+        final Wizard wizard;
+        final Instant startTime;
+        final int originalHunger;
+        final int level;
 
-    private void endFocus(Wizard wizard) {
+        final long maxDurationMillis;
+        final int stunDurationTicks;
+        final int stunSlownessAmplifier;
 
-        focused.remove(wizard);
-        updateTask.cancel();
+        FocusInstance(SpellFocus parent, Player player, int level) {
+            this.parent = parent;
+            this.player = player;
+            this.wizard = parent.getWizard(player).orElse(null);
+            this.startTime = Instant.now();
+            this.originalHunger = player.getFoodLevel();
+            this.level = level;
 
-        Player player = wizard.getPlayer();
+            this.maxDurationMillis = (long) (parent.getStat("max-duration-seconds", level, 10.0) * 1000);
+            this.stunDurationTicks = (int) parent.getStat("stun-duration-ticks", level, 60.0);
+            this.stunSlownessAmplifier = (int) parent.getStat("stun-slowness-amplifier", level, 3.0) - 1;
 
-        player.setFoodLevel(player.getMetadata("Hunger").get(0).asInt());
-        player.removeMetadata("Hunger", getGame().getPlugin());
+            if (wizard != null) {
+                wizard.setManaRegenMultiplier((float) parent.getStat("mana-regen-multiplier", level, 3.0), true);
+            }
+            player.setFoodLevel(6);
+            player.sendMessage(parent.languageManager.getTranslated(player, "wizards.spell.focus.activated"));
+            player.getWorld().playSound(player.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.0F, 1.3F);
+        }
 
-        player.sendMessage("Your focus ended!");
+        boolean tick() {
+            if (!player.isOnline() || Duration.between(startTime, Instant.now()).toMillis() > maxDurationMillis) {
+                if (player.isOnline()) {
+                    player.sendMessage(parent.languageManager.getTranslated(player, "wizards.spell.focus.faded"));
+                }
+                endFocus(false, false);
+                return true;
+            }
+
+            Location center = player.getLocation().add(0, 1.2, 0);
+            center.getWorld().spawnParticle(Particle.REDSTONE, center, 15, 0.8, 0.8, 0.8, new Particle.DustOptions(Color.YELLOW, 1F));
+            center.getWorld().playSound(center, Sound.BLOCK_CONDUIT_AMBIENT_SHORT, 0.7F, 1.5F);
+            
+            return false;
+        }
+
+        void endFocus(boolean applyStun, boolean isCleanup) {
+            if (wizard != null) wizard.revert();
+            if (player.isOnline()) player.setFoodLevel(originalHunger);
+
+            if (applyStun) {
+                player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, stunDurationTicks, stunSlownessAmplifier));
+                player.getWorld().playSound(player.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 1.0F, 0.8F);
+            } else if (!isCleanup) {
+                player.getWorld().playSound(player.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 0.8F, 1.2F);
+            }
+        }
+        
+        double getPowerMultiplier() {
+            long seconds = Duration.between(startTime, Instant.now()).getSeconds();
+            
+            // CORRECTED LOGIC: The semicolon is removed.
+            if (seconds >= parent.getStat("tier-3-seconds", level, 6.0))
+                return parent.getStat("tier-3-multiplier", level, 2.5);
+            if (seconds >= parent.getStat("tier-2-seconds", level, 4.0))
+                return parent.getStat("tier-2-multiplier", level, 2.0);
+            if (seconds >= parent.getStat("tier-1-seconds", level, 2.0)) 
+                return parent.getStat("tier-1-multiplier", level, 1.5);
+            
+            return 1.0;
+        }
     }
 }

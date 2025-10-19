@@ -1,30 +1,61 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.game.Wizard;
-import dev.thomashanson.wizards.game.spell.Spell;
 import org.bukkit.Sound;
 import org.bukkit.attribute.Attribute;
 import org.bukkit.attribute.AttributeInstance;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Player;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.jetbrains.annotations.NotNull;
+
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
 
 public class SpellSoulExchange extends Spell {
 
+    public SpellSoulExchange(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
+    }
+
     @Override
-    public void castSpell(Player player, int level) {
-
+    public boolean cast(Player player, int level) {
         AttributeInstance healthAttribute = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
+        if (healthAttribute == null) return false;
 
-        if (healthAttribute != null) {
-            healthAttribute.setBaseValue(Math.max(healthAttribute.getBaseValue() - 2.0, 2.0));
-            player.setHealth(Math.min(player.getHealth(), healthAttribute.getBaseValue()));
+        StatContext context = StatContext.of(level);
+        double healthSacrifice = getStat("health-sacrifice", level);
+        double minHealth = getStat("min-health", level);
+
+        double newMaxHealth = Math.max(minHealth, healthAttribute.getBaseValue() - healthSacrifice);
+        
+        // Prevent casting if already at minimum health
+        if (newMaxHealth == healthAttribute.getBaseValue()) {
+            // Optional: send a feedback message to the player
+            return false;
+        }
+        
+        healthAttribute.setBaseValue(newMaxHealth);
+        
+        // Adjust current health if it's now higher than the new max
+        if (player.getHealth() > newMaxHealth) {
+            player.setHealth(newMaxHealth);
         }
 
-        Wizard wizard = getWizard(player);
-        wizard.setMaxMana(wizard.getMaxMana() + 15);
+        getWizard(player).ifPresent(wizard -> {
+            double manaGain = getStat("mana-gain", level);
+            double maxManaIncrease = getStat("max-mana-increase", level);
 
-        player.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, 200, 0));
+            wizard.addMana((float) manaGain);
+            wizard.setMaxMana(wizard.getMaxMana() + (float) maxManaIncrease);
+        });
+
+        int witherDuration = (int) getStat("wither-duration-ticks", level);
+        int witherAmplifier = (int) getStat("wither-amplifier", level) - 1;
+        player.addPotionEffect(new PotionEffect(PotionEffectType.WITHER, witherDuration, witherAmplifier));
+        
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_WITHER_SPAWN, 1F, 1F);
+        return true;
     }
 }

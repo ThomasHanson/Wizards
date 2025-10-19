@@ -21,7 +21,7 @@ public class PotionRegeneration extends Potion {
     private final Map<UUID, BukkitTask> tasks = new HashMap<>();
 
     @Override
-    public void activate(Wizard wizard) {
+    public void onActivate(Wizard wizard) {
 
         tasks.put(wizard.getUniqueId(), new BukkitRunnable() {
 
@@ -37,14 +37,14 @@ public class PotionRegeneration extends Potion {
                 AttributeInstance healthAttribute = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
 
                 if (healthAttribute != null)
-                    player.setHealth(Math.max(player.getHealth() + 2.0, healthAttribute.getBaseValue()));
+                    player.setHealth(Math.min(player.getHealth() + 2.0, healthAttribute.getBaseValue()));
             }
 
         }.runTaskTimer(getGame().getPlugin(), 0L, 20L));
     }
 
     @Override
-    public void deactivate(Wizard wizard) {
+    public void onDeactivate(Wizard wizard) {
 
         BukkitTask task = tasks.get(wizard.getUniqueId());
 
@@ -75,15 +75,15 @@ public class PotionRegeneration extends Potion {
     public void onDamage(CustomDamageEvent event) {
 
         LivingEntity victim = event.getVictim();
-        Player victimPlayer = null;
 
-        if (victim instanceof Player)
-            victimPlayer = (Player) victim;
+        if (victim instanceof Player) {
 
-        Wizard wizard = getGame().getWizard(victimPlayer);
+            Player victimPlayer = (Player) victim;
 
-        if (victimPlayer != null && wizard != null)
-            if (wizard.getActivePotion() == getPotion())
+            Wizard wizard = getGame().getWizard(victimPlayer);
+
+            if (wizard != null && wizard.getActivePotion() == getPotion())
                 event.setDamage(event.getDamage() * 2);
+        }
     }
 }

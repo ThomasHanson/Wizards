@@ -1,79 +1,61 @@
 package dev.thomashanson.wizards.game.spell;
 
-import net.md_5.bungee.api.ChatColor;
+import org.bukkit.Material;
+
+import net.kyori.adventure.text.format.NamedTextColor;
 
 public enum SpellElement {
 
-    ATTACK (
-            "Attack Spells",
-            "Spells of destruction",
-            1, 0, 2,
-            101,
-            ChatColor.RED
+    ATTACK(
+            "wizards.gui.spellbook.element.attack.name",
+            "wizards.gui.spellbook.element.attack.desc",
+            Material.IRON_SWORD,
+            1, 0, 2, // Header in slot 1, spans columns 0-2
+            NamedTextColor.RED
     ),
 
-    SUPPORT (
-            "Support Spells",
-            "Spells of assistance",
-            4, 4, 4,
-            201,
-            ChatColor.DARK_GREEN
+    UTILITY(
+            "wizards.gui.spellbook.element.utility.name",
+            "wizards.gui.spellbook.element.utility.desc",
+            Material.FEATHER,
+            4, 4, 5, // Header in slot 4, spans columns 4-5
+            NamedTextColor.AQUA
     ),
 
-    ENVIRONMENTAL (
-            "Environmental Spells",
-            "Spells that generally affect the world itself.",
-            7, 6, 8,
-            301,
-            ChatColor.BLUE
+    TACTICAL(
+            "wizards.gui.spellbook.element.tactical.name",
+            "wizards.gui.spellbook.element.tactical.desc",
+            Material.ENDER_EYE,
+            7, 7, 8, // Header in slot 7, spans columns 7-8
+            NamedTextColor.DARK_PURPLE
     );
 
-    private final String name;
-    private final String description;
+    private final String nameKey;
+    private final String descriptionKey;
+    private final Material icon;
     private final int slot;
     private final int firstSlot;
     private final int secondSlot;
-    private final int data;
-    private final ChatColor color;
+    private final NamedTextColor color;
 
-    SpellElement(String name, String description,
-                 int slot, int firstSlot, int secondSlot,
-                 int data,
-                 ChatColor color) {
-        this.name = name;
-        this.description = description;
+    SpellElement(
+            String nameKey, String descriptionKey, Material icon,
+            int slot, int firstSlot, int secondSlot,
+            NamedTextColor color) {
+        this.nameKey = nameKey;
+        this.descriptionKey = descriptionKey;
+        this.icon = icon;
         this.slot = slot;
         this.firstSlot = firstSlot;
         this.secondSlot = secondSlot;
-        this.data = data;
         this.color = color;
     }
 
-    public String getName() {
-        return name;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public int getSlot() {
-        return slot;
-    }
-
-    public int getFirstSlot() {
-        return firstSlot;
-    }
-
-    public int getSecondSlot() {
-        return secondSlot;
-    }
-
-    public int getData() {
-        return data;
-    }
-
-    public ChatColor getColor() {
-        return color;
-    }
+    public String getNameKey() { return nameKey; }
+    public String getDescriptionKey() { return descriptionKey; }
+    public Material getIcon() { return icon; }
+    public int getSlot() { return slot; }
+    public int getFirstSlot() { return firstSlot; }
+    public int getSecondSlot() { return secondSlot; }
+    public NamedTextColor getColor() { return color; }
 }

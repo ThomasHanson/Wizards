@@ -13,12 +13,10 @@ import org.bukkit.potion.PotionEffectType;
 public class PotionFrozen extends Potion {
 
     @Override
-    public void activate(Wizard wizard) {}
+    public void onActivate(Wizard wizard) {}
 
     @Override
-    public void deactivate(Wizard wizard) {
-        super.deactivate(wizard);
-    }
+    public void onDeactivate(Wizard wizard) {}
 
     @EventHandler
     public void onDamage(CustomDamageEvent event) {

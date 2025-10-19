@@ -27,7 +27,7 @@ public class PotionGambler extends Potion {
     private final Map<UUID, GamblerResult> results = new HashMap<>();
 
     @Override
-    public void activate(Wizard wizard) {
+    public void onActivate(Wizard wizard) {
 
         int numResults = GamblerResult.values().length;
         GamblerResult result = GamblerResult.values()[ThreadLocalRandom.current().nextInt(numResults - 1)];
@@ -36,9 +36,8 @@ public class PotionGambler extends Potion {
     }
 
     @Override
-    public void deactivate(Wizard wizard) {
+    public void onDeactivate(Wizard wizard) {
         results.remove(wizard.getUniqueId());
-        super.deactivate(wizard);
     }
 
     @Override

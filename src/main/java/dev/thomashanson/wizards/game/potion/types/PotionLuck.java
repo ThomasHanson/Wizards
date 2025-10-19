@@ -11,7 +11,10 @@ import java.util.concurrent.ThreadLocalRandom;
 public class PotionLuck extends Potion {
 
     @Override
-    public void activate(Wizard wizard) {}
+    public void onActivate(Wizard wizard) {}
+
+    @Override
+    public void onDeactivate(Wizard wizard) {}
 
     @EventHandler
     public void onSpellCollect(SpellCollectEvent event) {

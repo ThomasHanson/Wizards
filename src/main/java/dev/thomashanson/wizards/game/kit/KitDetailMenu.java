@@ -1,50 +1,148 @@
 package dev.thomashanson.wizards.game.kit;
 
-import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.util.menu.InventoryMenuBuilder;
-import dev.thomashanson.wizards.util.menu.ItemBuilder;
-import org.bukkit.ChatColor;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.event.inventory.ClickType;
 
-class KitDetailMenu {
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.manager.GameManager;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
+import dev.triumphteam.gui.builder.item.ItemBuilder;
+import dev.triumphteam.gui.guis.Gui;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
-    private final Wizards game;
+public class KitDetailMenu {
 
+    private final WizardsPlugin plugin;
+    private final GameManager gameManager;
+    private final LanguageManager lang;
     private final WizardsKit kit;
+    private int currentLevel;
     private final KitSelectMenu prevMenu;
 
-    KitDetailMenu(Wizards game, WizardsKit kit, KitSelectMenu prevMenu) {
-        this.game = game;
+    public KitDetailMenu(WizardsPlugin plugin, WizardsKit kit, int currentLevel, KitSelectMenu prevMenu) {
+        this.plugin = plugin;
+        this.gameManager = plugin.getGameManager();
+        this.lang = plugin.getLanguageManager();
         this.kit = kit;
+        this.currentLevel = currentLevel;
         this.prevMenu = prevMenu;
     }
 
-    void showMenu(Player player) {
+    public void showMenu(Player player) {
+        // Get the translated kit name once at the beginning
+        Component kitName = lang.getTranslated(player, kit.getNameKey());
 
-        InventoryMenuBuilder menuBuilder = new InventoryMenuBuilder(game.getPlugin(), kit.getName(), prevMenu != null ? 54 : 45);
+        Gui gui = Gui.gui()
+                .title(kitName) // Use the translated component directly
+                .rows(5)
+                .create();
 
-        menuBuilder.withItem(13,
+        gui.setDefaultClickAction(event -> event.setCancelled(true));
 
-                new ItemBuilder(kit.getMenuItem().getType())
-                        .withName(kit.getFormattedName())
-                        .withLore(kit.getDescription())
-                        .get()
-        );
+        // --- Kit Info Item ---
+        List<Component> infoLore = new ArrayList<>();
+        // Get the translated description and add it
+        infoLore.add(lang.getTranslated(player, kit.getDescriptionKey()));
+        
+        gui.setItem(13, ItemBuilder.from(kit.getIcon())
+            .name(kitName.colorIfAbsent(NamedTextColor.AQUA)) // Apply color to the already-translated name
+            .lore(infoLore)
+            .asGuiItem());
 
-        if (prevMenu != null) {
+        // --- Level Display ---
+        for (int i = 1; i <= 5; i++) {
+            boolean isLevelUnlocked = i <= currentLevel;
+            Material material = isLevelUnlocked ? Material.LIME_STAINED_GLASS_PANE : Material.GRAY_STAINED_GLASS_PANE;
+            
+            String statusKey = isLevelUnlocked ? "wizards.gui.generic.unlocked" : "wizards.gui.generic.locked";
 
-            menuBuilder.withItem(49,
+            List<Component> levelLore = new ArrayList<>();
+            levelLore.add(lang.getTranslated(player, statusKey));
+            
+            String descriptionKey = kit.getDescriptionKey();
 
-                    new ItemBuilder(Material.ARROW)
-                            .withName(ChatColor.GREEN + "Go Back")
-                            .get(),
+            levelLore.add(Component.text(""));
+            levelLore.add(lang.getTranslated(player, descriptionKey));
 
-                    (p, action, item) -> game.getKitSelectMenu().showMenu(p), ClickType.LEFT
-            );
+            gui.setItem(20 + (i - 1), ItemBuilder.from(material)
+                .name(lang.getTranslated(player, "wizards.gui.generic.level", Placeholder.unparsed("level", String.valueOf(i))))
+                .lore(levelLore)
+                .asGuiItem());
         }
 
-        menuBuilder.show(player);
+        // --- Purchase/Upgrade Button ---
+        if (currentLevel == 0) { // Kit is not owned yet
+            if (kit.getUnlockType() == WizardsKit.UnlockType.COINS) {
+                gui.setItem(31, ItemBuilder.from(Material.GOLD_INGOT)
+                        .name(lang.getTranslated(player, "wizards.gui.kitDetail.action.purchaseKit"))
+                        .lore(
+                            lang.getTranslated(player, "wizards.gui.generic.cost", Placeholder.unparsed("cost", String.valueOf(kit.getUnlockCost()))),
+                            Component.text(""),
+                            lang.getTranslated(player, "wizards.gui.generic.action.clickToPurchase")
+                        ).asGuiItem(event -> handlePurchase(player)));
+
+            } else if (kit.getUnlockType() == WizardsKit.UnlockType.ACHIEVEMENTS) {
+                gui.setItem(31, ItemBuilder.from(Material.BARRIER)
+                        .name(lang.getTranslated(player, "wizards.gui.generic.locked"))
+                        .lore(lang.getTranslated(player, "wizards.gui.kitSelect.unlock.achievements"))
+                        .asGuiItem());
+            }
+
+        } else if (currentLevel < 5) { // Kit is owned but not max level
+            Map<Integer, Integer> upgradeTiers = gameManager.getKitManager().getKitUpgradeCosts().get(kit.getId());
+            int nextLevel = currentLevel + 1;
+
+            if (upgradeTiers == null || !upgradeTiers.containsKey(nextLevel)) {
+                gui.setItem(31, ItemBuilder.from(Material.BARRIER)
+                        .name(lang.getTranslated(player, "wizards.gui.kitDetail.status.upgradeNotAvailable"))
+                        .lore(lang.getTranslated(player, "wizards.gui.kitDetail.lore.cannotUpgrade"))
+                        .asGuiItem());
+            } else {
+                int upgradeCost = upgradeTiers.get(nextLevel);
+                gui.setItem(31, ItemBuilder.from(Material.EMERALD)
+                        .name(lang.getTranslated(player, "wizards.gui.kitDetail.action.upgradeToLevel", Placeholder.unparsed("level", String.valueOf(nextLevel))))
+                        .lore(
+                            lang.getTranslated(player, "wizards.gui.generic.cost", Placeholder.unparsed("cost", String.valueOf(upgradeCost))),
+                            Component.text(""),
+                            lang.getTranslated(player, "wizards.gui.generic.action.clickToUpgrade")
+                        ).asGuiItem(event -> handleUpgrade(player, nextLevel, upgradeCost)));
+            }
+
+        } else { // Kit is max level
+            gui.setItem(31, ItemBuilder.from(Material.DIAMOND)
+                    .name(lang.getTranslated(player, "wizards.gui.kitDetail.status.maxLevel"))
+                    .lore(lang.getTranslated(player, "wizards.gui.kitDetail.lore.fullyUpgraded"))
+                    .glow(true)
+                    .asGuiItem());
+        }
+
+        // --- Back Button ---
+        if (prevMenu != null) {
+            gui.setItem(40, ItemBuilder.from(Material.ARROW)
+                .name(lang.getTranslated(player, "wizards.gui.generic.goBack"))
+                .asGuiItem(event -> prevMenu.showMenu(player)));
+        }
+
+        gui.open(player);
+    }
+
+    private void handlePurchase(Player player) {
+        KitConfirmationMenu confirmationMenu = new KitConfirmationMenu(plugin, this, kit, KitConfirmationMenu.ActionType.PURCHASE, kit.getUnlockCost(), 1);
+        confirmationMenu.showMenu(player);
+    }
+
+    private void handleUpgrade(Player player, int nextLevel, int cost) {
+        KitConfirmationMenu confirmationMenu = new KitConfirmationMenu(plugin, this, kit, KitConfirmationMenu.ActionType.UPGRADE, cost, nextLevel);
+        confirmationMenu.showMenu(player);
+    }
+
+    public void setCurrentLevel(int level) {
+        this.currentLevel = level;
     }
 }

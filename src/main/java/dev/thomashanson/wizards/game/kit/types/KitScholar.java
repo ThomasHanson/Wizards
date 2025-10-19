@@ -1,49 +1,213 @@
 package dev.thomashanson.wizards.game.kit.types;
 
-import dev.thomashanson.wizards.game.kit.WizardsKit;
-import dev.thomashanson.wizards.util.EntityUtil;
-import org.bukkit.*;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
-import java.util.Arrays;
+import org.bukkit.FireworkEffect;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.World;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
+import org.bukkit.entity.Player;
+import org.bukkit.entity.Rabbit;
+import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.scheduler.BukkitRunnable;
+
+import dev.thomashanson.wizards.game.Wizard;
+import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.kit.WizardsKit;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.SpellManager;
 
 public class KitScholar extends WizardsKit {
 
-    public KitScholar() {
+    private final Wizards game;
 
-        super (
-                "Scholar", ChatColor.LIGHT_PURPLE, Color.fromRGB(255, 85, 255),
+    public KitScholar(Wizards game, Map<String, Object> data) {
+        super(data);
+        // super (
+        //         "Scholar",
 
-                Arrays.asList (
-                        "Starts with Mana Bolt, Heal, Ice Prison, and Wizard Compass.",
-                        "It can over-level each spell by 1."
-                ),
+        //         "Starts with Mana Bolt, Heal, Ice Prison, and Wizard's " +
+        //                 "Compass. It can over-level each spell by 1."
 
-                new ItemStack(Material.BOOK),
-                new ItemStack(Material.BLAZE_ROD)
-        );
+        //         // new ItemStack(Material.BOOK),
+        //         // new ItemStack(Material.BLAZE_ROD)
+        // );
+
+        this.game = game;
     }
 
     @Override
     public void playSpellEffect(Player player, Location location) {}
 
     @Override
-    public void playIntro(Player player, Location location, int ticks) {
-
-        if (ticks % 20 == 3) {
-
-            for (int i = 0; i < 2; i++) {
-
-                FireworkEffect effect = FireworkEffect.builder()
-                        .flicker(false)
-                        .withColor(i == 0 ? Color.WHITE : Color.YELLOW)
-                        .with(FireworkEffect.Type.BALL)
-                        .trail(false)
-                        .build();
-
-                EntityUtil.launchFirework(player.getLocation(), effect, null, 3);
-            }
+    public void playIntro(Player player) {
+        if (player == null || !player.isOnline()) {
+            return;
         }
+
+        Location playerSpawnLoc = player.getLocation();
+        World world = playerSpawnLoc.getWorld();
+
+        if (world == null) {
+            return;
+        }
+
+        // 1. Pure white bunny hopping at player spawn
+        Rabbit bunny = (Rabbit) world.spawnEntity(playerSpawnLoc, EntityType.RABBIT);
+        bunny.setRabbitType(Rabbit.Type.WHITE);
+        bunny.setAI(false); // Control its movement
+        bunny.setSilent(true);
+        bunny.setInvulnerable(true);
+        
+        player.playSound(playerSpawnLoc, Sound.ENTITY_RABBIT_AMBIENT, 0.7F, 1.5F);
+
+
+        new BukkitRunnable() {
+            int ticks = 0;
+            final int duration = 60; // 3 seconds
+            boolean goingUp = true;
+            double hopHeight = 0;
+
+            @Override
+            public void run() {
+                if (!player.isOnline() || ticks >= duration) {
+                    bunny.remove();
+                    if (player.isOnline()) {
+                        // Player appears in a puff of white smoke
+                        player.setInvisible(false);
+                        world.spawnParticle(Particle.SNOWBALL, player.getLocation().add(0, 1, 0), 30, 0.3, 0.3, 0.3, 0.1);
+                        world.spawnParticle(Particle.CLOUD, player.getLocation().add(0, 1, 0), 20, 0.5, 0.5, 0.5, 0.05);
+                        player.playSound(player.getLocation(), Sound.ENTITY_CHICKEN_EGG, 1F, 1.2F);
+
+
+                        // Two small firework bursts (white and gold)
+                        Location fireworkLoc = player.getLocation().add(0, 1.5, 0);
+                        spawnFirework(fireworkLoc, org.bukkit.Color.WHITE, org.bukkit.Color.SILVER);
+                        game.getPlugin().getServer().getScheduler().runTaskLater(game.getPlugin(), () -> {
+                            if(player.isOnline()) spawnFirework(fireworkLoc.clone().add(Math.random()*0.5-0.25, 0, Math.random()*0.5-0.25), org.bukkit.Color.YELLOW, org.bukkit.Color.ORANGE);
+                        }, 5L); // Slightly delayed second firework
+                         player.playSound(player.getLocation(), Sound.ENTITY_FIREWORK_ROCKET_TWINKLE, 1F, 1F);
+
+                    }
+                    this.cancel();
+                    return;
+                }
+
+                // Bunny hopping logic
+                if (bunny.isValid()) {
+                    if (goingUp) {
+                        hopHeight += 0.1;
+                        if (hopHeight >= 0.5) {
+                            goingUp = false;
+                            player.playSound(bunny.getLocation(), Sound.ENTITY_RABBIT_JUMP, 0.5F, 1.8F);
+                        }
+                    } else {
+                        hopHeight -= 0.1;
+                        if (hopHeight <= 0) {
+                            hopHeight = 0;
+                            goingUp = true;
+                        }
+                    }
+                    bunny.teleport(playerSpawnLoc.clone().add(0, hopHeight, 0));
+                }
+                
+                if (ticks % 20 == 0 && bunny.isValid()) {
+                     player.playSound(bunny.getLocation(), Sound.ENTITY_RABBIT_AMBIENT, 0.4F, (float) (1.5 + Math.random()*0.4));
+                }
+
+
+                ticks++;
+            }
+        }.runTaskTimer(game.getPlugin(), 0L, 1L);
+    }
+
+    private void spawnFirework(Location location, org.bukkit.Color primaryColor, org.bukkit.Color fadeColor) {
+        if (location.getWorld() == null) return;
+        Firework fw = location.getWorld().spawn(location, Firework.class);
+        FireworkMeta fwm = fw.getFireworkMeta();
+        fwm.addEffect(FireworkEffect.builder()
+                .withColor(primaryColor)
+                .withFade(fadeColor)
+                .with(FireworkEffect.Type.BALL)
+                .flicker(true)
+                .build());
+        fwm.setPower(0);
+        fw.setFireworkMeta(fwm);
+        game.getPlugin().getServer().getScheduler().runTaskLater(game.getPlugin(), fw::detonate, 1L);
+    }
+
+    @Override
+    public List<String> getLevelDescription(int level) {
+        // Scholar has no upgrades, so it's the same for all levels.
+        return Collections.singletonList(
+            "<gray>Can overlevel spells by 1."
+        );
+    }
+
+    @Override
+    public float getInitialMaxMana(int kitLevel) {
+        return 100;
+    }
+
+    @Override
+    public int getInitialWands() {
+        return 2;
+    }
+
+    @Override
+    public int getInitialMaxWands(int kitLevel) {
+        return 5;
+    }
+
+    @Override
+    public float getBaseManaPerTick(int kitLevel) {
+        return 2.5F / 20F;
+    }
+
+    @Override
+    public void applyModifiers(Wizard wizard, int kitLevel) {
+        double reduction = 0.1 + (0.025 * (kitLevel- 1));
+        wizard.setCooldownMultiplier((float) (1 - reduction), false);
+    }
+
+    @Override
+    public void applyInitialSpells(Wizard wizard) {
+        // Get the SpellManager from your main game instance
+        SpellManager spellManager = game.getPlugin().getSpellManager();
+
+        // Look up each spell by its key and pass the object to learnSpell
+        Spell manaBolt = spellManager.getSpell("MANA_BOLT");
+        if (manaBolt != null) {
+            wizard.learnSpell(manaBolt);
+        }
+
+        Spell fireball = spellManager.getSpell("FIREBALL");
+        if (fireball != null) {
+            wizard.learnSpell(fireball);
+        }
+
+        Spell heal = spellManager.getSpell("HEAL");
+        if (heal != null) {
+            wizard.learnSpell(heal);
+        }
+
+        Spell icePrison = spellManager.getSpell("ICE_PRISON");
+        if (icePrison != null) {
+            wizard.learnSpell(icePrison);
+        }
+    }
+
+    @Override
+    public int getModifiedMaxSpellLevel(Spell spell, int currentDefaultMaxLevel) {
+        // Switch on the spell's unique key (e.g., "MANA_BOLT")
+        return switch (spell.getKey().toUpperCase()) {
+            case "MANA_BOLT", "FIREBALL", "HEAL", "ICE_PRISON" -> currentDefaultMaxLevel + 1;
+            default -> currentDefaultMaxLevel;
+        }; // Scholar bonus
     }
 }

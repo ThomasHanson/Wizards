@@ -1,140 +1,116 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.damage.types.CustomDamageTick;
-import dev.thomashanson.wizards.game.overtime.types.DisasterHail;
-import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.projectile.CustomProjectile;
-import dev.thomashanson.wizards.projectile.ProjectileData;
-import dev.thomashanson.wizards.util.EntityUtil;
-import dev.thomashanson.wizards.util.MathUtil;
-import dev.thomashanson.wizards.util.npc.NPC;
-import org.apache.commons.lang.Validate;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
-import org.bukkit.entity.ArmorStand;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
-import java.time.Instant;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
+import dev.thomashanson.wizards.projectile.CustomProjectile;
+import dev.thomashanson.wizards.projectile.ProjectileData;
 
-public class SpellIceShards extends Spell implements CustomProjectile, Spell.Deflectable, Spell.Cancellable {
+public class SpellIceShards extends Spell implements CustomProjectile, Tickable {
 
-    public SpellIceShards() {
-        setCancelOnSwap();
+    private static final List<ShardVolley> ACTIVE_VOLLEYS = new ArrayList<>();
+
+    public SpellIceShards(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
     }
 
     @Override
-    public void castSpell(Player player, int level) {
+    public boolean cast(Player player, int level) {
+        // When cast, create a new volley manager and let the tick() method handle firing.
+        ACTIVE_VOLLEYS.add(new ShardVolley(this, player, level));
+        return true;
+    }
 
-        shoot(player);
+    @Override
+    public void tick(long gameTick) {
+        if (ACTIVE_VOLLEYS.isEmpty()) return;
+        ACTIVE_VOLLEYS.removeIf(ShardVolley::tick);
+    }
+    
+    @Override
+    public void cleanup() {
+        ACTIVE_VOLLEYS.clear();
+    }
 
-        for (int i = 1; i <= (level * (getGame().isOvertime() && getGame().getDisaster() instanceof DisasterHail ? 2 : 1)); i++) {
+    @Override
+    public void onCollide(LivingEntity hitEntity, Block hitBlock, ProjectileData data) {
+        Integer level = data.getCustomData("level", Integer.class);
+        if (level == null) return;
+        
+        if (hitEntity != null && data.getThrower() instanceof Player caster) {
+            damage(hitEntity, new CustomDamageTick(getStat("damage", level), EntityDamageEvent.DamageCause.PROJECTILE, getKey(), Instant.now(), caster, null));
+        }
 
-            int finalI = i;
+        Location impact = (hitEntity != null) ? hitEntity.getLocation() : hitBlock.getLocation();
+        impact.getWorld().spawnParticle(Particle.ITEM_CRACK, impact, 30, 0.2, 0.2, 0.2, 0.1, new ItemStack(Material.ICE));
+    }
 
-            new BukkitRunnable() {
+    private static class ShardVolley {
+        final SpellIceShards parent;
+        final Player caster;
+        final int level;
 
-                @Override
-                public void run() {
+        final int totalShots;
+        final int shotDelay;
+        
+        private int shotsFired = 0;
+        private int tickCounter = 0;
 
-                    if (isCancelled()) {
-                        cancel();
-                        return;
-                    }
+        ShardVolley(SpellIceShards parent, Player caster, int level) {
+            this.parent = parent;
+            this.caster = caster;
+            this.level = level;
 
-                    shoot(player);
-                    setProgress((float) finalI / level);
+            StatContext context = StatContext.of(level);
+            this.totalShots = (int) parent.getStat("shards", level);
+            this.shotDelay = (int) parent.getStat("delay-ticks", level);
+        }
+
+        /** @return true if this volley is complete and should be removed */
+        boolean tick() {
+            if (!caster.isOnline()) return true;
+
+            if (tickCounter % shotDelay == 0) {
+                if (shotsFired >= totalShots) {
+                    return true;
                 }
-
-            }.runTaskLater(getGame().getPlugin(), i * 5);
-        }
-    }
-
-    @Override
-    public void onCollide(LivingEntity hitEntity, NPC hitNPC, Block hitBlock, ProjectileData data) {
-
-        if (hitEntity != null) {
-
-            if (data.getEntity().hasMetadata("Wizard")) {
-
-                CustomDamageTick damageTick = new CustomDamageTick(
-                        4.0,
-                        EntityDamageEvent.DamageCause.PROJECTILE,
-                        "Ice Shard",
-                        Instant.now(),
-                        (Player) data.getEntity().getMetadata("Wizard").get(0).value()
-                );
-
-                damage(hitEntity, damageTick);
-
-                if (damageTick.getPlayer() != null)
-                    if (getWizard(damageTick.getPlayer()) != null)
-                        getWizard(damageTick.getPlayer()).addAccuracy(true);
-
-            } else if (isBoulder(hitEntity)) {
-                hitEntity.remove();
+                fireShard();
+                shotsFired++;
             }
+            tickCounter++;
+            return false;
         }
 
-        Location location = data.getEntity().getLocation();
-        Validate.notNull(location.getWorld());
+        void fireShard() {
+            StatContext context = StatContext.of(level);
+            ProjectileData.Builder dataBuilder = new ProjectileData.Builder(parent.getGame().orElse(null), caster, parent)
+                .hitPlayer(true).hitBlock(true)
+                .impactSound(Sound.BLOCK_GLASS_BREAK, 1.2F, 1.0F)
+                .maxTicksLived((int) parent.getStat("projectile-lifespan-ticks", level))
+                .customData("level", level);
 
-        location.getWorld().playSound(location, Sound.BLOCK_GLASS_BREAK, 1.2F, 1F);
-
-        for (int x = -1; x <= 1; x++) {
-            for (int y = -1; y <= 1; y++) {
-                for (int z = -1; z <= 1; z++) {
-
-                    Block block = location.clone().add(x, y, z).getBlock();
-
-                    if (block.getType() == Material.FIRE) {
-
-                        block.setType(Material.AIR);
-                        // achievement
-                    }
-                }
-            }
+            Vector velocity = caster.getEyeLocation().getDirection().normalize().multiply(parent.getStat("projectile-speed", level));
+            parent.plugin.getProjectileManager().launchProjectile(caster.getEyeLocation(), new ItemStack(Material.GHAST_TEAR), velocity, dataBuilder);
+            caster.getWorld().playSound(caster.getLocation(), Sound.ENTITY_PLAYER_ATTACK_SWEEP, 1.2F, 1.2F);
         }
-    }
-
-    @Override
-    public void cancelSpell(Player player) {}
-
-    @Override
-    public void deflectSpell(Player player, int level, Vector direction) {
-
-    }
-
-    private void shoot(Player player) {
-
-        if (getWizard(player) == null)
-            return;
-
-        ArmorStand stand = EntityUtil.makeProjectile(player.getEyeLocation(), Material.GHAST_TEAR);
-
-        stand.setMetadata("Wizard", new FixedMetadataValue(getGame().getPlugin(), player));
-        MathUtil.setVelocity(stand, player.getLocation().getDirection(), 2.0, false, 0, 0.2, 10, false);
-
-        getGame().getPlugin().getProjectileManager().addThrow (
-
-                stand,
-
-                new ProjectileData (
-
-                        getGame(),
-
-                        stand, player,
-                        this,
-                        true, true
-                )
-        );
-
-        player.getWorld().playSound(player.getLocation(), Sound.UI_BUTTON_CLICK, 1.2F, 0.8F);
     }
 }

@@ -1,52 +1,65 @@
 package dev.thomashanson.wizards.game.kit.types;
 
-import dev.thomashanson.wizards.damage.DamageTick;
-import dev.thomashanson.wizards.event.CustomDamageEvent;
-import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.game.kit.WizardsKit;
-import dev.thomashanson.wizards.game.manager.DamageManager;
-import dev.thomashanson.wizards.game.spell.WandElement;
-import dev.thomashanson.wizards.util.BlockUtil;
-import org.bukkit.ChatColor;
+import java.time.Instant;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import org.bukkit.Bukkit;
 import org.bukkit.Color;
+import org.bukkit.FireworkEffect;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Firework;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.scheduler.BukkitRunnable;
 
-import java.time.Instant;
-import java.util.Collections;
-import java.util.Map;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.DamageTick;
+import dev.thomashanson.wizards.event.CustomDamageEvent;
+import dev.thomashanson.wizards.game.Wizard;
+import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.kit.WizardsKit;
+import dev.thomashanson.wizards.game.manager.DamageManager;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.util.BlockUtil;
 
 public class KitEnchantress extends WizardsKit {
 
     private final Wizards game;
     private Instant lastDamaged;
 
-    //private Map<UUID, List<Block>> blocksChanged = new HashMap<>();
+    private final int PARTICLE_DELAY = 5; // Particle delay in ticks (adjust as needed)
+    private final int FIREWORK_DELAY = 60; // Firework delay in ticks (adjust as needed)
 
-    public KitEnchantress(Wizards game) {
-
-        super (
-                "Enchantress", ChatColor.RED, Color.RED,
-
-                Collections.singletonList (
-                        "Duplicate spellbooks have a 20-25% chance to level up a random spell."
-                ),
-
-                new ItemStack(Material.EXPERIENCE_BOTTLE),
-                new ItemStack(WandElement.ICE.getMaterial())
-        );
-
+    public KitEnchantress(Wizards game, Map<String, Object> data) {
+        super(data);
         this.game = game;
     }
+
+    @Override
+    public List<String> getLevelDescription(int level) {
+        // Chance to level up = 0.2 + (0.0125 * (level - 1))
+        double chance = 0.2 + (0.0125 * (Math.max(0, level - 1)));
+        String formattedChance = String.format("%.1f%%", chance * 100);
+
+        return Collections.singletonList(
+            "<gray>Duplicate Spellbook Upgrade Chance: <aqua>" + formattedChance
+        );
+    }
+
+    //             new ItemStack(Material.EXPERIENCE_BOTTLE),
+    //             new ItemStack(WandElement.ICE.getMaterial())
 
     @Override
     public void playSpellEffect(Player player, Location location) {
@@ -54,8 +67,64 @@ public class KitEnchantress extends WizardsKit {
     }
 
     @Override
-    public void playIntro(Player player, Location location, int ticks) {
+    public void playIntro(Player player) {
 
+        // Store the player's initial location
+        Location initialLocation = player.getLocation();
+
+        // Set the player to be invisible
+        player.setInvisible(true);
+
+        // Play the rising hot pink particles
+        new BukkitRunnable() {
+            int count = 0;
+
+            @Override
+            public void run() {
+                count++;
+
+                // Calculate the position for the rising particles
+                double offsetX = Math.sin(count / 10.0) * 0.5;
+                double offsetY = count / 20.0;
+                double offsetZ = Math.cos(count / 10.0) * 0.5;
+
+                // Spawn the particles at the calculated position
+                initialLocation.getWorld().spawnParticle(Particle.REDSTONE, initialLocation.getX() + offsetX,
+                        initialLocation.getY() + offsetY, initialLocation.getZ() + offsetZ, 0,
+                        new Particle.DustOptions(Color.FUCHSIA, 1));
+
+                if (count >= 60) {
+                    // Stop the particle effect after 3 seconds (60 ticks)
+                    cancel();
+
+                    // Play the burst of hot pink fireworks
+                    spawnFirework(initialLocation, Color.FUCHSIA);
+                }
+            }
+        }.runTaskTimer(WizardsPlugin.getPlugin(WizardsPlugin.class), 0, PARTICLE_DELAY);
+
+        // Schedule the player to become visible again after the effect
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                // Make the player visible again
+                player.setInvisible(false);
+            }
+        }.runTaskLater(WizardsPlugin.getPlugin(WizardsPlugin.class), FIREWORK_DELAY);
+    }
+
+    private void spawnFirework(Location location, Color color) {
+        Firework firework = (Firework) location.getWorld().spawnEntity(location, EntityType.FIREWORK);
+        FireworkMeta fireworkMeta = firework.getFireworkMeta();
+        fireworkMeta.addEffect(FireworkEffect.builder().withColor(color).with(FireworkEffect.Type.BURST).build());
+        fireworkMeta.setPower(0);
+        firework.setFireworkMeta(fireworkMeta);
+
+        // Schedule the firework to explode and disappear
+        Bukkit.getScheduler().scheduleSyncDelayedTask(WizardsPlugin.getPlugin(WizardsPlugin.class), firework::detonate,
+                FIREWORK_DELAY);
+        Bukkit.getScheduler().scheduleSyncDelayedTask(WizardsPlugin.getPlugin(WizardsPlugin.class), firework::remove,
+                FIREWORK_DELAY + 20); // Remove firework 1 second after explosion
     }
 
     @EventHandler
@@ -141,5 +210,36 @@ public class KitEnchantress extends WizardsKit {
 
             lastDamaged = lastTick.getTimestamp();
         }
+    }
+
+    @Override
+    public float getInitialMaxMana(int kitLevel) {
+        return 100;
+    }
+
+    @Override
+    public int getInitialWands() {
+        return 2;
+    }
+
+    @Override
+    public int getInitialMaxWands(int kitLevel) {
+        return 5;
+    }
+
+    @Override
+    public float getBaseManaPerTick(int kitLevel) {
+        return 2.5F / 20F;
+    }
+
+    @Override
+    public void applyModifiers(Wizard wizard, int kitLevel) { }
+
+    @Override
+    public void applyInitialSpells(Wizard wizard) { }
+
+    @Override
+    public int getModifiedMaxSpellLevel(Spell spell, int currentDefaultMaxLevel) {
+        return currentDefaultMaxLevel;
     }
 }

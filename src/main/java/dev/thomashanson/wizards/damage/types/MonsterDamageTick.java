@@ -1,92 +1,96 @@
 package dev.thomashanson.wizards.damage.types;
 
-import dev.thomashanson.wizards.damage.DamageTick;
-import dev.thomashanson.wizards.game.manager.DamageManager;
-import dev.thomashanson.wizards.util.EntityUtil;
+import java.text.DecimalFormat;
+import java.time.Instant;
+import java.util.UUID;
+
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.jetbrains.annotations.Nullable;
 
-import java.text.DecimalFormat;
-import java.time.Instant;
+import dev.thomashanson.wizards.damage.DamageConfig;
+import dev.thomashanson.wizards.damage.DamageTick;
+import dev.thomashanson.wizards.game.manager.DamageManager;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
+import dev.thomashanson.wizards.util.EntityUtil;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class MonsterDamageTick extends DamageTick {
 
+    public static final DecimalFormat DISTANCE_FORMAT = new DecimalFormat("#.#");
+
     private LivingEntity entity;
-    private double distance;
-    private boolean ranged = false;
+    private final UUID attackerId;
+    private final String attackerName;
 
-    public MonsterDamageTick(double damage, String name, Instant timestamp, LivingEntity entity) {
-        super(damage, EntityDamageEvent.DamageCause.ENTITY_ATTACK, name, timestamp);
+    private final double distance;
+    private final boolean ranged;
+
+    public MonsterDamageTick(double damage, EntityDamageEvent.DamageCause cause, String reason, Instant timestamp, LivingEntity entity, @Nullable Double distanceVal) {
+        super(damage, cause, reason, timestamp);
         this.entity = entity;
-    }
+        this.attackerId = entity.getUniqueId();
+        this.attackerName = EntityUtil.getEntityName(entity);
 
-    public MonsterDamageTick(double damage, String name, Instant timestamp, LivingEntity entity, double distance) {
-        super(damage, EntityDamageEvent.DamageCause.ENTITY_ATTACK, name, timestamp);
-        this.entity = entity;
-        this.distance = distance;
-        this.ranged = true;
-    }
-
-    private double getDistance() {
-        return distance;
-    }
-
-    private boolean isRanged() {
-        return ranged;
-    }
-
-    public LivingEntity getEntity() {
-        return entity;
-    }
-
-    public void setEntity(LivingEntity entity) {
-        this.entity = entity;
-    }
-
-    String getMessageTemplate() {
-
-        if (isRanged()) {
-
-            DecimalFormat decimalFormat = new DecimalFormat("#.#");
-
-            return
-                    DamageManager.BASE_COLOR + "Shot by " + DamageManager.ACCENT_COLOR + "{ATTACKER}" + DamageManager.BASE_COLOR + " from "+
-                            DamageManager.ACCENT_COLOR + decimalFormat.format(getDistance()) + "m " + DamageManager.BASE_COLOR + "away";
-
+        if (distanceVal != null) {
+            this.distance = distanceVal;
+            this.ranged = true;
         } else {
-            return DamageManager.BASE_COLOR + "Attacked by " + DamageManager.ACCENT_COLOR +  "{ATTACKER}";
-        }
-    }
-
-    String getDeathMessageTemplate(Player player) {
-
-        if (isRanged()) {
-
-            DecimalFormat decimalFormat = new DecimalFormat("#.#");
-
-            return
-                    DamageManager.ACCENT_COLOR + player.getDisplayName() + DamageManager.BASE_COLOR + " was killed by " + DamageManager.ACCENT_COLOR + "{KILLER}" + DamageManager.BASE_COLOR + " from "+
-                            DamageManager.ACCENT_COLOR + decimalFormat.format(getDistance()) + "m " + DamageManager.BASE_COLOR + "away";
-
-        } else {
-            return DamageManager.ACCENT_COLOR + player.getDisplayName() + DamageManager.BASE_COLOR + " was killed by " + DamageManager.ACCENT_COLOR +  "{KILLER}";
+            this.distance = 0.0;
+            this.ranged = false;
         }
     }
 
     @Override
     public boolean matches(DamageTick tick) {
-        return (tick instanceof MonsterDamageTick) && getEntity().getUniqueId().equals(((MonsterDamageTick) tick).getEntity().getUniqueId());
+        return tick instanceof MonsterDamageTick other &&
+               this.getAttackerId().equals(other.getAttackerId()) &&
+               this.getReason().equals(other.getReason());
     }
 
     @Override
-    public String getDeathMessage(Player player) {
-        return getDeathMessageTemplate(player).replace("{KILLER}", EntityUtil.getEntityName(getEntity()));
+    public Component getDeathMessage(Player victim, LanguageManager lang, DamageManager damageManager) {
+        Component victimName = victim.displayName().color(NamedTextColor.RED);
+        DamageConfig.MonsterConfig msgConfig = damageManager.getConfig().deathMessages().monster();
 
+        if (isRanged()) {
+            String distanceStr = DISTANCE_FORMAT.format(getDistance());
+            return lang.getTranslated(victim, msgConfig.ranged(),
+                Placeholder.component("victim_name", victimName),
+                Placeholder.unparsed("monster_name", getAttackerName()),
+                Placeholder.unparsed("distance", distanceStr)
+            );
+        } else {
+            return lang.getTranslated(victim, msgConfig.melee(),
+                Placeholder.component("victim_name", victimName),
+                Placeholder.unparsed("monster_name", getAttackerName())
+            );
+        }
     }
 
     @Override
-    public String getSingleLineSummary() {
-        return getMessageTemplate().replace("{ATTACKER}", EntityUtil.getEntityName(getEntity()));
+    public Component getSingleLineSummary(Player viewer, LanguageManager lang, DamageManager damageManager) {
+        if (isRanged()) {
+            String distanceStr = DISTANCE_FORMAT.format(getDistance());
+            return lang.getTranslated(viewer, "wizards.damage.summary.monster.ranged",
+                Placeholder.unparsed("monster_name", getAttackerName()),
+                Placeholder.unparsed("distance", distanceStr)
+            );
+        } else {
+            return lang.getTranslated(viewer, "wizards.damage.summary.monster.melee",
+                Placeholder.unparsed("monster_name", getAttackerName())
+            );
+        }
     }
+
+    // Unchanged getters and setters
+    public final LivingEntity getEntity() { return entity; }
+    public void setEntity(LivingEntity entity) { this.entity = entity; }
+    public final UUID getAttackerId() { return attackerId; }
+    public final String getAttackerName() { return attackerName; }
+    protected final double getDistance() { return distance; }
+    public final boolean isRanged() { return ranged; }
 }

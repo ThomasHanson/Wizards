@@ -1,10 +1,11 @@
 package dev.thomashanson.wizards.event;
 
-import dev.thomashanson.wizards.damage.DamageTick;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
+
+import dev.thomashanson.wizards.damage.DamageTick;
 
 public class CustomDamageEvent extends Event implements Cancellable {
 
@@ -38,7 +39,7 @@ public class CustomDamageEvent extends Event implements Cancellable {
     }
 
     public double getDamage() {
-        return damageTick.getDamage();
+        return damageTick.getFinalDamage();
     }
 
     public void setDamage(double damage) {

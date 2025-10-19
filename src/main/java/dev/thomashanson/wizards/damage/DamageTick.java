@@ -1,13 +1,18 @@
 package dev.thomashanson.wizards.damage;
 
-import org.bukkit.Location;
-import org.bukkit.entity.Player;
-import org.bukkit.event.entity.EntityDamageEvent;
-
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
+
+import org.bukkit.Location;
+import org.bukkit.entity.Player;
+import org.bukkit.event.entity.EntityDamageEvent;
+
+import dev.thomashanson.wizards.game.manager.DamageManager;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public abstract class DamageTick implements Comparable<DamageTick> {
 
@@ -16,10 +21,9 @@ public abstract class DamageTick implements Comparable<DamageTick> {
     private final String reason;
     private Instant timestamp;
 
-    private final Map<String, Double> damageMods = new HashMap<>();
-
+    private final Map<String, Double> damageModifiers = new HashMap<>();
     private Location knockbackOrigin;
-    private final Map<String, Double> knockbackMods = new HashMap<>();
+    private final Map<String, Double> knockbackModifiers = new HashMap<>();
 
     protected DamageTick(double damage, EntityDamageEvent.DamageCause cause, String reason, Instant timestamp) {
         this.damage = damage;
@@ -28,49 +32,41 @@ public abstract class DamageTick implements Comparable<DamageTick> {
         this.timestamp = timestamp;
     }
 
-    @Override
-    public int compareTo(DamageTick tick) {
-        return timestamp.compareTo(tick.getTimestamp());
-    }
+    public abstract boolean matches(DamageTick other);
 
-    public abstract boolean matches(DamageTick tick);
+    public abstract Component getDeathMessage(Player victim, LanguageManager lang, DamageManager damageManager);
 
-    public abstract String getDeathMessage(Player player);
+    public abstract Component getSingleLineSummary(Player viewer, LanguageManager lang, DamageManager damageManager);
 
-    public abstract String getSingleLineSummary();
+    public Component getTimeDifferenceComponent(Player viewer, LanguageManager lang, DamageManager damageManager) {
+        long differenceMillis = Duration.between(getTimestamp(), Instant.now()).toMillis();
+        long justNowThreshold = damageManager.getConfig().justNowThresholdMillis();
 
-    public String timeDiff() {
-
-        Instant now = Instant.now();
-        Instant then = getTimestamp();
-
-        long difference = Duration.between(then, now).toMillis();
-
-        if (difference < 1500) {
-            return "just now";
-
-        } else {
-            difference = difference / 1000;
-            return difference + "s prior";
+        if (differenceMillis < justNowThreshold) {
+            return lang.getTranslated(viewer, "wizards.time.just_now");
         }
+
+        long seconds = differenceMillis / 1000;
+        return lang.getTranslated(viewer, "wizards.time.seconds_prior",
+            Placeholder.unparsed("seconds", String.valueOf(seconds))
+        );
     }
 
-    public double getDamage() {
+    @Override
+    public int compareTo(DamageTick o) {
+        return this.timestamp.compareTo(o.getTimestamp());
+    }
 
-        double damage = this.damage;
-
-        for (double multiplier : damageMods.values())
-            damage *= multiplier;
-
-        return damage;
+    public double getFinalDamage() {
+        return damage * damageModifiers.values().stream().reduce(1.0, (a, b) -> a * b);
     }
 
     public void setDamage(double damage) {
         this.damage = damage;
     }
 
-    public void addDamage(String reason, double amount) {
-        damageMods.put(reason, amount);
+    public void addDamageModifier(String reason, double multiplier) {
+        damageModifiers.put(reason, multiplier);
     }
 
     public EntityDamageEvent.DamageCause getCause() {
@@ -78,21 +74,6 @@ public abstract class DamageTick implements Comparable<DamageTick> {
     }
 
     public String getReason() {
-
-        /*
-        StringBuilder reason = new StringBuilder(damageMods.isEmpty() ? this.reason : "");
-
-        for (String changeReason : damageMods.keySet())
-            reason.append(ChatColor.GREEN).append(changeReason).append(ChatColor.GRAY).append(", ");
-
-        if (reason.length() > 0) {
-            reason = new StringBuilder(reason.substring(0, reason.length() - 2));
-            return reason.toString();
-        }
-
-        return reason.toString();
-         */
-
         return reason;
     }
 
@@ -112,11 +93,11 @@ public abstract class DamageTick implements Comparable<DamageTick> {
         this.knockbackOrigin = knockbackOrigin;
     }
 
-    public void addKnockback(String reason, double amount) {
-        knockbackMods.put(reason, amount);
+    public void addKnockbackModifier(String reason, double multiplier) {
+        knockbackModifiers.put(reason, multiplier);
     }
 
-    public Map<String, Double> getKnockbackMods() {
-        return knockbackMods;
+    public Map<String, Double> getKnockbackModifiers() {
+        return knockbackModifiers;
     }
 }

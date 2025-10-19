@@ -1,264 +1,168 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.damage.types.CustomDamageTick;
-import dev.thomashanson.wizards.game.overtime.types.DisasterMeteors;
-import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.util.BlockUtil;
-import org.apache.commons.lang.Validate;
-import org.bukkit.*;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.block.Block;
-import org.bukkit.block.BlockFace;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
+import dev.thomashanson.wizards.util.BlockUtil;
 
-public class SpellNapalm extends Spell {
+public class SpellNapalm extends Spell implements Tickable {
 
-    private final Map<Material, Material> glazedBlocks = new HashMap<>();
+    private final List<NapalmInstance> activeNapalms = new ArrayList<>();
+    private final Map<Material, Material> blockTransformations = new HashMap<>();
 
-    public SpellNapalm() {
-        glazedBlocks.put(Material.STONE, Material.COBBLESTONE);
-        glazedBlocks.put(Material.GRASS, Material.DIRT);
-        glazedBlocks.put(Material.OAK_FENCE, Material.NETHER_BRICK_FENCE);
-        glazedBlocks.put(Material.OAK_STAIRS, Material.NETHER_BRICK_STAIRS);
-        glazedBlocks.put(Material.STONE_BRICK_STAIRS, Material.NETHER_BRICK_STAIRS);
-        glazedBlocks.put(Material.SAND, Material.GLASS);
-        glazedBlocks.put(Material.STONE_BRICKS, Material.NETHER_BRICK);
-        glazedBlocks.put(Material.OAK_LOG, Material.NETHERRACK);
-        glazedBlocks.put(Material.ACACIA_LOG, Material.NETHERRACK);
-        glazedBlocks.put(Material.CLAY, Material.LIGHT_GRAY_GLAZED_TERRACOTTA);
+    public SpellNapalm(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
+
+        ConfigurationSection transformSection = config.getConfigurationSection("block-transformations");
+        if (transformSection != null) {
+            for (String from : transformSection.getKeys(false)) {
+                Material fromMat = Material.matchMaterial(from);
+                Material toMat = Material.matchMaterial(transformSection.getString(from));
+                if (fromMat != null && toMat != null) {
+                    blockTransformations.put(fromMat, toMat);
+                }
+            }
+        }
     }
 
     @Override
-    public void castSpell(Player player, int level) {
+    public boolean cast(Player player, int level) {
+        activeNapalms.add(new NapalmInstance(this, player, level));
+        return true;
+    }
 
-        final int length = (level * 10) + 5;
-        final double multiplier = 0.3 * (getGame().isOvertime() && getGame().getDisaster() instanceof DisasterMeteors ? 2 : 1);
-        final Vector vector = player.getLocation().getDirection().normalize().multiply(multiplier);
-
-        final Location playerLocation = player.getLocation().add(0, 2, 0);
-        final Location napalmLocation = playerLocation.clone().add(playerLocation.getDirection().normalize().multiply(2));
-
-        Validate.notNull(napalmLocation.getWorld());
-
-        new BukkitRunnable() {
-
-            final List<Block> litOnFire = new ArrayList<>();
-            final Map<Block, Double> tempIgnore = new HashMap<>();
-
-            double travelled, size = 1, lastTick;
-
-            @Override
-            public void run() {
-
-                napalmLocation.add(vector);
-
-                for (int b = 0; b < size * 20; b++) {
-
-                    float x = ThreadLocalRandom.current().nextFloat();
-                    float y = ThreadLocalRandom.current().nextFloat();
-                    float z = ThreadLocalRandom.current().nextFloat();
-
-                    while (Math.sqrt((x * x) + (y * y) + (z * z)) >= 1) {
-                        x = ThreadLocalRandom.current().nextFloat();
-                        y = ThreadLocalRandom.current().nextFloat();
-                        z = ThreadLocalRandom.current().nextFloat();
-                    }
-
-                    napalmLocation.getWorld().spawnParticle (
-
-                            Particle.REDSTONE,
-
-                            napalmLocation.clone().add (
-                                    (size * (x - 0.5)) / 5,
-                                    (size * (y - 0.5)) / 5,
-                                    (size * (z - 0.5)) / 5
-                            ),
-
-                            0,
-
-                            -0.3F,
-                            0.35F + (ThreadLocalRandom.current().nextFloat() / 8),
-                            0.3F,
-
-                            new Particle.DustOptions(Color.ORANGE, 1)
-                    );
-                }
-
-                if (lastTick % 3 == 0) {
-
-                    Objects.requireNonNull(napalmLocation.getWorld()).getEntities().forEach(entity -> {
-
-                        if (entity instanceof Player && getWizard((Player) entity) == null)
-                            return;
-
-                        double heat = (size * 1.1) - entity.getLocation().distance(napalmLocation);
-
-                        if (heat <= 0)
-                            return;
-
-                        if (lastTick % 10 == 0 && heat > 0.2) {
-
-                            if (entity instanceof LivingEntity) {
-
-                                CustomDamageTick damageTick = new CustomDamageTick (
-                                        heat / 1.5,
-                                        EntityDamageEvent.DamageCause.FIRE,
-                                        getSpell().getSpellName(),
-                                        Instant.now(),
-                                        player
-                                );
-
-                                damage((LivingEntity) entity, damageTick);
-
-                            } else {
-                                entity.remove();
-                                return;
-                            }
-                        }
-
-                        if (entity instanceof LivingEntity && entity.getFireTicks() < heat * 40) {
-
-                            LivingEntity livingEntity = (LivingEntity) entity;
-
-                            if (livingEntity instanceof Player)
-                                if (getGame().getWizard((Player) livingEntity) == null)
-                                    return;
-
-                            entity.setFireTicks((int) (heat * 40));
-                        }
-                    });
-
-                    int newSize = (int) Math.ceil(size * 0.75);
-
-                    for (int y = -newSize; y <= newSize; y++) {
-
-                        if (napalmLocation.getBlockY() + y < 256 && napalmLocation.getBlockY() + y > 0) {
-
-                            for (int x = -newSize; x <= newSize; x++) {
-                                for (int z = -newSize; z <= newSize; z++) {
-
-                                    Block block = napalmLocation.clone().add(x, y, z).getBlock();
-
-                                    if (litOnFire.contains(block))
-                                        continue;
-
-                                    if (playerLocation.distance(block.getLocation().add(0.5, 0.5, 0.5)) < 2.5)
-                                        continue;
-
-                                    double newHeat = newSize - napalmLocation.distance(block.getLocation().add(0.5, 0.5, 0.5));
-
-                                    if (tempIgnore.containsKey(block)) {
-                                        if (tempIgnore.remove(block) > newHeat) {
-                                            litOnFire.add(block);
-                                            continue;
-                                        }
-                                    }
-
-                                    if (newHeat <= 0)
-                                        continue;
-
-                                    if (block.getType() != Material.AIR) {
-
-                                        block.getType().getHardness();
-                                        float strength = block.getType().getHardness();
-
-                                        if (strength <= newHeat) {
-                                            block.setType(Material.AIR);
-                                            block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXTINGUISH_FIRE, 1.3F, 0.6F + ((ThreadLocalRandom.current().nextFloat() - 0.5F) / 3F));
-
-                                        } else if (0.2 <= newHeat) {
-
-                                            if (glazedBlocks.containsKey(block.getType())) {
-                                                block.setType(glazedBlocks.get(block.getType()));
-                                                block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXTINGUISH_FIRE, 1.3F, 0.6F + ((ThreadLocalRandom.current().nextFloat() - 0.5F) / 3F));
-                                            }
-
-                                        } else if (strength * 2 > size) {
-
-                                            tempIgnore.put(block, newHeat);
-                                            continue;
-                                        }
-                                    }
-
-                                    if (block.getType() == Material.WATER) {
-
-                                        if (newHeat > 1) {
-                                            block.setType(Material.AIR);
-
-                                            block.getWorld().playSound(block.getLocation(), Sound.ENTITY_GENERIC_EXTINGUISH_FIRE, 1.3F, 0);
-                                            litOnFire.add(block);
-                                        }
-                                    } else if (block.getType() == Material.AIR) {
-
-                                        if (!ThreadLocalRandom.current().nextBoolean())
-                                            return;
-
-                                        for (int a = 0; a < 6; a++) {
-
-                                            Block relative = block.getRelative(BlockFace.values()[a]);
-
-                                            if (relative.getType() != Material.AIR) {
-
-                                                block.setType(Material.FIRE);
-                                                block.getWorld().playSound(block.getLocation(), Sound.BLOCK_WOOL_BREAK, 1.3F, 0.6F + ((ThreadLocalRandom.current().nextFloat() - 0.5F) / 3F));
-
-                                                break;
-                                            }
-                                        }
-
-                                        litOnFire.add(block);
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    size = Math.min(8, size + 0.06);
-                }
-
-                travelled += multiplier;
-
-                if (lastTick++ % 8 == 0)
-                    napalmLocation.getWorld().playSound(napalmLocation, Sound.ENTITY_CAT_HISS, Math.min(0.8F + (float) (size * 0.09F), 1.8F), 0F);
-
-                if (travelled >= length) {
-                    createFire(napalmLocation);
-                    cancel();
-                }
-            }
-        }.runTaskTimer(getGame().getPlugin(), 0L, 1L);
+    @Override
+    public void tick(long gameTick) {
+        if (activeNapalms.isEmpty()) return;
+        activeNapalms.removeIf(NapalmInstance::tick);
     }
 
     @Override
     public void cleanup() {
-        glazedBlocks.clear();
+        activeNapalms.clear();
     }
 
-    private void createFire(final Location location) {
+    private static class NapalmInstance {
+        final SpellNapalm parent;
+        final Player caster;
+        final int level;
+        Location location;
+        Vector velocity;
 
-        Validate.notNull(location.getWorld());
+        // Configurable stats
+        final double maxDistance;
+        final double speedPerTick;
+        final double initialSize;
+        final double maxSize;
+        final double sizeGrowth;
 
-        location.getWorld().spawnParticle (
+        double currentSize;
+        double distanceTravelled = 0;
 
-                Particle.LAVA, location,
+        NapalmInstance(SpellNapalm parent, Player caster, int level) {
+            this.parent = parent;
+            this.caster = caster;
+            this.level = level;
+            this.location = caster.getEyeLocation().add(caster.getLocation().getDirection().multiply(2));
 
-                30,
-                0.3, 0, 0.3,
-                0
-        );
+            StatContext context = StatContext.of(level);
+            this.maxDistance = parent.getStat("distance", level);
+            double speedBPS = parent.getStat("speed-bps", level);
+            this.speedPerTick = speedBPS / 20.0;
+            this.initialSize = parent.getStat("initial-size", level);
+            this.maxSize = parent.getStat("max-size", level);
+            this.sizeGrowth = parent.getStat("size-growth-per-tick", level);
+            this.currentSize = initialSize;
+            
+            this.velocity = caster.getLocation().getDirection().normalize().multiply(speedPerTick);
+        }
 
-        final Map<Block, Double> blocks = BlockUtil.getInRadius(location, 3.5, false);
+        boolean tick() {
+            if (!caster.isOnline() || distanceTravelled >= maxDistance || location.getBlock().getType().isSolid()) {
+                explode();
+                return true;
+            }
 
-        blocks.keySet().forEach(block -> {
-            if (!block.getRelative(BlockFace.DOWN).getType().isSolid())
-                Bukkit.getScheduler().scheduleSyncDelayedTask(getGame().getPlugin(), () -> block.setType(Material.FIRE), 60 - (int) (60 * blocks.get(block)));
-        });
+            location.add(velocity);
+            distanceTravelled += speedPerTick;
+            currentSize = Math.min(maxSize, currentSize + sizeGrowth);
+
+            renderParticles();
+            damageEntities();
+            transformBlocks();
+
+            return false;
+        }
+
+        void renderParticles() {
+            for (int i = 0; i < currentSize * 15; i++) {
+                Vector offset = Vector.getRandom().subtract(new Vector(0.5, 0.5, 0.5)).normalize().multiply(currentSize * ThreadLocalRandom.current().nextDouble());
+                location.getWorld().spawnParticle(Particle.REDSTONE, location.clone().add(offset), 0, -0.3, 0.4, 0.3, new Particle.DustOptions(Color.ORANGE, 1.2F));
+            }
+        }
+
+        void damageEntities() {
+            double baseDamage = parent.getStat("damage-per-tick", level);
+            int fireTicks = (int) parent.getStat("fire-ticks", level);
+
+            for (LivingEntity entity : location.getWorld().getNearbyLivingEntities(location, currentSize)) {
+                if (entity.equals(caster)) continue;
+                
+                double distanceFactor = 1.0 - (entity.getLocation().distance(location) / currentSize);
+                if (distanceFactor <= 0) continue;
+
+                parent.damage(entity, new CustomDamageTick(baseDamage * distanceFactor, EntityDamageEvent.DamageCause.FIRE, parent.getKey(), Instant.now(), caster, null));
+                entity.setFireTicks(Math.max(entity.getFireTicks(), (int) (fireTicks * distanceFactor)));
+            }
+        }
+
+        void transformBlocks() {
+            int radius = (int) Math.ceil(currentSize);
+            for (Block block : BlockUtil.getInRadius(location, radius, false).keySet()) {
+                if (parent.blockTransformations.containsKey(block.getType())) {
+                    block.setType(parent.blockTransformations.get(block.getType()));
+                } else if (block.getType().getHardness() < currentSize && block.getType().isSolid()) {
+                    if (ThreadLocalRandom.current().nextDouble() < 0.1) { // 10% chance to break block
+                        block.breakNaturally();
+                    }
+                }
+            }
+        }
+
+        void explode() {
+            int explosionFireTicks = (int) parent.getStat("explosion-fire-ticks", level);
+            double explosionDamage = parent.getStat("explosion-damage", level);
+            
+            location.getWorld().spawnParticle(Particle.LAVA, location, 30, 0.3, 0.3, 0.3);
+            location.getWorld().playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 1.5F, 1.0F);
+
+            for (LivingEntity entity : location.getWorld().getNearbyLivingEntities(location, maxSize)) {
+                 if (entity.equals(caster)) continue;
+                 parent.damage(entity, new CustomDamageTick(explosionDamage, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, parent.getKey() + ".explosion", Instant.now(), caster, null));
+                 entity.setFireTicks(Math.max(entity.getFireTicks(), explosionFireTicks));
+            }
+        }
     }
 }

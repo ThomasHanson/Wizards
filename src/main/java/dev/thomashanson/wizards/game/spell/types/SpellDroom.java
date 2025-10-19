@@ -1,134 +1,99 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.game.overtime.types.DisasterEarthquake;
-import dev.thomashanson.wizards.game.spell.Spell;
-import org.bukkit.*;
-import org.bukkit.entity.Entity;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
+import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.FallingBlock;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.entity.EntityChangeBlockEvent;
-import org.bukkit.event.entity.ItemSpawnEvent;
-import org.bukkit.metadata.FixedMetadataValue;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
+import org.jetbrains.annotations.NotNull;
 
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
+import dev.thomashanson.wizards.util.ExplosionUtil;
 
 public class SpellDroom extends Spell {
 
-    private final List<FallingBlock> fallingBlocks = new ArrayList<>();
+    private final NamespacedKey droomKey;
+    private final NamespacedKey casterKey;
+    private final NamespacedKey levelKey;
+
+    public SpellDroom(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
+        this.droomKey = new NamespacedKey(plugin, "droom_anvil");
+        this.casterKey = new NamespacedKey(plugin, "droom_caster");
+        this.levelKey = new NamespacedKey(plugin, "droom_level");
+    }
 
     @Override
-    public void castSpell(final Player player, int level) {
+    public boolean cast(Player player, int level) {
+        StatContext context = StatContext.of(level);
+        double radius = getStat("radius", level);
+        double spawnHeight = getStat("spawn-height", level);
 
         List<Player> targets = new ArrayList<>();
-
-        // Spawn anvil above player's head
         targets.add(player);
 
-        final int radius = 4 + (level * 2); //(int) getValue(player, "Radius");
-
         player.getNearbyEntities(radius, radius * 3, radius).forEach(entity -> {
-            if (entity instanceof Player && getWizard(player) != null)
+            if (entity instanceof Player && getWizard((Player) entity).isPresent())
                 targets.add((Player) entity);
         });
 
-        List<FallingBlock> curFalling = new ArrayList<>();
+        if (targets.isEmpty()) return false;
 
         for (Player target : targets) {
-
-            target.getWorld().spawnParticle(Particle.SMOKE_LARGE, player.getLocation(), 1, 0, 0, 0, 0, 0);
-
-            Location location = target.getLocation().clone().add(0, 15 + (level * 3), 0);
-            int lowered = 0;
-
-            while (lowered++ < 5 && location.getBlock().getType() != Material.AIR)
-                location = location.subtract(0, 1, 0);
-
-            if (location.getBlock().getType() == Material.AIR) {
-
-                FallingBlock anvil = target.getWorld().spawnFallingBlock (
-                        location.getBlock().getLocation().add(0.5, 0.5, 0.5),
-                        Bukkit.createBlockData(Material.ANVIL)
-                );
-
-                anvil.setMetadata("Wizard", new FixedMetadataValue(getGame().getPlugin(), player));
-                anvil.setMetadata("SL", new FixedMetadataValue(getGame().getPlugin(), level));
-
-                anvil.getWorld().playSound(anvil.getLocation(), Sound.BLOCK_ANVIL_USE, 1.9F, 0F);
-                curFalling.add(anvil);
+            Location loc = target.getLocation().clone().add(0, spawnHeight, 0);
+            
+            // Ensure we don't spawn inside a block
+            while (loc.getBlock().getType() != Material.AIR && loc.getY() < player.getWorld().getMaxHeight()) {
+                loc.add(0, 1, 0);
             }
+            
+            FallingBlock anvil = target.getWorld().spawnFallingBlock(loc, Bukkit.createBlockData(Material.ANVIL));
+            
+            // Tag the entity with modern PersistentDataContainer
+            PersistentDataContainer pdc = anvil.getPersistentDataContainer();
+            pdc.set(droomKey, PersistentDataType.BYTE, (byte) 1);
+            pdc.set(casterKey, PersistentDataType.STRING, player.getUniqueId().toString());
+            pdc.set(levelKey, PersistentDataType.INTEGER, level);
+            
+            anvil.getWorld().playSound(anvil.getLocation(), Sound.BLOCK_ANVIL_USE, 1.9F, 0F);
         }
 
-        if (!curFalling.isEmpty())
-            fallingBlocks.addAll(curFalling);
-    }
-
-    private void createExplosion(Entity entity) {
-
-        if (entity instanceof FallingBlock)
-            fallingBlocks.remove(entity);
-
-        int spellLevel = entity.getMetadata("SL").get(0).asInt();
-
-        float explosionPower = 1 + (spellLevel / 2F);
-
-        if (getGame().isOvertime())
-            if (getGame().getDisaster() instanceof DisasterEarthquake)
-                explosionPower *= 2;
-
-        entity.getWorld().createExplosion(entity.getLocation(), explosionPower);
-
-        /*
-        CustomExplosion explosion = new CustomExplosion(Wizards.getArcadeManager().GetDamage(), Wizards.getArcadeManager().GetExplosion(), entity.getLocation(), 1 + (spellLevel / 2F), "Anvil Drop");
-
-        explosion.setPlayer((Player) entity.getMetadata("Wizard").get(0).value(), true);
-
-        explosion.setFallingBlockExplosion(true);
-
-        explosion.setDropItems(false);
-
-        explosion.setMaxDamage(6 + (spellLevel * 4));
-
-        explosion.explode();
-         */
-
-        entity.remove();
+        return true;
     }
 
     @EventHandler
-    public void onDrop(ItemSpawnEvent event) {
+    public void onAnvilLand(EntityChangeBlockEvent event) {
+        if (!(event.getEntity() instanceof FallingBlock)) return;
 
-        Iterator<FallingBlock> iterator = fallingBlocks.iterator();
-        FallingBlock fallingBlock = null;
+        PersistentDataContainer pdc = event.getEntity().getPersistentDataContainer();
+        if (!pdc.has(droomKey, PersistentDataType.BYTE)) return;
 
-        while (iterator.hasNext()) {
+        event.setCancelled(true); // Prevent the anvil block from actually forming
 
-            FallingBlock block = iterator.next();
+        String casterUUIDString = pdc.get(casterKey, PersistentDataType.STRING);
+        Integer level = pdc.get(levelKey, PersistentDataType.INTEGER);
+        if (casterUUIDString == null || level == null) return;
 
-            if (block.isDead()) {
-                fallingBlock = block;
-                break;
-            }
-        }
+        Player caster = Bukkit.getPlayer(UUID.fromString(casterUUIDString));
+        if (caster == null) return;
 
-        if (fallingBlock != null) {
-            event.setCancelled(true);
-            createExplosion(fallingBlock);
-        }
-    }
+        StatContext context = StatContext.of(level);
+        float explosionPower = (float) getStat("explosion-power", level);
 
-    @EventHandler
-    public void onChange(EntityChangeBlockEvent event) {
-
-        if (!(event.getEntity() instanceof FallingBlock))
-            return;
-
-        if (!fallingBlocks.contains(event.getEntity()))
-            return;
-
-        createExplosion(event.getEntity());
-        event.setCancelled(true);
+        ExplosionUtil.createExplosion(plugin, event.getEntity().getLocation(), explosionPower, true, false);
+        event.getEntity().remove();
     }
 }

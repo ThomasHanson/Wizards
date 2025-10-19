@@ -1,123 +1,84 @@
 package dev.thomashanson.wizards.game.state.types;
 
-import dev.thomashanson.wizards.WizardsPlugin;
-import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.game.mode.GameTeam;
-import dev.thomashanson.wizards.game.mode.WizardsMode;
-import dev.thomashanson.wizards.game.state.GameState;
-import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
-import dev.thomashanson.wizards.map.LocalGameMap;
+import java.io.File;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerPreLoginEvent;
 import org.bukkit.event.server.ServerListPingEvent;
 
-import java.io.File;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.manager.GameManager;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
+import dev.thomashanson.wizards.game.mode.WizardsMode;
+import dev.thomashanson.wizards.game.state.GameState;
+import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
+import dev.thomashanson.wizards.map.LocalGameMap;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
-/**
- * Represents the server preparation state. This will
- * set the proper game mode from config and select a map
- * at random upon server startup.
- */
 public class SetupState extends GameState implements Listener {
 
     @Override
     public void onEnable(WizardsPlugin plugin) {
+        super.onEnable(plugin);
 
-        //String serverMode = getPlugin().getConfig().getString("mode");
-        //WizardsMode wizardsMode = WizardsMode.valueOf(serverMode);
+        WizardsMode wizardsMode = WizardsMode.valueOf(plugin.getConfig().getString("mode"));
+        Bukkit.getLogger().info(String.format("Game configured as: %s.", wizardsMode.name()));
 
         File gameMapsFolder = new File(plugin.getDataFolder(), "maps");
-
-        if (!gameMapsFolder.exists())
+        if (!gameMapsFolder.exists()) {
             gameMapsFolder.mkdirs();
-
-        File[] directories = new File(gameMapsFolder.getPath()).listFiles(File::isDirectory);
-
-        if (directories == null)
-            return;
-
-        int numMaps = directories.length;
-
-        if (numMaps == 0) {
-            Bukkit.getLogger().severe("Could not locate any game maps!");
-            return;
         }
 
-        Bukkit.getLogger().info("Loading " + numMaps + " map" + (numMaps > 1 ? "s" : "") + " from directory.");
-
+        File[] directories = gameMapsFolder.listFiles(File::isDirectory);
+        if (directories == null || directories.length == 0) {
+            plugin.getLogger().severe(String.format("Could not locate any game maps within '%s'!", gameMapsFolder.getAbsolutePath()));
+            return;
+        }
+        
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
 
         for (File mapFile : directories) {
-            LocalGameMap currentMap = new LocalGameMap(gameMapsFolder, mapFile.getName(), false);
-            plugin.getMapManager().addMap(currentMap);
+            plugin.getMapManager().addMap(new LocalGameMap(plugin, gameMapsFolder, mapFile.getName()));
         }
 
-        plugin.getMapManager().getAllMaps().forEach(map -> Bukkit.getLogger().info(map.getName()));
-
-        LocalGameMap randomMap = plugin.getMapManager().getAllMaps().get(ThreadLocalRandom.current().nextInt(numMaps)); // NULL WHEN WE ENABLE THE REST;
-
-        for (LocalGameMap map : plugin.getMapManager().getAllMaps())
-            if (map.getName().equalsIgnoreCase("Hogwarts"))
-                randomMap = map;
-
-        /*
-         * Make sure that the map we select is for the right mode
-         */
-        /*
-        while (
-                randomMap == null ||
-                randomMap.getCoreSection().getStringList("modes").contains(wizardsMode.toString())
-        ) {
-
-            randomMap = plugin.getMapManager().getAllMaps().get(ThreadLocalRandom.current().nextInt(numMaps));
+        List<LocalGameMap> modeSpecificMaps = plugin.getMapManager().getAllMaps(wizardsMode);
+        if (modeSpecificMaps.isEmpty()) {
+            plugin.getLogger().severe(String.format("No maps found for the configured game mode '%s'.", wizardsMode.name()));
+            return;
         }
-         */
 
-        // Load the map manually
+        LocalGameMap randomMap = modeSpecificMaps.get(ThreadLocalRandom.current().nextInt(modeSpecificMaps.size()));
+        
         if (randomMap.load()) {
             plugin.getMapManager().setActiveMap(randomMap);
-            Bukkit.getLogger().info(randomMap.getName() + " selected as randomized map.");
-        }
-
-        plugin.getGameManager().setState(new LobbyState());
-
-        plugin.getGameManager().setActiveGame(new Wizards(plugin));
-        plugin.getServer().getPluginManager().registerEvents(plugin.getGameManager().getActiveGame(), plugin);
-
-        Wizards game = plugin.getGameManager().getActiveGame();
-        //game.setCurrentMode(wizardsMode);
-
-        WizardsMode mode = game.getCurrentMode();
-
-        if (mode.isTeamMode()) {
-
-            for (int i = 0; i < mode.getNumTeams(); i++) {
-
-                List<Location> spawnLocations = randomMap.getSpawnLocations();
-
-                GameTeam newTeam = new GameTeam(game, "" + (i + 1), spawnLocations);
-                game.getTeams().add(newTeam);
-
-                Bukkit.getLogger().info("Team " + newTeam.getTeamName() + " created.");
-            }
-
+            plugin.getLogger().info(String.format("Successfully loaded and set active map: %s", randomMap.getName()));
         } else {
-
-            GameTeam newTeam = new GameTeam(game, "Wizards", randomMap.getSpawnLocations());
-            game.getTeams().add(newTeam);
-
-            Bukkit.getLogger().info("Solo team created.");
+            plugin.getLogger().severe(String.format("Failed to load random map: %s. Server setup cannot continue.", randomMap.getName()));
+            return;
         }
 
-        plugin.getMapManager().registerListeners();
+        // *** BEGIN FIX ***
+        // We must load the kits into the KitManager BEFORE the lobby starts.
+        // We create a temporary game instance here solely to satisfy the method signature
+        // for loading kits. This instance is not the one that will be used for the actual game.
+        plugin.getLogger().info("Loading kits into KitManager...");
+        GameManager gameManager = plugin.getGameManager();
+        Wizards tempGameForLoading = new Wizards(plugin);
+        gameManager.getKitManager().loadKitsFromDatabase(tempGameForLoading);
+        gameManager.getKitManager().loadKitUpgradeCosts();
+        plugin.getLogger().info("Kits loaded successfully.");
+        // *** END FIX ***
+
+        // Now that kits are loaded, it's safe to switch to the LobbyState.
+        plugin.getGameManager().setState(new LobbyState());
     }
 
     @Override
@@ -125,36 +86,39 @@ public class SetupState extends GameState implements Listener {
         super.onDisable();
         HandlerList.unregisterAll(this);
     }
+    
+    @Override
+    public List<Component> getScoreboardComponents(Player player) {
+        LanguageManager lang = getPlugin().getLanguageManager();
+        return List.of(
+            lang.getTranslated(player, "wizards.scoreboard.setup.settingUp")
+        );
+    }
 
     @EventHandler
     public void onJoin(AsyncPlayerPreLoginEvent event) {
-        event.setKickMessage(ChatColor.RED + "Server is still preparing! Please try again soon!");
+        LanguageManager lang = getPlugin().getLanguageManager();
+        event.kickMessage(lang.getTranslated(null, "wizards.system.kick.preparing"));
         event.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
     }
 
     @EventHandler
     public void onServerPing(ServerListPingEvent event) {
-
         Wizards game = getGame();
-
-        if (game == null)
-            return;
+        if (game == null) return;
 
         event.setMaxPlayers(game.getCurrentMode().getMaxPlayers());
-
         LocalGameMap selectedMap = game.getActiveMap();
 
-        if (selectedMap != null)
-            event.setMotd(ChatColor.YELLOW + "Map Selected: " + ChatColor.GOLD + selectedMap.getName());
-    }
-
-    @Override
-    public List<String> getScoreboardLines() {
-
-        return Arrays.asList (
-                ChatColor.YELLOW + "Preparing Server",
-                ChatColor.RED + "Please wait!"
-        );
+        if (selectedMap != null) {
+            LanguageManager lang = getPlugin().getLanguageManager();
+            Component motd = lang.getTranslated(
+                    null,
+                    "wizards.motd.mapSelected",
+                    Placeholder.unparsed("map_name", selectedMap.getName())
+            );
+            event.motd(motd);
+        }
     }
 
     @Override

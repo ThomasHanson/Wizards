@@ -1,98 +1,111 @@
 package dev.thomashanson.wizards.game.overtime.types;
 
-import dev.thomashanson.wizards.damage.types.CustomDamageTick;
-import dev.thomashanson.wizards.game.Wizards;
-import dev.thomashanson.wizards.game.overtime.Disaster;
-import dev.thomashanson.wizards.game.spell.SpellType;
-import dev.thomashanson.wizards.util.BlockUtil;
-import dev.thomashanson.wizards.util.EntityUtil;
-import org.apache.commons.lang.Validate;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
+
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.block.BlockFace;
 
-import java.time.Instant;
-import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
+import dev.thomashanson.wizards.game.Wizards;
+import dev.thomashanson.wizards.game.overtime.Disaster;
+import dev.thomashanson.wizards.util.ExplosionUtil;
 
 public class DisasterLightning extends Disaster {
 
+    // --- Configuration for Hail Timing ---
+    private static final long INITIAL_STRIKE_INTERVAL_MS = 9000;
+    private static final long MINIMUM_STRIKE_INTERVAL_MS = 750;
+    private static final long STRIKE_INTERVAL_REDUCTION_PER_TICK_MS = 2;
+
     public DisasterLightning(Wizards game) {
-
-        super (
-                game,
-
-                "Lightning",
-
-                Stream.of (
-
-                        SpellType.LIGHTNING_STRIKE,
-                        SpellType.GUST,
-                        SpellType.SPECTRAL_ARROW
-
-                ).collect(Collectors.toSet()),
-
-                Arrays.asList (
-                        "Storm rumbles through the sky, birds fly high!",
-                        "Lightning strikes the earth, terror given birth!",
-                        "Lightning flickering through the air, doom is here!"
-                )
+        super(game,
+            "wizards.disaster.lightning.name",
+            Collections.emptySet(),
+            Arrays.asList(
+                "wizards.disaster.lightning.announce.1",
+                "wizards.disaster.lightning.announce.2",
+                "wizards.disaster.lightning.announce.3",
+                "wizards.disaster.final_announce"
+            )
         );
     }
 
     @Override
-    public void strike() {
-
-        Location location = getNextLocation();
-
-        Validate.notNull(location);
-        Validate.notNull(location.getWorld());
-
-        location.getWorld().spigot().strikeLightningEffect(location, true);
-
-        location.getWorld().playSound(location, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 5F, 0.8F + ThreadLocalRandom.current().nextFloat());
-        location.getWorld().playSound(location, Sound.ENTITY_GENERIC_EXPLODE, 2F, 0.9F + (ThreadLocalRandom.current().nextFloat() / 3));
-
-        //UtilBlock.getExplosionBlocks(loc, 3 * _endgameSize, false);
-
-        List<Block> blocks = new ArrayList<>(BlockUtil.getInRadius(location, 3 * getSize(), false).keySet());
-        Collections.shuffle(blocks);
-
-        while (blocks.size() > 20)
-            blocks.remove(0).setType(Material.AIR);
-
-        // TODO: 2020-06-02 block explosion
-
-        Map<LivingEntity, Double> inRadius = EntityUtil.getInRadius(location, 4 * getSize());
-
-        double baseDamage = 6 * getSize();
-
-        for (LivingEntity entity : inRadius.keySet()) {
-
-            double damage = baseDamage * inRadius.get(entity);
-
-            if (damage <= 0)
-                continue;
-
-            CustomDamageTick damageTick = new CustomDamageTick (
-                    damage,
-                    EntityDamageEvent.DamageCause.LIGHTNING,
-                    "Lightning",
-                    Instant.now(),
-                    null
-            );
-
-            getGame().getPlugin().getDamageManager().damage(entity, damageTick);
-        }
+    protected long getInitialStrikeIntervalMs() {
+        return INITIAL_STRIKE_INTERVAL_MS;
     }
 
     @Override
-    public void update() {
+    protected long getMinimumStrikeIntervalMs() {
+        return MINIMUM_STRIKE_INTERVAL_MS;
+    }
 
+    @Override
+    protected long getStrikeIntervalReductionPerTickMs() {
+        return STRIKE_INTERVAL_REDUCTION_PER_TICK_MS;
+    }
+
+    @Override
+    protected void strikeAt(Location location) {
+        // --- Pre-Strike Warning Effects (copied from SpellLightningStrike) ---
+        location.getWorld().spawnParticle(Particle.VILLAGER_ANGRY, location.clone().add(0, 1.3, 0), 7, 0.5, 0.3, 0.5, 0);
+        location.getWorld().playSound(location, Sound.ENTITY_CAT_HISS, 1F, 1F);
+
+        // Schedule the actual lightning strike with a delay to match the spell
+        Bukkit.getScheduler().runTaskLater(getGame().getPlugin(), () -> {
+
+            // Ensure strike is within current (possibly further shrunk) bounds
+            if (location.getX() >= getGame().getCurrentMinX() && location.getX() < getGame().getCurrentMaxX() &&
+                location.getZ() >= getGame().getCurrentMinZ() && location.getZ() < getGame().getCurrentMaxZ()) {
+
+                // --- The Strike ---
+                location.getWorld().strikeLightning(location);
+
+                // --- Post-Strike Environmental Effects (copied from SpellLightningStrike) ---
+                Block impactBlock = location.getWorld().getHighestBlockAt(location).getRelative(BlockFace.DOWN);
+
+                List<Block> toExplode = new ArrayList<>();
+                List<Block> toFire = new ArrayList<>();
+
+                // Gather blocks in a 3x3x3 radius for the effects
+                for (int x = -1; x <= 1; x++) {
+                    for (int y = -1; y <= 1; y++) {
+                        for (int z = -1; z <= 1; z++) {
+                            if (x == 0 || (Math.abs(x) != Math.abs(z) || ThreadLocalRandom.current().nextInt(3) == 0)) {
+                                Block relativeBlock = impactBlock.getRelative(x, y, z);
+                                Material material = relativeBlock.getType();
+
+                                if ((y == 0 || (x == 0 && z == 0)) && material.isSolid() && material != Material.BEDROCK) {
+                                    if (y == 0 || ThreadLocalRandom.current().nextBoolean()) {
+                                        toExplode.add(relativeBlock);
+                                        toFire.add(relativeBlock);
+                                    }
+                                } else if (relativeBlock.getType() == Material.AIR) {
+                                    toFire.add(relativeBlock);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Use the custom explosion utility for visuals
+                ExplosionUtil.createExplosion(getGame().getPlugin(), impactBlock.getLocation(), toExplode, false);
+
+                // Set blocks on fire randomly
+                for (Block block : toFire) {
+                    if (ThreadLocalRandom.current().nextBoolean()) {
+                        block.setType(Material.FIRE);
+                    }
+                }
+            }
+        }, 20L); // 1.25 second delay (25 ticks), matching the spell
     }
 }

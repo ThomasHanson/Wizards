@@ -1,66 +1,64 @@
 package dev.thomashanson.wizards.damage.types;
 
-import dev.thomashanson.wizards.damage.DamageTick;
-import dev.thomashanson.wizards.game.manager.DamageManager;
-import dev.thomashanson.wizards.util.EntityUtil;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.Entity;
+import java.time.Instant;
+
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
+import org.jetbrains.annotations.Nullable;
 
-import java.time.Instant;
+import dev.thomashanson.wizards.damage.DamageConfig;
+import dev.thomashanson.wizards.damage.DamageTick;
+import dev.thomashanson.wizards.game.manager.DamageManager;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 public class VoidDamageTick extends DamageTick {
 
     private final DamageTick previousTick;
 
-    public VoidDamageTick(double damage, String name, DamageTick previousTick, Instant timestamp) {
-        super(damage, EntityDamageEvent.DamageCause.VOID, name, timestamp);
+    public VoidDamageTick(double damage, Instant timestamp, @Nullable DamageTick previousTick) {
+        super(damage, EntityDamageEvent.DamageCause.VOID, "Void", timestamp);
         this.previousTick = previousTick;
     }
 
     @Override
     public boolean matches(DamageTick tick) {
-        return tick instanceof VoidDamageTick;
+        return false; // Void damage is a terminal event.
     }
 
     @Override
-    public String getDeathMessage(Player player) {
+    public Component getDeathMessage(Player victim, LanguageManager lang, DamageManager damageManager) {
+        Component victimName = victim.displayName().color(NamedTextColor.RED);
+        DamageConfig.VoidConfig msgConfig = damageManager.getConfig().deathMessages().voidMessages();
 
-        String finalMessage = ChatColor.BOLD + "???";
-
-        if (previousTick != null) {
-
-            if (previousTick instanceof PlayerDamageTick) {
-
-                finalMessage =
-                        DamageManager.ACCENT_COLOR + player.getDisplayName() +
-                                DamageManager.BASE_COLOR + "was knocked into the void by " +
-                                DamageManager.ACCENT_COLOR + ((PlayerDamageTick) previousTick).getPlayer().getDisplayName();
-
-            } else if (previousTick instanceof MonsterDamageTick) {
-
-                MonsterDamageTick monsterDamageTick = (MonsterDamageTick) previousTick;
-                Entity entity = monsterDamageTick.getEntity();
-
-                finalMessage =
-                        DamageManager.ACCENT_COLOR + player.getDisplayName() +
-                                DamageManager.BASE_COLOR + "was knocked into the void by " +
-                                DamageManager.ACCENT_COLOR + EntityUtil.getEntityName(entity);
-            }
-
-        } else {
-
-            finalMessage =
-                    DamageManager.ACCENT_COLOR + player.getDisplayName() +
-                            DamageManager.BASE_COLOR + " fell into the void";
+        if (previousTick instanceof PlayerDamageTick pdt && pdt.getPlayer() != null) {
+            Component attackerName = pdt.getPlayer().displayName().color(NamedTextColor.RED);
+            return lang.getTranslated(victim, msgConfig.knockedByPlayer(),
+                Placeholder.component("victim_name", victimName),
+                Placeholder.component("attacker_name", attackerName)
+            );
+        } else if (previousTick instanceof MonsterDamageTick mdt) {
+            return lang.getTranslated(victim, msgConfig.knockedByMonster(),
+                Placeholder.component("victim_name", victimName),
+                Placeholder.unparsed("monster_name", mdt.getAttackerName())
+            );
         }
 
-        return finalMessage;
+        return lang.getTranslated(victim, msgConfig.fell(),
+            Placeholder.component("victim_name", victimName)
+        );
     }
 
     @Override
-    public String getSingleLineSummary() {
-        return DamageManager.BASE_COLOR + "Fell into the void";
+    public Component getSingleLineSummary(Player viewer, LanguageManager lang, DamageManager damageManager) {
+        if (previousTick instanceof PlayerDamageTick pdt && pdt.getPlayer() != null) {
+            Component attackerName = pdt.getPlayer().displayName().color(NamedTextColor.RED);
+            return lang.getTranslated(viewer, "wizards.damage.summary.void.knocked_by_player",
+                Placeholder.component("attacker_name", attackerName)
+            );
+        }
+        return lang.getTranslated(viewer, "wizards.damage.summary.void.fell");
     }
 }

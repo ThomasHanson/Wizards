@@ -1,70 +1,106 @@
 package dev.thomashanson.wizards.game.kit;
 
-import org.bukkit.ChatColor;
-import org.bukkit.Color;
+import java.util.List;
+import java.util.Map;
+
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
-import org.bukkit.inventory.ItemStack;
 
-import java.util.ArrayList;
-import java.util.List;
+import dev.thomashanson.wizards.game.Wizard;
+import dev.thomashanson.wizards.game.spell.Spell;
 
 public abstract class WizardsKit implements Listener {
 
-    private final String name;
-    private final ChatColor chatColor;
-    private final Color color;
-    private final List<String> description;
-    private final ItemStack menuItem;
-    private final ItemStack itemInHand;
-    private final int cost;
+    // --- Fields loaded from the database ---
+    private final int id;
+    private final String key;
+    private final String nameKey;
+    private final String descriptionKey;
+    private final float baseMaxMana;
+    private final float maxManaPerLevel;
+    private final int baseWands;
+    private final int baseMaxWands;
+    private final int maxWandsPerLevel;
+    private final float baseManaRegen;
+    private final float manaRegenPerLevel;
+    private final UnlockType unlockType;
+    private final int unlockCost;
+    private Material icon;
 
-    private WizardsKit(String name, ChatColor chatColor, Color color, List<String> description, ItemStack menuItem, ItemStack itemInHand, int cost) {
-        this.name = name;
-        this.chatColor = chatColor;
-        this.color = color;
-        this.description = description;
-        this.menuItem = menuItem;
-        this.itemInHand = itemInHand;
-        this.cost = cost;
-    }
-
-    protected WizardsKit(String name, ChatColor chatColor, Color color, List<String> description, ItemStack menuItem, ItemStack itemInHand) {
-        this(name, chatColor, color, description, menuItem, itemInHand, 0);
-    }
-
+    // --- Abstract methods for unique, coded behaviors ---
     public abstract void playSpellEffect(Player player, Location location);
+    public abstract void playIntro(Player player);
+    public abstract void applyModifiers(Wizard wizard, int kitLevel);
 
-    public void playIntro(Player player, Location location, int ticks) {}
+    /**
+     * Allows kits to grant specific starting spells. THIS REMAINS.
+     */
+    public abstract void applyInitialSpells(Wizard wizard);
 
-    String getFormattedName() {
-        return chatColor.toString() + ChatColor.BOLD + name;
+    /**
+     * Modifies the max level for a given spell. THIS REMAINS.
+     */
+    public abstract int getModifiedMaxSpellLevel(Spell spell, int currentDefaultMaxLevel);
+
+    public WizardsKit(Map<String, Object> data) {
+        this.id = (int) data.get("kit_id");
+        this.key = (String) data.get("kit_key");
+        this.nameKey = (String) data.get("name_key");
+        this.descriptionKey = (String) data.get("description_key");
+        this.baseMaxMana = (float) data.get("base_max_mana");
+        this.maxManaPerLevel = (float) data.get("max_mana_per_level");
+        this.baseWands = (int) data.get("base_wands");
+        this.baseMaxWands = (int) data.get("base_max_wands");
+        this.maxWandsPerLevel = (int) data.get("max_wands_per_level");
+        this.baseManaRegen = (float) data.get("base_mana_regen");
+        this.manaRegenPerLevel = (float) data.get("mana_regen_per_level");
+        this.unlockType = UnlockType.valueOf((String) data.get("unlock_type"));
+        this.unlockCost = (int) data.get("unlock_cost");
+        try {
+            this.icon = Material.valueOf((String) data.get("icon_material"));
+        } catch (IllegalArgumentException | NullPointerException e) {
+            this.icon = Material.BOOK;
+        }
     }
 
-    public String getName() {
-        return name;
+    /**
+     * Gets a formatted list of strings describing the benefits of a specific level.
+     * Each subclass will implement this to describe its unique upgrades.
+     *
+     * @param level The kit level (1-5) to describe.
+     * @return A list of strings for the GUI lore.
+     */
+    public abstract List<String> getLevelDescription(int level);
+
+    public float getInitialMaxMana(int kitLevel) {
+        return baseMaxMana + (maxManaPerLevel * (Math.max(0, kitLevel - 1)));
     }
 
-    List<String> getDescription() {
-        List<String> formattedDesc = new ArrayList<>();
-        description.forEach(line -> formattedDesc.add(ChatColor.GRAY + line));
-        return formattedDesc;
+    public int getInitialWands() {
+        return baseWands;
     }
 
-    public Color getColor() {
-        return color;
+    public int getInitialMaxWands(int kitLevel) {
+        return baseMaxWands + (maxWandsPerLevel * (Math.max(0, kitLevel - 1)));
     }
 
-    ItemStack getMenuItem() {
-        return menuItem;
+    public float getBaseManaPerTick(int kitLevel) {
+        return baseManaRegen + (manaRegenPerLevel * (Math.max(0, kitLevel - 1)));
     }
 
-    public ItemStack getItemInHand() {
-        return itemInHand;
-    }
+    // --- Getters for the stored data ---
+    public int getId() { return id; }
+    public String getKey() { return key; }
+    public String getNameKey() { return nameKey; }
+    public String getDescriptionKey() { return descriptionKey; }
+    public UnlockType getUnlockType() { return unlockType; }
+    public int getUnlockCost() { return unlockCost; }
+    public Material getIcon() { return icon; }
 
-    public int getCost() {
-        return cost;
+    // Helper enum to match the database
+    public enum UnlockType {
+        DEFAULT, COINS, ACHIEVEMENTS
     }
 }

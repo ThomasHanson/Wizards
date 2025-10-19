@@ -1,14 +1,37 @@
 package dev.thomashanson.wizards.util;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.util.Vector;
 
-import java.util.*;
+import com.comphenix.protocol.reflect.FuzzyReflection;
+import com.comphenix.protocol.reflect.fuzzy.FuzzyMethodContract;
+import com.comphenix.protocol.utility.MinecraftReflection;
 
 public class BlockUtil {
+
+    // reflective handles
+    // M method, F field
+    private static Method m_craftBlockData_getState = null;
+    private static Method m_nmsBlock_getId = null;
+
+    // direct references
+    private final static AtomicInteger nmsEntity_entityCounter = null;
 
     public static final BlockFace[] AXIS = {
             BlockFace.NORTH,
@@ -95,6 +118,34 @@ public class BlockUtil {
         return blocks;
     }
 
+    public static BlockFace[] getCornerBlockFaces(BlockFace facing) {
+
+        BlockFace left, right;
+
+        for (int i = 0; i < RADIAL.length; i++) {
+
+            if (RADIAL[i] != facing)
+                continue;
+
+            int high = i + 2;
+
+            if (high >= RADIAL.length)
+                high = high - RADIAL.length;
+
+            int low = i - 2;
+
+            if (low < 0)
+                low = RADIAL.length + low;
+
+            left = RADIAL[low];
+            right = RADIAL[high];
+
+            return new BlockFace[] { left, right };
+        }
+
+        return null;
+    }
+
     public static Map<Block, Double> getInRadius(Location location, double radius, boolean ignoreY) {
 
         Map<Block, Double> blocks = new HashMap<>();
@@ -161,6 +212,42 @@ public class BlockUtil {
         }
 
         return locations;
+    }
+
+    /**
+     * Gets the NMS registry state ID for the given block data.
+     * @param data the block data
+     * @return the NMS registry state ID.
+     */
+    public static int getBlockStateId(BlockData data) {
+        try {
+            if (m_craftBlockData_getState == null || m_nmsBlock_getId == null) {
+                // use reflection to obtain the <nms.BlockState> getState method in CraftBlockData.
+                Class<?> craftBlockDataClazz = MinecraftReflection.getCraftBukkitClass("block.data.CraftBlockData");
+                Method M_craftBlockData_getState = craftBlockDataClazz.getMethod("getState");
+                M_craftBlockData_getState.setAccessible(true);
+                m_craftBlockData_getState = M_craftBlockData_getState;
+
+                // use fuzzy reflection to find getId method in the nms.Block class.
+                // this will lookup and return the registry state ID for the given nms.BlockState reference.
+                // we'll just have to hope there isn't another public static method that returns int and accepts exactly nms.BlockState in the nms.Block class.
+                FuzzyReflection blockReflector = FuzzyReflection.fromClass(MinecraftReflection.getBlockClass());
+                m_nmsBlock_getId = blockReflector.getMethod(FuzzyMethodContract.newBuilder()
+                        .banModifier(Modifier.PRIVATE)
+                        .banModifier(Modifier.PROTECTED)
+                        .requireModifier(Modifier.STATIC)
+                        .parameterExactArray(MinecraftReflection.getIBlockDataClass())
+                        .returnTypeExact(int.class)
+                        .build());
+            }
+
+            // invoke getState to get the nms.BlockState of the CraftBlockData
+            Object nmsState = m_craftBlockData_getState.invoke(data);
+            // invoke getId to get the nms registry state ID of the nms.BlockState
+            return (int) m_nmsBlock_getId.invoke(null, nmsState);
+        } catch (ReflectiveOperationException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static Set<Material> getNonSolidBlocks() {

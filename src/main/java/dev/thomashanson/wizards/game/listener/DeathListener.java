@@ -1,20 +1,27 @@
 package dev.thomashanson.wizards.game.listener;
 
+import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.damage.DamageTick;
 import dev.thomashanson.wizards.damage.KillAssist;
+import dev.thomashanson.wizards.damage.types.PlayerDamageTick;
 import dev.thomashanson.wizards.event.CustomDeathEvent;
 import dev.thomashanson.wizards.game.manager.DamageManager;
+import dev.thomashanson.wizards.game.manager.LanguageManager;
+import dev.thomashanson.wizards.game.manager.PlayerStatsManager;
+import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.JoinConfiguration;
+import net.kyori.adventure.text.format.NamedTextColor;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.entity.PlayerDeathEvent;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class DeathListener implements Listener {
 
@@ -25,64 +32,85 @@ public class DeathListener implements Listener {
     }
 
     @EventHandler
-    public void onDeath(EntityDeathEvent event) {
+    public void onPlayerDeath(PlayerDeathEvent event) {
+        Player player = event.getPlayer();
 
-        LivingEntity entity = event.getEntity();
+        WizardsPlugin plugin = damageManager.getPlugin();
+        LanguageManager lang = plugin.getLanguageManager();
 
-        if ((event instanceof PlayerDeathEvent)) {
+        getStatsManager().incrementStat(player, PlayerStatsManager.StatType.DEATHS, 1);
+        List<DamageTick> allTicks = damageManager.getLoggedTicks(player.getUniqueId());
 
-            Player player = (Player) entity;
-
-            List<DamageTick> ticks = damageManager.getLoggedTicks(player.getUniqueId());
-            List<String> summary = damageManager.getDamageSummary(ticks);
-
-            ((PlayerDeathEvent) event).setDeathMessage(!ticks.isEmpty() ? ticks.get(ticks.size() - 1).getDeathMessage(player) : null);
-
-            if (summary.size() > 0) {
-
-                player.sendMessage(DamageManager.PUNCTUATION_COLOR + "-----------[ " + DamageManager.ACCENT_COLOR + ChatColor.BOLD + " Death Summary " + DamageManager.PUNCTUATION_COLOR + "]-----------");
-
-                for(String message : summary)
-                    player.sendMessage(message);
-
-                player.sendMessage("");
-
-                int more = ticks.size() - 1;
-                List<KillAssist> assists = damageManager.getPossibleAssists(ticks);
-
-                if (assists.size() > 0) {
-
-                    String assistText = DamageManager.BASE_COLOR + ", assisted by ";
-
-                    List<String> names = new ArrayList<>();
-                    int morePlayers = 0;
-
-                    for (KillAssist assist : assists) {
-
-                        if (names.size() >= 3) {
-                            morePlayers++;
-                            continue;
-                        }
-
-                        names.add(DamageManager.ACCENT_COLOR + assist.getAttacker().getDisplayName() + DamageManager.BASE_COLOR);
-                    }
-
-                    assistText += names.toString().replace("[", "").replace("]", "");
-
-                    if (morePlayers > 0)
-                        assistText += " + " + morePlayers + " other player" + (morePlayers != 1 ? "s" : "");
-
-                    ((PlayerDeathEvent) event).setDeathMessage(((PlayerDeathEvent) event).getDeathMessage() + assistText);
-
-                } else if (more > 0) {
-                    ((PlayerDeathEvent) event).setDeathMessage(((PlayerDeathEvent) event).getDeathMessage() + DamageManager.BASE_COLOR + " (+" + more + " more)");
-                }
-            }
-
-            CustomDeathEvent deathEvent = new CustomDeathEvent(entity, damageManager.getLastLoggedTick(player.getUniqueId()));
-            Bukkit.getServer().getPluginManager().callEvent(deathEvent);
+        if (allTicks.isEmpty()) {
+            player.sendMessage(lang.getTranslated(player, "wizards.death.summary.noDamage"));
+            event.deathMessage(null); // Use modern Paper API
+            damageManager.dump(player.getUniqueId());
+            return;
         }
 
-        damageManager.dump(entity.getUniqueId());
+        DamageTick lastTick = allTicks.get(allTicks.size() - 1);
+
+        if (lastTick instanceof PlayerDamageTick pdt) {
+            Player killer = pdt.getPlayer();
+            if (killer != null && !killer.getUniqueId().equals(player.getUniqueId())) {
+                getStatsManager().incrementStat(killer, PlayerStatsManager.StatType.KILLS, 1);
+            }
+        }
+        
+        List<KillAssist> assists = damageManager.getPossibleAssists(player.getUniqueId(), allTicks);
+        if (!assists.isEmpty()) {
+            for (KillAssist assist : assists) {
+                Player assister = assist.getAttacker();
+                if (assister != null) {
+                    getStatsManager().incrementStat(assister, PlayerStatsManager.StatType.ASSISTS, 1);
+                }
+            }
+        }
+        
+        Component deathMessage = lastTick.getDeathMessage(player, lang, damageManager);
+        deathMessage = appendAssistMessage(player, deathMessage, assists, lang);
+
+        // Modern Paper API to set death message
+        event.deathMessage(deathMessage);
+
+        sendDeathSummary(player, allTicks, lang);
+
+        Bukkit.getServer().getPluginManager().callEvent(new CustomDeathEvent(player, lastTick));
+        damageManager.dump(player.getUniqueId());
+    }
+    
+    private Component appendAssistMessage(Player viewer, Component deathMessage, List<KillAssist> assists, LanguageManager lang) {
+        if (assists.isEmpty()) {
+            return deathMessage.append(Component.text("."));
+        }
+        
+        List<Component> assisterNames = assists.stream()
+            .map(assist -> Component.text(assist.getAttacker().getName(), NamedTextColor.RED))
+            .collect(Collectors.toList());
+
+        JoinConfiguration joinConfig = JoinConfiguration.builder()
+            .separator(lang.getTranslated(viewer, "wizards.death.assist.separator"))
+            .lastSeparator(lang.getTranslated(viewer, "wizards.death.assist.and"))
+            .build();
+            
+        return deathMessage
+            .append(lang.getTranslated(viewer, "wizards.death.assist.header"))
+            .append(Component.join(joinConfig, assisterNames))
+            .append(Component.text("."));
+    }
+
+    private void sendDeathSummary(Player player, List<DamageTick> allTicks, LanguageManager lang) {
+        List<DamageTick> displayOrderTicks = new ArrayList<>(allTicks);
+        Collections.reverse(displayOrderTicks);
+        
+        List<Component> summaryComponents = damageManager.getDamageSummary(player, displayOrderTicks);
+        
+        player.sendMessage(lang.getTranslated(player, "wizards.death.summary.header"));
+        summaryComponents.forEach(player::sendMessage);
+        player.sendMessage(lang.getTranslated(player, "wizards.death.summary.footer"));
+    }
+
+    private PlayerStatsManager getStatsManager() {
+        return damageManager.getPlugin().getStatsManager();
     }
 }

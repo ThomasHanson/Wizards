@@ -1,271 +1,137 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.damage.types.CustomDamageTick;
-import dev.thomashanson.wizards.game.mode.GameTeam;
-import dev.thomashanson.wizards.game.overtime.types.DisasterManaStorm;
-import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.util.BlockUtil;
-import org.apache.commons.lang.Validate;
-import org.bukkit.*;
-import org.bukkit.entity.Entity;
+import java.time.Instant;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.bukkit.Color;
+import org.bukkit.Location;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.mode.GameTeam;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
 
-public class SpellManaBolt extends Spell implements Spell.Deflectable {
+public class SpellManaBolt extends Spell implements Tickable {
 
-    public void castSpell(final Player player, int level) {
+    private static final List<ManaBoltInstance> ACTIVE_BOLTS = new CopyOnWriteArrayList<>();
 
-        final Location missileLocation = player.getEyeLocation();
-        final Location shotFrom = missileLocation.clone();
-
-        final Vector direction = missileLocation.getDirection().normalize().multiply(0.3);
-
-        final int maxRange = 20 + (10 * level);
-        final int maxDings = maxRange * 3;
-
-        final int damage = 4 + (level * 2);
-        final int multiplier = getGame().isOvertime() && getGame().getDisaster() instanceof DisasterManaStorm ? 2 : 1;
-
-        new BukkitRunnable() {
-
-            private int numDings;
-            private Location prevLocation = missileLocation;
-
-            private void burst(boolean hitEntity) {
-
-                Validate.notNull(missileLocation.getWorld());
-
-                for (Entity worldEntity : missileLocation.getWorld().getEntities()) {
-
-                    if (
-                            worldEntity.equals(player) || !(worldEntity instanceof LivingEntity) ||
-                                    (worldEntity instanceof Player && getWizard((Player) worldEntity) == null)
-                    )
-                        continue;
-
-                    LivingEntity entity = (LivingEntity) worldEntity;
-
-                    Location entityLocation = entity.getLocation();
-
-                    // If they are less than 0.5 blocks away
-                    if (entityLocation.clone().add(0, missileLocation.getY() - entityLocation.getY(), 0).distance(missileLocation) <= 0.7) {
-
-                        // If it is in their body height
-                        if (Math.abs((entityLocation.getY() + (entity.getEyeHeight() / 1.5)) - missileLocation.getY()) <= entity.getEyeHeight() / 2) {
-
-                            getWizard(player).addAccuracy(true, false);
-
-                            if (!(entity instanceof Player) || getWizard((Player) entity) != null) {
-
-                                CustomDamageTick damageTick = new CustomDamageTick (
-                                        damage,
-                                        EntityDamageEvent.DamageCause.MAGIC,
-                                        getSpell().getSpellName(),
-                                        Instant.now(),
-                                        player
-                                );
-
-                                damage(entity, damageTick);
-                            }
-                        }
-                    }
-                }
-
-                playParticle(missileLocation, prevLocation);
-
-                for (int i = 0; i < 120; i++) {
-
-                    Vector vector = new Vector (
-                            ThreadLocalRandom.current().nextFloat() - 0.5F,
-                            ThreadLocalRandom.current().nextFloat() - 0.5F,
-                            ThreadLocalRandom.current().nextFloat() - 0.5F
-                    );
-
-                    if (vector.length() >= 1) {
-                        i--;
-                        continue;
-                    }
-
-                    Location location = missileLocation.clone();
-                    location.add(vector.multiply(2));
-
-                    player.getWorld().spawnParticle (
-                            Particle.REDSTONE, location, 0, 0.001, 1, 0, 1,
-                            new Particle.DustOptions(Color.fromRGB(104, 171, 177), 1)
-                    );
-                }
-
-                missileLocation.getWorld().playSound(missileLocation, Sound.ENTITY_BAT_TAKEOFF, 1.2F, 1F);
-                cancel();
-
-                if (!hitEntity)
-                    getWizard(player).addAccuracy(false);
-            }
-
-            @Override
-            public void run() {
-
-                if (numDings >= maxDings || !player.isOnline() || getWizard(player) == null) {
-                    burst(false);
-
-                } else {
-
-                    for (int i = 0; i < 2; i++) {
-
-                        Player closestPlayer = null;
-                        double distance = 0;
-
-                        for (Player closest : getGame().getPlayers(true)) {
-
-                            GameTeam.TeamRelation relation = getGame().getRelation(closest, player);
-
-                            if (relation == GameTeam.TeamRelation.SOLO || relation == GameTeam.TeamRelation.ALLY)
-                                continue;
-
-                            Location location = closest.getLocation();
-
-                            if (closest != player) {
-
-                                double distToClosest = location.distance(shotFrom);
-
-                                // If the player is a valid target
-                                if (distToClosest < maxRange + 10) {
-
-                                    double distFromMissile = missileLocation.distance(location);
-
-                                    // If the player is closer to the magic missile than the other dist
-                                    if (closestPlayer == null || distFromMissile < distance) {
-
-                                        double distToLocation = missileLocation.clone().add(direction).distance(location);
-
-                                        if (distToLocation < distFromMissile) {
-                                            closestPlayer = closest;
-                                            distance = distFromMissile;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        if (closestPlayer != null) {
-
-                            Vector newDirection = closestPlayer.getLocation().add(0, 1, 0)
-                                    .toVector()
-                                    .subtract(missileLocation.toVector());
-
-                            direction.add(newDirection.normalize().multiply(0.01)).normalize().multiply(0.3);
-                            direction.multiply(multiplier);
-
-                            if (isDeflected())
-                                direction.multiply(-1);
-                        }
-
-                        missileLocation.add(direction);
-
-                        /*
-                        NPC npcAtLoc = getGame().npcFromLocation(missileLocation);
-
-                        if (npcAtLoc != null) {
-
-                            Location npcLocation = npcAtLoc.getLocation();
-
-                            // If they are less than 0.5 blocks away
-                            if (npcLocation.clone().add(0, missileLocation.getY() - npcLocation.getY(), 0).distance(missileLocation) <= 0.7) {
-
-                                // If it is in their body height
-                                if (Math.abs((npcLocation.getY() + (entity.getEyeHeight() / 1.5)) - missileLocation.getY()) <= entity.getEyeHeight() / 2) {
-
-                                    burst(true);
-                                    return;
-                                }
-                            }
-                        }
-                         */
-
-                        for (Entity worldEntity : Objects.requireNonNull(missileLocation.getWorld()).getEntities()) {
-
-                            if (
-                                    worldEntity == player ||
-                                    !(worldEntity instanceof LivingEntity)
-                                    || (worldEntity instanceof Player && getWizard(player) == null)
-                            )
-                                continue;
-
-                            LivingEntity entity = (LivingEntity) worldEntity;
-                            Location entityLocation = entity.getLocation();
-
-                            // If they are less than 0.5 blocks away
-                            if (entityLocation.clone().add(0, missileLocation.getY() - entityLocation.getY(), 0).distance(missileLocation) <= 0.7) {
-
-                                // If it is in their body height
-                                if (Math.abs((entityLocation.getY() + (entity.getEyeHeight() / 1.5)) - missileLocation.getY()) <= entity.getEyeHeight() / 2) {
-
-                                    burst(true);
-
-                                    if (isShield(entity) && !isDeflected())
-                                        setDeflected(true, player);
-                                    else
-                                        getWizard(player).addAccuracy(true, false);
-
-                                    return;
-                                }
-                            }
-                        }
-
-                        if (missileLocation.getBlock().getType().isSolid()) {
-                            burst(false);
-                            return;
-                        }
-
-                        playParticle(missileLocation, prevLocation);
-                        prevLocation = missileLocation.clone();
-
-                        numDings++;
-                    }
-
-                    missileLocation.getWorld().playSound(missileLocation, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7F, 0F);
-                }
-            }
-
-        }.runTaskTimer(getGame().getPlugin(), 0L, 0L);
+    public SpellManaBolt(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
     }
 
     @Override
-    public void deflectSpell(Player player, int level, Vector direction) {}
+    public boolean cast(Player player, int level) {
+        ACTIVE_BOLTS.add(new ManaBoltInstance(this, player, level));
+        return true;
+    }
 
-    private void playParticle(Location start, Location end) {
+    @Override
+    public void tick(long gameTick) {
+        if (ACTIVE_BOLTS.isEmpty()) return;
+        ACTIVE_BOLTS.removeIf(ManaBoltInstance::tick);
+    }
+    
+    @Override
+    public void cleanup() {
+        ACTIVE_BOLTS.clear();
+    }
 
-        final List<Location> locations = BlockUtil.getLinesDistancedPoints(start, end, 0.1);
+    private static class ManaBoltInstance {
+        final SpellManaBolt parent;
+        Player caster;
+        final int level;
+        Location location;
+        Vector direction;
+        
+        final double speed;
+        final double maxRangeSq;
+        final double damage;
+        final double homingStrength;
+        
+        private Location origin;
 
-        new BukkitRunnable() {
+        ManaBoltInstance(SpellManaBolt parent, Player caster, int level) {
+            this.parent = parent;
+            this.caster = caster;
+            this.level = level;
+            this.location = caster.getEyeLocation();
+            this.origin = this.location.clone();
 
-            int timesRan;
+            StatContext context = StatContext.of(level);
+            this.speed = parent.getStat("speed-bps", level) / 20.0;
+            double range = parent.getStat("range", level);
+            this.maxRangeSq = range * range;
+            this.damage = parent.getStat("damage", level);
+            this.homingStrength = parent.getStat("homing-strength", level);
+            
+            this.direction = location.getDirection().normalize().multiply(speed);
+            location.getWorld().playSound(location, Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 0.7F, 0.5F);
+        }
 
-            @Override
-            public void run() {
-
-                for (Location location : locations) {
-
-                    Validate.notNull(location.getWorld());
-
-                    location.getWorld().spawnParticle (
-                            Particle.REDSTONE, location, 0, 0.001, 1, 0, 1,
-                            new Particle.DustOptions(Color.fromRGB(104, 171, 177), 1)
-                    );
-                }
-
-                if (timesRan++ > 1)
-                    cancel();
+        boolean tick() {
+            if (!caster.isOnline() || location.distanceSquared(origin) > maxRangeSq) {
+                burst(false);
+                return true;
             }
 
-        }.runTaskTimer(getGame().getPlugin(), 0L, 0L);
+            updateHoming();
+            location.add(direction);
+
+            if (location.getBlock().getType().isSolid()) {
+                burst(false);
+                return true;
+            }
+            
+            for (LivingEntity entity : location.getWorld().getNearbyLivingEntities(location, 1.2)) {
+                if (entity.equals(caster)) continue;
+                parent.damage(entity, new CustomDamageTick(damage, EntityDamageEvent.DamageCause.MAGIC, parent.getKey(), Instant.now(), caster, null));
+                burst(true);
+                return true;
+            }
+            
+            location.getWorld().spawnParticle(Particle.REDSTONE, location, 1, new Particle.DustOptions(Color.AQUA, 1F));
+            return false;
+        }
+
+        void updateHoming() {
+            if (homingStrength <= 0) return;
+            parent.getGame().flatMap(game -> game.getPlayers(true).stream()
+                .filter(p -> !p.equals(caster) && game.getRelation(p, caster) == GameTeam.TeamRelation.ENEMY)
+                .min(java.util.Comparator.comparingDouble(p -> p.getEyeLocation().distanceSquared(location)))
+            ).ifPresent(target -> {
+                Vector toTarget = target.getEyeLocation().toVector().subtract(location.toVector());
+                direction.add(toTarget.normalize().multiply(homingStrength)).normalize().multiply(speed);
+            });
+        }
+
+        void burst(boolean hit) {
+            location.getWorld().spawnParticle(Particle.CRIT_MAGIC, location, 60, 0.5, 0.5, 0.5, 0.2);
+            location.getWorld().playSound(location, Sound.ENTITY_BAT_TAKEOFF, 1.2F, 1F);
+            
+            if (hit) {
+                parent.getWizard(caster).ifPresent(wizard -> wizard.addAccuracy(true));
+            } else {
+                parent.getWizard(caster).ifPresent(wizard -> wizard.addAccuracy(false));
+            }
+        }
+        
+        // This method can be called by SpellLightShield
+        public void reflect(Player reflector, Vector newDirection) {
+            this.caster = reflector;
+            this.origin = this.location.clone(); // Reset range check
+            this.direction = newDirection.normalize().multiply(speed);
+        }
     }
 }
+

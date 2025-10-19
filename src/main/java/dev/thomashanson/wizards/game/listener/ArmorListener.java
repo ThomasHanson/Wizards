@@ -7,7 +7,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDispenseArmorEvent;
 
-public class ArmorListener implements Listener {
+class ArmorListener implements Listener {
 
     @EventHandler
     public void onDispenseArmor(BlockDispenseArmorEvent event) {

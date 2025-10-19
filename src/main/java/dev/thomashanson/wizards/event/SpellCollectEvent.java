@@ -1,27 +1,28 @@
 package dev.thomashanson.wizards.event;
 
-import dev.thomashanson.wizards.game.spell.SpellType;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 
+import dev.thomashanson.wizards.game.spell.Spell;
+
 public class SpellCollectEvent extends PlayerEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
-    private SpellType spell;
+    private Spell spell;
     private float manaGain;
 
     private boolean cancelled;
 
-    public SpellCollectEvent(Player who, SpellType spell) {
+    public SpellCollectEvent(Player who, Spell spell) {
 
         super(who);
         this.spell = spell;
 
-        Bukkit.getLogger().info(player.getName() + " collected " + spell.getSpellName() + " spell");
+        Bukkit.getLogger().info(player.getName() + " collected " + spell.getName() + " spell");
     }
 
     @Override
@@ -33,11 +34,11 @@ public class SpellCollectEvent extends PlayerEvent implements Cancellable {
         return HANDLERS;
     }
 
-    public SpellType getSpell() {
+    public Spell getSpell() {
         return spell;
     }
 
-    public void setSpell(SpellType spell) {
+    public void setSpell(Spell spell) {
         this.spell = spell;
     }
 

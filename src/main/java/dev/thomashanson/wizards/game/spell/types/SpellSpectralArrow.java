@@ -1,156 +1,131 @@
 package dev.thomashanson.wizards.game.spell.types;
 
-import dev.thomashanson.wizards.damage.types.CustomDamageTick;
-import dev.thomashanson.wizards.game.Wizard;
-import dev.thomashanson.wizards.game.overtime.Disaster;
-import dev.thomashanson.wizards.game.overtime.types.DisasterHail;
-import dev.thomashanson.wizards.game.overtime.types.DisasterLightning;
-import dev.thomashanson.wizards.game.overtime.types.DisasterMeteors;
-import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.util.BlockUtil;
-import net.md_5.bungee.api.ChatColor;
-import org.bukkit.Bukkit;
+import java.time.Instant;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
 import org.bukkit.Location;
+import org.bukkit.NamespacedKey;
 import org.bukkit.Particle;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Arrow;
-import org.bukkit.entity.LightningStrike;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
-import org.bukkit.metadata.FixedMetadataValue;
-import org.bukkit.potion.PotionEffect;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.event.entity.ProjectileHitEvent;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.Vector;
+import org.jetbrains.annotations.NotNull;
 
-import java.time.Instant;
-import java.util.*;
+import dev.thomashanson.wizards.WizardsPlugin;
+import dev.thomashanson.wizards.damage.types.CustomDamageTick;
+import dev.thomashanson.wizards.game.Tickable;
+import dev.thomashanson.wizards.game.mode.GameTeam;
+import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.StatContext;
 
-public class SpellSpectralArrow extends Spell implements Spell.Deflectable {
+public class SpellSpectralArrow extends Spell implements Tickable {
 
-    private final Map<Arrow, List<Location>> arrows = new HashMap<>();
+    private final Map<Arrow, Location> activeArrows = new ConcurrentHashMap<>();
+    private final NamespacedKey levelKey;
 
-    @Override
-    public void castSpell(Player player, int level) {
-
-        Arrow arrow = player.launchProjectile(Arrow.class);
-
-        arrow.setMetadata("SL", new FixedMetadataValue(getGame().getPlugin(), level));
-        arrow.setVelocity(arrow.getVelocity().multiply(1));
-        arrow.setShooter(player);
-
-        if (getGame().isOvertime() && getGame().getDisaster() instanceof DisasterMeteors)
-            arrow.setFireTicks(Integer.MAX_VALUE);
-
-        arrows.put(arrow, Arrays.asList(player.getLocation(), player.getLocation()));
-
-        final Particle particle =
-
-                (getGame().isOvertime() && getGame().getDisaster() instanceof DisasterHail) ?
-                        Particle.SNOW_SHOVEL :
-                        Particle.FIREWORKS_SPARK;
-
-        new BukkitRunnable() {
-
-            @Override
-            public void run() {
-
-                // Remove any ground or invalid arrows
-                arrows.keySet().removeIf(entity -> entity.isOnGround() || !entity.isValid());
-
-                // Play particles
-                for (Map.Entry<Arrow, List<Location>> entry : arrows.entrySet()) {
-
-                    for (Location location : BlockUtil.getLinesDistancedPoints(entry.getValue().get(1), entry.getKey().getLocation(), 0.7))
-                        if (location.getWorld() != null)
-                            location.getWorld().spawnParticle(particle, location, 0, 0, 0, 1);
-
-                    entry.getValue().set(1, entry.getKey().getLocation());
-                }
-
-            }
-
-        }.runTaskTimer(getGame().getPlugin(), 0L, 1L);
+    public SpellSpectralArrow(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
+        super(plugin, key, config);
+        this.levelKey = new NamespacedKey(plugin, "spectral_arrow_level");
     }
 
     @Override
-    public void deflectSpell(Player player, int level, Vector vector) {
+    public boolean cast(Player player, int level) {
+        Arrow arrow = player.launchProjectile(Arrow.class);
+        arrow.setShooter(player);
+        arrow.setVelocity(arrow.getVelocity().multiply(getStat("velocity-multiplier", level, 1.5)));
+        
+        PersistentDataContainer pdc = arrow.getPersistentDataContainer();
+        pdc.set(levelKey, PersistentDataType.INTEGER, level);
+        
+        activeArrows.put(arrow, arrow.getLocation());
+        return true;
+    }
 
-        // TODO: 2020-06-18 add metadata. example:
-        //Arrow arrow = null;
-        //arrow.setMetadata("Deflected", new FixedMetadataValue(getGame().getPlugin(), true));
+    @Override
+    public void tick(long gameTick) {
+        if (activeArrows.isEmpty()) return;
+
+        Particle particle = Particle.FIREWORKS_SPARK;
+
+        activeArrows.entrySet().removeIf(entry -> {
+            Arrow arrow = entry.getKey();
+            if (!arrow.isValid() || arrow.isOnGround()) {
+                return true;
+            }
+
+            // Draw a trail from the arrow's last known position to its current one
+            Location lastPos = entry.getValue();
+            Location currentPos = arrow.getLocation();
+            Vector travel = currentPos.toVector().subtract(lastPos.toVector());
+
+            for (double d = 0; d < travel.length(); d += 0.5) {
+                Vector offset = travel.clone().normalize().multiply(d);
+                arrow.getWorld().spawnParticle(particle, lastPos.clone().add(offset), 1, 0, 0, 0, 0);
+            }
+            entry.setValue(currentPos);
+            return false;
+        });
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onDamage(EntityDamageByEntityEvent event) {
+        if (!(event.getDamager() instanceof Arrow arrow) || !(event.getEntity() instanceof LivingEntity target)) {
+            return;
+        }
+
+        Integer spellLevel = arrow.getPersistentDataContainer().get(levelKey, PersistentDataType.INTEGER);
+        if (spellLevel == null) return;
+
+        event.setCancelled(true);
+        arrow.remove();
+
+        if (!(arrow.getShooter() instanceof Player attacker)) return;
+
+        if (target instanceof Player && getGame().map(g -> g.getRelation(attacker, (Player) target) != GameTeam.TeamRelation.ENEMY).orElse(false)) {
+            return;
+        }
+        
+        Location origin = activeArrows.getOrDefault(arrow, attacker.getLocation());
+        double distance = origin.distance(target.getLocation());
+        
+        // Correctly use the safe getStat method with the distance context
+        StatContext distanceContext = StatContext.of(spellLevel, distance);
+        double damage = getStat("damage", distanceContext, 1);
+
+        damage(target, new CustomDamageTick(damage, EntityDamageEvent.DamageCause.PROJECTILE, getKey(), Instant.now(), attacker, distance));
+        getWizard(attacker).ifPresent(wizard -> wizard.addAccuracy(true));
+        activeArrows.remove(arrow);
     }
 
     @EventHandler
-    public void onDamage(EntityDamageByEntityEvent event) {
-
-        if (!(event.getDamager() instanceof Arrow))
-            return;
-
-        if (!event.getDamager().hasMetadata("SL"))
-            return;
-
-        if (!(event.getEntity() instanceof Player))
-            return;
-
-        Arrow arrow = (Arrow) event.getDamager();
-        List<Location> locations = arrows.remove(event.getDamager());
-
-        if (locations == null || locations.isEmpty())
-            return;
-
-        Player player = (Player) event.getEntity();
-
-        int spellLevel = arrow.getMetadata("SL").get(0).asInt();
-
-        double distance = locations.get(0).distance(event.getEntity().getLocation());
-        double damage = 6 + distance / (7.0 - spellLevel);
-
-        event.setDamage(damage);
-
-        // TODO: 4/14/21 stat tracking & sniper achievement
-
-        CustomDamageTick customTick = new CustomDamageTick (
-                damage,
-                EntityDamageEvent.DamageCause.PROJECTILE,
-                getSpell().getSpellName(),
-                Instant.now(),
-                (Player) arrow.getShooter()
-        );
-
-        getGame().getPlugin().getDamageManager().logTick(player, customTick);
-
-        Wizard shooter = getWizard((Player) arrow.getShooter());
-        shooter.addAccuracy(true, false);
-
-        if (getGame().isOvertime()) {
-
-            Disaster disaster = getGame().getDisaster();
-
-            if (disaster instanceof DisasterLightning) {
-
-                LightningStrike strike = player.getWorld().strikeLightning(player.getLocation());
-                strike.setMetadata("OT", new FixedMetadataValue(getGame().getPlugin(), shooter));
-
-            } else if (disaster instanceof DisasterHail) {
-                player.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 30, Integer.MAX_VALUE));
-                player.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, 30, 250));
+    public void onProjectileHit(ProjectileHitEvent event) {
+        if (event.getEntity() instanceof Arrow arrow && activeArrows.containsKey(arrow)) {
+            arrow.remove();
+            
+            // The instanceof pattern creates the 'shooter' variable
+            if (arrow.getShooter() instanceof Player shooter) {
+                // We use the new 'shooter' variable directly, no cast needed
+                getWizard(shooter).ifPresent(wizard -> wizard.addAccuracy(false));
             }
+            activeArrows.remove(arrow);
         }
+    }
 
-        Bukkit.broadcastMessage (
-
-                ChatColor.GREEN.toString() + ChatColor.BOLD + ((Player) event.getEntity()).getDisplayName() +
-                        ChatColor.GRAY + " was hit by " +
-                        ChatColor.GREEN + ChatColor.BOLD + getSpell().getSpellName() +
-                        ChatColor.GRAY + " from " +
-                        ChatColor.GREEN + "" + ChatColor.BOLD + distance +
-                        ChatColor.GRAY + " blocks away for " +
-                        ChatColor.GREEN + ChatColor.BOLD + event.getDamage() +
-                        ChatColor.GRAY + " damage!"
-        );
-
-        //int damage = getValue(player, "Damage", distance);
+    @Override
+    public void cleanup() {
+        activeArrows.keySet().forEach(arrow -> {
+            if (arrow.isValid()) arrow.remove();
+        });
+        activeArrows.clear();
     }
 }
