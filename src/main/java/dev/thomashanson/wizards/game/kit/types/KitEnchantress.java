@@ -138,7 +138,7 @@ public class KitEnchantress extends WizardsKit {
         if (!((LivingEntity) player).isOnGround())
             return;
 
-        Map<Block, Double> blocks = BlockUtil.getInRadius(player.getLocation().subtract(0, 1, 0), 3.0, true);
+        Map<Block, Double> blocks = BlockUtil.getBlocksInRadius(player.getLocation().subtract(0, 1, 0), 3.0);
 
         blocks.forEach((block, distance) -> {
 

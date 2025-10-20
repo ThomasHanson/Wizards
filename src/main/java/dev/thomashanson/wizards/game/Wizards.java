@@ -604,16 +604,17 @@ public class Wizards implements Listener, Tickable {
                 continue;
             }
             // Survival players outside map
-            Vector vector = MathUtil.getTrajectory2D(player.getLocation(), currentMap.getSpectatorLocation());
+            // UPDATED: getTrajectory2D is now getDirection, and setVelocity is now applyVelocity.
+            Vector vector = MathUtil.getDirection(player.getLocation(), currentMap.getSpectatorLocation()).setY(0);
             double yBase = player.getLocation().getY() > currentMap.getBounds().getMaxY() ? 0 : 0.4;
-            MathUtil.setVelocity(player, vector, 1, true, yBase, 0, 10, true);
+            MathUtil.applyVelocity(player, vector, 1, yBase, 0, 10);
 
             DamageTick lastLoggedTick = plugin.getDamageManager().getLastLoggedTick(player.getUniqueId());
             VoidDamageTick borderTick = new VoidDamageTick(4.0, Instant.now(), lastLoggedTick);
             plugin.getDamageManager().damage(player, borderTick);
-            
+
             Location playerLocation = player.getLocation();
-            
+
             if (playerLocation != null) {
                 world.playSound(playerLocation, Sound.BLOCK_NOTE_BLOCK_BASS, 2F, 1F);
                 world.playSound(playerLocation, Sound.BLOCK_NOTE_BLOCK_BASS, 2F, 1F);

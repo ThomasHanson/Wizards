@@ -106,7 +106,8 @@ public class SpellFrostBarrier extends Spell implements Spell.SpellBlock, Tickab
         BarrierInstance(SpellFrostBarrier parent, Player caster, Block startBlock, int level) {
             this.parent = parent;
             this.startBlock = startBlock;
-            this.facing = BlockUtil.getFace(caster.getEyeLocation().getYaw());
+            // UPDATED: getFace now requires a boolean. 'false' is correct for a straight wall.
+            this.facing = BlockUtil.getFace(caster.getEyeLocation().getYaw(), false);
 
             StatContext context = StatContext.of(level);
             this.width = (int) parent.getStat("width", level);
@@ -129,16 +130,25 @@ public class SpellFrostBarrier extends Spell implements Spell.SpellBlock, Tickab
 
         void buildWallSegment(Block center) {
             placeBlock(center);
-            BlockFace[] growDirections = BlockUtil.getCornerBlockFaces(facing);
-            if (growDirections == null) return;
+            // UPDATED: Replaced the removed utility method with a simple, local helper.
+            BlockFace[] growDirections = getWallDirections(facing);
 
             for (BlockFace direction : growDirections) {
-                for (int i = 1; i < width / 2; i++) {
-                    Block relative = center.getRelative(direction.getModX() * i, 0, direction.getModZ() * i);
-                    if (relative.getType().isSolid()) break;
+                // This loop builds outwards from the center block in both directions.
+                for (int i = 1; i <= width / 2; i++) {
+                    Block relative = center.getRelative(direction, i);
+                    if (relative.getType().isSolid()) break; // Stop this direction if we hit something
                     placeBlock(relative);
                 }
             }
+        }
+
+        private BlockFace[] getWallDirections(BlockFace facing) {
+            return switch (facing) {
+                case NORTH, SOUTH -> new BlockFace[]{BlockFace.WEST, BlockFace.EAST};
+                case WEST, EAST -> new BlockFace[]{BlockFace.NORTH, BlockFace.SOUTH};
+                default -> new BlockFace[0]; // Should not happen with getFace(..., false)
+            };
         }
 
         void placeBlock(Block block) {

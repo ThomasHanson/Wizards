@@ -97,7 +97,16 @@ public class DisasterLightning extends Disaster {
                 }
 
                 // Use the custom explosion utility for visuals
-                ExplosionUtil.createExplosion(getGame().getPlugin(), impactBlock.getLocation(), toExplode, false);
+                ExplosionUtil.ExplosionConfig config = new ExplosionUtil.ExplosionConfig(
+                        false,  // regenerateBlocks
+                        100L,   // regenerationDelayTicks
+                        60,     // debrisLifespanTicks
+                        0.25,   // debrisChance
+                        0.5,    // velocityStrength
+                        0.4,    // velocityYAward
+                        0.5     // itemVelocityModifier
+                    );
+                    ExplosionUtil.createExplosion(getGame().getPlugin(), impactBlock.getLocation(), toExplode, config, false);
 
                 // Set blocks on fire randomly
                 for (Block block : toFire) {

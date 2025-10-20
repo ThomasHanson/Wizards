@@ -70,8 +70,8 @@ public class MapExportCommand {
                         config.set("locations.max.y", bounds.getMaxY());
                         config.set("locations.max.z", bounds.getMaxZ());
 
-                        config.set("locations.spectator", LocationUtil.locationToString(gameMap.getSpectatorLocation()));
-                        config.set("locations.spawns", gameMap.getSpawnLocations().stream().map(LocationUtil::locationToString).collect(Collectors.toList()));
+                        config.set("locations.spectator", LocationUtil.toString(gameMap.getSpectatorLocation()));
+                        config.set("locations.spawns", gameMap.getSpawnLocations().stream().map(LocationUtil::toString).collect(Collectors.toList()));
 
                         try {
                             config.save(dataFile);

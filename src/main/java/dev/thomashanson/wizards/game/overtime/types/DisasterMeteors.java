@@ -144,12 +144,21 @@ public class DisasterMeteors extends Disaster {
     private void handleMeteorImpact(Location impactLocation, float explosionSize) {
         // Ensure impact is within current game bounds
         if (!(impactLocation.getX() >= getGame().getCurrentMinX() && impactLocation.getX() < getGame().getCurrentMaxX() &&
-              impactLocation.getZ() >= getGame().getCurrentMinZ() && impactLocation.getZ() < getGame().getCurrentMaxZ())) {
+                impactLocation.getZ() >= getGame().getCurrentMinZ() && impactLocation.getZ() < getGame().getCurrentMaxZ())) {
             return;
         }
 
-        // Trigger your custom explosion utility instead of the vanilla one.
-        // The sound and huge explosion particle are handled by the utility.
-        ExplosionUtil.createExplosion(getGame().getPlugin(), impactLocation, explosionSize, false, true);
+        // UPDATED: ExplosionUtil now uses a configuration record.
+        ExplosionUtil.ExplosionConfig config = new ExplosionUtil.ExplosionConfig(
+            false,      // regenerateBlocks
+            100L,       // regenerationDelayTicks
+            60,         // debrisLifespanTicks
+            0.35,       // debrisChance
+            0.8,        // velocityStrength
+            0.7,        // velocityYAward
+            0.5         // itemVelocityModifier
+        );
+
+        ExplosionUtil.createExplosion(getGame().getPlugin(), impactLocation, explosionSize, config, true);
     }
 }

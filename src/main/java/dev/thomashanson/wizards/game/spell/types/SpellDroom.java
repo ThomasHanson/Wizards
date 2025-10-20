@@ -93,7 +93,18 @@ public class SpellDroom extends Spell {
         StatContext context = StatContext.of(level);
         float explosionPower = (float) getStat("explosion-power", level);
 
-        ExplosionUtil.createExplosion(plugin, event.getEntity().getLocation(), explosionPower, true, false);
+        // UPDATED: ExplosionUtil now uses a configuration record.
+        ExplosionUtil.ExplosionConfig config = new ExplosionUtil.ExplosionConfig(
+            false,  // regenerateBlocks
+            100L,   // regenerationDelayTicks
+            60,     // debrisLifespanTicks
+            0.3,    // debrisChance
+            0.6,    // velocityStrength
+            0.5,    // velocityYAward
+            0.5     // itemVelocityModifier
+        );
+
+        ExplosionUtil.createExplosion(plugin, event.getEntity().getLocation(), explosionPower, config, false);
         event.getEntity().remove();
     }
 }

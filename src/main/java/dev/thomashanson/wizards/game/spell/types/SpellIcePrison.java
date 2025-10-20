@@ -63,7 +63,8 @@ public class SpellIcePrison extends Spell implements CustomProjectile, Tickable 
         long durationSeconds = (long) getStat("duration-seconds", level);
         long meltOffsetMillis = (long) (getStat("melt-random-offset-seconds", level) * 1000L);
 
-        Map<Block, Double> blocksInRadius = BlockUtil.getInRadius(impactLocation.getBlock(), radius, true);
+        // UPDATED: The method is now getBlocksInRadius and takes a Location.
+        Map<Block, Double> blocksInRadius = BlockUtil.getBlocksInRadius(impactLocation, radius);
 
         for (Block block : blocksInRadius.keySet()) {
             if (block.getType().isAir() || !block.getType().isSolid() || block.isLiquid()) {

@@ -264,7 +264,7 @@ public class Wizard {
         if (activePotion != null) {
             Duration potionDuration = game.getWizardManager().getPotionDuration(getPlayer(), activePotion);
             if (potionDuration != null) {
-                return String.format("%s §7| §e%s", activePotion.getPotionName(), MathUtil.formatTime(potionDuration.toMillis(), 1));
+                return String.format("%s §7| §e%s", activePotion.getPotionName(), MathUtil.formatTime(potionDuration.toMillis()));
             }
         }
         return "";

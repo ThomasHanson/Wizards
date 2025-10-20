@@ -11,3 +11,138 @@ database:
   database: "" # The name of the specific database to use.
   username: ""  # The username for the database account.
   password: ""  # The password for the database account.
+
+lobby_world: "Lobby_MCS"
+
+# --- Lobby Settings ---
+# Defines the world and spawn point for the pre-game lobby.
+lobby:
+  world: "Lobby_MCS"
+  spawn-point:
+    x: 0.5
+    y: 34.0
+    z: 0.5
+  tutorial-npc:
+    world: "Lobby_MCS"
+    x: 3.5
+    y: 33.0
+    z: -2.5
+    pitch: 0.0
+    yaw: 45.0
+  countdown-seconds: 10
+  tip-interval-seconds: 30
+  game-tips:
+    - "wizards.game.tip.1"
+    - "wizards.game.tip.2"
+    - "wizards.game.tip.3"
+    - "wizards.game.tip.4"
+    - "wizards.game.tip.5"
+    - "wizards.game.tip.6"
+    - "wizards.game.tip.7"
+    - "wizards.game.tip.8"
+    - "wizards.game.tip.9"
+    - "wizards.game.tip.10"
+
+overtime:
+  duration-seconds: 600 # 10 minutes
+  minimum-map-dimension: 5.0
+  blocks-to-process-per-tick: 150
+  async-collector-interval-ticks: 40
+  visual-range-blocks: 64
+
+# ----------------------------------------------------------------
+# Damage & Death Configuration
+# ----------------------------------------------------------------
+damage:
+  # How long (in seconds) damage history is kept for a player for death recaps and assists.
+  log-timeout-seconds: 10
+  # The minimum percentage of total damage a player must deal to qualify for an assist.
+  assist-threshold-percentage: 20
+  # The maximum time (in seconds) for a damage event to be considered "just now" in the death summary.
+  just-now-threshold-seconds: 1.5
+  # The distance (in blocks) beyond which a player attack is considered 'ranged' for death messages and logging.
+  melee-range-threshold: 4.5
+
+  # Custom sounds played when a player is hit, based on the armor they are wearing.
+  # A random piece of equipped armor is chosen. If no armor, vanilla sounds play.
+  armor-hit-sounds:
+    # Default sound if no specific match is found but the player is wearing some armor.
+    default:
+      sound: "minecraft:item.armor.equip_generic"
+      volume: 1.0
+      pitch: 1.0
+    # Keywords are checked against the material name (e.g., DIAMOND_HELMET contains "DIAMOND").
+    # The first match in this list is used. Order matters.
+    NETHERITE:
+      sound: "minecraft:item.armor.equip_netherite"
+      volume: 1.0
+      pitch: 0.8
+    DIAMOND:
+      sound: "minecraft:item.armor.equip_diamond"
+      volume: 1.0
+      pitch: 0.9
+    IRON:
+      sound: "minecraft:item.armor.equip_iron"
+      volume: 1.0
+      pitch: 1.0
+    GOLDEN: # Match Bukkit's Material enum name
+      sound: "minecraft:item.armor.equip_gold"
+      volume: 1.0
+      pitch: 1.4
+    CHAINMAIL:
+      sound: "minecraft:item.armor.equip_chain"
+      volume: 1.0
+      pitch: 1.1
+    LEATHER:
+      sound: "minecraft:item.armor.equip_leather"
+      volume: 1.0
+      pitch: 1.2
+
+  # Defines localization keys for death messages.
+  death-messages:
+    # Mappings for specific block materials. This overrides any other cause.
+    by-block:
+      CACTUS: "wizards.death.block.cactus"
+      LAVA: "wizards.death.block.lava"
+      default: "wizards.death.block.generic" # Placeholders: <victim_name>, <block_name>
+
+    # Mappings for specific Bukkit DamageCause enums.
+    by-cause:
+      FIRE_TICK: "wizards.death.cause.fire_tick"
+      DROWNING: "wizards.death.cause.drowning"
+    
+    # Fall damage. Placeholders: <victim_name>, <distance>
+    fall: "wizards.death.fall.distance"
+
+    # Void damage, with context for how the player ended up there.
+    void:
+      knocked-by-player: "wizards.death.void.knocked_by_player"  # Placeholders: <victim_name>, <attacker_name>
+      knocked-by-monster: "wizards.death.void.knocked_by_monster" # Placeholders: <victim_name>, <monster_name>
+      fell: "wizards.death.void.fell" # Placeholder: <victim_name>
+
+    # Player vs. Player combat.
+    pvp:
+      melee:
+        verbs: ["wizards.death.verb.melee.1", "wizards.death.verb.melee.2", "wizards.death.verb.melee.3", "wizards.death.verb.melee.4"]
+        format: "wizards.death.player.melee" # Placeholders: <victim_name>, <attacker_name>, <verb>
+      ranged:
+        format: "wizards.death.player.ranged" # Placeholders: <victim_name>, <attacker_name>, <distance>
+
+    # Kills by monsters.
+    monster:
+      melee: "wizards.death.monster.melee"   # Placeholders: <victim_name>, <monster_name>
+      ranged: "wizards.death.monster.ranged"  # Placeholders: <victim_name>, <monster_name>, <distance>
+
+    # Kills by custom spells.
+    by-spell:
+      overrides:
+        "wizards.spell.gust.name": "wizards.death.player_by_gust"
+        "wizards.spell.trap_rune.name": "wizards.death.player_by_trap_rune"
+      generic:
+        verbs: ["wizards.death.verb.spell.1", "wizards.death.verb.spell.2", "wizards.death.verb.spell.3", "wizards.death.verb.spell.4", "wizards.death.verb.spell.5", "wizards.death.verb.spell.6", "wizards.death.verb.spell.7", "wizards.death.verb.spell.8"]
+        format: "wizards.death.player_by_spell" # Placeholders: <victim_name>, <attacker_name>, <verb>, <spell_name>
+      suicide:
+        format: "wizards.death.suicide_by_spell" # Placeholders: <victim_name>, <spell_name>
+
+    # Fallback message for any unhandled death cause. Placeholders: <victim_name>, <reason>
+    default: "wizards.death.default"

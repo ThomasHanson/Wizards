@@ -87,10 +87,10 @@ public class SpellImplode extends Spell implements Tickable {
             StatContext context = StatContext.of(level);
             int size = (int) parent.getStat("size", level);
 
-            // Using the BlockUtil.getInRadius(Block, double, boolean) method you provided
-            BlockUtil.getInRadius(targetBlock, size * 2, false).keySet().stream()
-                .filter(block -> block.getType().isSolid() && block.getType().getHardness() >= 0 && block.getType() != Material.BEDROCK && block.getType() != Material.BARRIER)
-                .forEach(affectedBlocks::add);
+            // UPDATED: The method is now getBlocksInRadius and takes a Location.
+            BlockUtil.getBlocksInRadius(targetBlock.getLocation(), size * 2).keySet().stream()
+                    .filter(block -> block.getType().isSolid() && block.getType().getHardness() >= 0 && block.getType() != Material.BEDROCK && block.getType() != Material.BARRIER)
+                    .forEach(affectedBlocks::add);
             Collections.shuffle(affectedBlocks);
         }
 
@@ -131,10 +131,17 @@ public class SpellImplode extends Spell implements Tickable {
             affectedBlocks.removeIf(block -> !block.getType().isSolid());
             if (affectedBlocks.isEmpty()) return;
 
-            // CORRECTED USAGE: Call the ExplosionUtil method that exists in your provided file.
-            // This version does not take a caster or a block list.
-            // createExplosion(JavaPlugin plugin, Location location, float power, boolean setFire, boolean breakBlocks)
-            ExplosionUtil.createExplosion(parent.plugin, center, explosionPower, false, true);
+            // UPDATED: ExplosionUtil now uses a configuration record.
+            ExplosionUtil.ExplosionConfig config = new ExplosionUtil.ExplosionConfig(
+                false,  // regenerateBlocks
+                100L,   // regenerationDelayTicks
+                60,     // debrisLifespanTicks
+                0.4,    // debrisChance
+                0.7,    // velocityStrength
+                0.6,    // velocityYAward
+                0.5     // itemVelocityModifier
+            );
+            ExplosionUtil.createExplosion(parent.plugin, center, explosionPower, config, true);
 
             center.getWorld().playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 1.5F, 1.5F);
             center.getWorld().spawnParticle(Particle.EXPLOSION_HUGE, center, 1);

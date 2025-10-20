@@ -75,7 +75,8 @@ public class SpellRumble extends Spell implements Spell.SpellBlock, Tickable {
             this.parent = parent;
             this.caster = caster;
             this.level = level;
-            this.direction = BlockUtil.getFace(caster.getEyeLocation().getYaw());
+
+            this.direction = BlockUtil.getFace(caster.getEyeLocation().getYaw(), false);
             this.currentBlock = startBlock;
 
             StatContext context = StatContext.of(level);
@@ -120,7 +121,9 @@ public class SpellRumble extends Spell implements Spell.SpellBlock, Tickable {
             StatContext context = StatContext.of(level, distance);
             int width = (int) parent.getStat("width", level);
 
-            for (Block block : BlockUtil.getInRadius(currentBlock, width, false).keySet()) {
+            // The method now takes a Location instead of a Block.
+            // We get the block's center to ensure the radius is uniform.
+            for (Block block : BlockUtil.getBlocksInRadius(currentBlock.getLocation().add(0.5, 0.5, 0.5), width).keySet()) {
                 if (block.getType().isSolid()) {
                     playEffect(block);
                     damageEntitiesAbove(block);
@@ -139,7 +142,20 @@ public class SpellRumble extends Spell implements Spell.SpellBlock, Tickable {
 
         void explode() {
             Location explosionCenter = currentBlock.getLocation().add(0.5, 1.0, 0.5);
-            ExplosionUtil.createExplosion(parent.plugin, explosionCenter, explosionPower, false, true);
+
+            // ExplosionUtil now uses a configuration record for its parameters.
+            // This creates a standard visual-only explosion that does not regenerate blocks.
+            ExplosionUtil.ExplosionConfig config = new ExplosionUtil.ExplosionConfig(
+                false,      // regenerateBlocks
+                100L, // regenerationDelayTicks
+                60,      // debrisLifespanTicks
+                0.3,            // debrisChance
+                0.6,        // velocityStrength
+                0.5,          // velocityYAward
+                0.5     // itemVelocityModifier
+            );
+
+            ExplosionUtil.createExplosion(parent.plugin, explosionCenter, explosionPower, config, true);
 
             for (LivingEntity entity : explosionCenter.getWorld().getNearbyLivingEntities(explosionCenter, explosionPower)) {
                 if (entity.equals(caster)) continue;

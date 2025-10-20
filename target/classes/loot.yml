@@ -1,13 +1,5 @@
-# =================================================================== #
-# Wizards Loot Configuration                                          #
-# =================================================================== #
-# This file is an exact translation of the original hard-coded loot.  #
-# =================================================================== #
-
-# Global settings used across all modes.
+# Global settings for loot generation.
 global:
-  # A set of materials that the random chest spawner will treat as "air"
-  # when looking for a solid ground block to place a chest on.
   non-ground-materials:
     - "AIR"
     - "CAVE_AIR"
@@ -20,85 +12,67 @@ global:
     - "SPRUCE_LEAVES"
 
 # Settings specific to each game mode.
-# The 'default' section acts as a fallback for any mode not explicitly defined.
+# We no longer use different chest types, so this is much simpler.
 modes:
   default:
-    # The number of additional chests to spawn in random locations.
-    # From: spawnRandomChests(gameMap, 40);
-    random-chests-to-spawn: 40
+    random-chests-to-spawn: 25
+    items-per-chest:
+      min: 2 # You can adjust these min/max values to your liking
+      max: 5
+    guarantees:
+      - { table: "spells", amount: 1 }
 
-    # The range of items to place in each chest.
-    # From: final int minItems = 3; final int maxItems = 5;
+  SOLO_BRAWL:
+    random-chests-to-spawn: 40
     items-per-chest:
       min: 3
-      max: 5
-
-    # This defines the "type" of chest to spawn. Since the original code had
-    # only one loot table, we define one chest type ("main") and give it a
-    # weight of 1, ensuring it's always chosen.
-    chest-types:
-      main: 1
-
-    # This replaces the hard-coded "failsafe" that ensured every chest had a spell.
-    # It guarantees that 1 item from the "spells" table is placed first.
+      max: 6
     guarantees:
       - { table: "spells", amount: 1 }
 
 # Definition of all loot tables.
 tables:
-  # This table contains ONLY spells. It is used exclusively by the "guarantees"
-  # system above to ensure every chest gets one spell. The weights are taken
-  # directly from the SpellRarity enum's lootAmount.
-  spells:
-    - { type: "SPELL_BY_RARITY", rarity: "COMMON", weight: 15 }
-    - { type: "SPELL_BY_RARITY", rarity: "UNCOMMON", weight: 10 }
-    - { type: "SPELL_BY_RARITY", rarity: "MEDIUM", weight: 5 }
-    - { type: "SPELL_BY_RARITY", rarity: "MED_RARE", weight: 3 }
-    - { type: "SPELL_BY_RARITY", rarity: "RARE", weight: 1 }
-
-  # This is the main loot table that mimics the original code's behavior of
-  # having all possible items in one giant pool. The weights are derived
-  # from the SpellRarity enum values used in the original addLoot() calls.
-  main:
-    # --- Potions ---
-    # Weight: SpellRarity.RARE.getLootAmount() -> 1
-    # Assuming all PotionTypes were added.
-    - { type: "POTION", potion-type: "FROZEN", weight: 1 }
-    - { type: "POTION", potion-type: "GAMBLER", weight: 1 }
-    - { type: "POTION", potion-type: "IRON", weight: 1 }
-    - { type: "POTION", potion-type: "LUCK", weight: 1 }
-    - { type: "POTION", potion-type: "MANA", weight: 1 }
-    - { type: "POTION", potion-type: "REGENERATION", weight: 1 }
-    - { type: "POTION", potion-type: "RUSHER", weight: 1 }
-    - { type: "POTION", potion-type: "SIGHT", weight: 1 }
-    - { type: "POTION", potion-type: "VOLATILE", weight: 1 }
-    - { type: "POTION", potion-type: "WISDOM", weight: 1 }
-
-    # --- Wands ---
-    # Weight: 4
+  # This is the single, master loot table that all chests will use,
+  # mimicking the behavior of your old _chestLoot object.
+  # Weights are taken directly from your old createLoot() method.
+  master_pool:
+    # Wands
     - { type: "CUSTOM_ITEM", key: "lootable_wand", weight: 4 }
 
-    # --- Food & Materials ---
-    # COMMON Weight: 15
+    # Food
+    - { type: "ITEM", material: "CARROT", weight: 15, amount: "1-2" }
     - { type: "ITEM", material: "COOKED_BEEF", weight: 15, amount: "1-2" }
     - { type: "ITEM", material: "BREAD", weight: 15, amount: "1-2" }
-    - { type: "ITEM", material: "COOKED_CHICKEN", weight: 15, amount: "1-2" } # Represents the "Cheese" item
-    # RARE Weight: 1
-    - { type: "ITEM", material: "CAKE", weight: 1 }
-    # MED_RARE Weight: 3
-    - { type: "ITEM", material: "OAK_PLANKS", weight: 3, amount: "1-8" }
+    - { type: "CUSTOM_ITEM", key: "cheese", weight: 15, amount: "1-2" }
 
-    # --- Ingots ---
-    # MEDIUM Weight: 5
+    # Materials
+    - { type: "ITEM", material: "WHEAT", weight: 5, amount: "1-2" }
+    - { type: "ITEM", material: "OAK_LOG", weight: 5, amount: "1-10" } # Changed from WOOD to OAK_LOG for clarity
     - { type: "ITEM", material: "GOLD_INGOT", weight: 5, amount: "1-2" }
     - { type: "ITEM", material: "IRON_INGOT", weight: 5, amount: "1-2" }
-    # MED_RARE Weight: 3
     - { type: "ITEM", material: "DIAMOND", weight: 3 }
 
-    # --- Armor ---
-    # MEDIUM Weight: 5
-    - { type: "ITEM", material: "LEATHER_BOOTS", weight: 5 }
-    - { type: "ITEM", material: "LEATHER_CHESTPLATE", weight: 5 }
-    # MED_RARE Weight: 3
-    - { type: "ITEM", material: "IRON_BOOTS", weight: 3 }
-    - { type: "ITEM", material: "IRON_CHESTPLATE", weight: 3 }
+    # Leather Armor
+    - { type: "ITEM", material: "LEATHER_BOOTS", weight: 6 }
+    - { type: "ITEM", material: "LEATHER_LEGGINGS", weight: 6 }
+    - { type: "ITEM", material: "LEATHER_CHESTPLATE", weight: 6 }
+    - { type: "ITEM", material: "LEATHER_HELMET", weight: 6 }
+
+    # Gold Armor
+    - { type: "ITEM", material: "GOLDEN_BOOTS", weight: 5 }
+    - { type: "ITEM", material: "GOLDEN_LEGGINGS", weight: 5 }
+    - { type: "ITEM", material: "GOLDEN_CHESTPLATE", weight: 5 }
+    - { type: "ITEM", material: "GOLDEN_HELMET", weight: 5 }
+
+    # Iron Armor
+    - { type: "ITEM", material: "IRON_BOOTS", weight: 2 }
+    - { type: "ITEM", material: "IRON_LEGGINGS", weight: 2 }
+    - { type: "ITEM", material: "IRON_CHESTPLATE", weight: 2 }
+    - { type: "ITEM", material: "IRON_HELMET", weight: 2 }
+  
+  spells:
+    - { type: "SPELL_BY_RARITY", rarity: "COMMON", weight: 40 }
+    - { type: "SPELL_BY_RARITY", rarity: "UNCOMMON", weight: 25 }
+    - { type: "SPELL_BY_RARITY", rarity: "MEDIUM", weight: 12 }
+    - { type: "SPELL_BY_RARITY", rarity: "MED_RARE", weight: 6 }
+    - { type: "SPELL_BY_RARITY", rarity: "RARE", weight: 2 }

@@ -64,8 +64,18 @@ public class SpellLightningStrike extends Spell {
             pdc.set(casterKey, PersistentDataType.STRING, player.getUniqueId().toString());
             pdc.set(damageKey, PersistentDataType.DOUBLE, damage);
 
+            // UPDATED: ExplosionUtil now uses a configuration record.
             float explosionRadius = (float) getStat("explosion-radius", level);
-            ExplosionUtil.createExplosion(plugin, strikeLocation, explosionRadius, getStat("sets-fire", level) > 0, true);
+            ExplosionUtil.ExplosionConfig config = new ExplosionUtil.ExplosionConfig(
+                false,  // regenerateBlocks
+                100L,   // regenerationDelayTicks
+                60,     // debrisLifespanTicks
+                0.2,    // debrisChance (less debris for lightning)
+                0.4,    // velocityStrength
+                0.3,    // velocityYAward
+                0.5     // itemVelocityModifier
+            );
+            ExplosionUtil.createExplosion(plugin, strikeLocation, explosionRadius, config, true);
 
         }, strikeDelay);
 

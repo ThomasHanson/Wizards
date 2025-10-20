@@ -117,7 +117,7 @@ public class TeamManager {
                 .collect(Collectors.toList());
 
             if (!allies.isEmpty()) {
-                Location location = LocationUtil.getLocationNearPlayers(allSpawns, allies, allLivingPlayers);
+                Location location = LocationUtil.getClosestLocation(allSpawns, allies, allLivingPlayers).orElse(null);
                 if (location != null) return location;
             }
         }
@@ -128,7 +128,7 @@ public class TeamManager {
             .collect(Collectors.toList());
 
         if (!enemies.isEmpty()) {
-            Location location = LocationUtil.getLocationAwayFromPlayers(allSpawns, enemies);
+            Location location = LocationUtil.getFurthestLocation(allSpawns, enemies).orElse(null);
             if (location != null) return location;
         }
 

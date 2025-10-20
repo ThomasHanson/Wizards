@@ -121,7 +121,9 @@ public class SpellRainbowRoad extends Spell implements Tickable {
             this.maxLength = (int) parent.getStat("length", level);
             this.durationSeconds = (long) parent.getStat("duration-seconds", level);
 
-            BlockFace facing = BlockUtil.getFace(caster.getEyeLocation().getYaw());
+            // UPDATED: The getFace method now requires a boolean for sub-cardinal directions.
+            // 'false' limits it to NORTH, SOUTH, EAST, or WEST, which is perfect for a road.
+            BlockFace facing = BlockUtil.getFace(caster.getEyeLocation().getYaw(), false);
             double yMod = Math.min(Math.max(caster.getLocation().getPitch() / 30, -1), 1);
             this.direction = new Vector(facing.getModX(), -yMod, facing.getModZ());
 
@@ -145,7 +147,8 @@ public class SpellRainbowRoad extends Spell implements Tickable {
 
         void buildSegment() {
             Block block = currentLocation.getBlock();
-            for (Block b : getRoadSegment(block, BlockUtil.getFace(caster.getEyeLocation().getYaw()))) {
+            // UPDATED: This call also needs the boolean parameter.
+            for (Block b : getRoadSegment(block, BlockUtil.getFace(caster.getEyeLocation().getYaw(), false))) {
                 if (parent.rainbowMaterials.contains(b.getType()) || b.getType().isSolid()) continue;
 
                 b.setType(parent.rainbowMaterials.get(colorProgress++ % parent.rainbowMaterials.size()));
@@ -158,10 +161,19 @@ public class SpellRainbowRoad extends Spell implements Tickable {
         List<Block> getRoadSegment(Block center, BlockFace facing) {
             List<Block> segment = new ArrayList<>();
             segment.add(center);
-            for (BlockFace face : BlockUtil.getSideBlockFaces(facing)) {
+            // UPDATED: Using the new, simpler private helper method instead of the old BlockUtil call.
+            for (BlockFace face : getSideFaces(facing)) {
                 segment.add(center.getRelative(face));
             }
             return segment;
+        }
+
+        private BlockFace[] getSideFaces(BlockFace facing) {
+            return switch (facing) {
+                case NORTH, SOUTH -> new BlockFace[]{BlockFace.WEST, BlockFace.EAST};
+                case WEST, EAST -> new BlockFace[]{BlockFace.NORTH, BlockFace.SOUTH};
+                default -> new BlockFace[0]; // Return empty for non-cardinal directions
+            };
         }
     }
 }

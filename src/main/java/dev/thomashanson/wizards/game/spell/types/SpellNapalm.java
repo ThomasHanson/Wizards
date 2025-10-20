@@ -140,7 +140,8 @@ public class SpellNapalm extends Spell implements Tickable {
 
         void transformBlocks() {
             int radius = (int) Math.ceil(currentSize);
-            for (Block block : BlockUtil.getInRadius(location, radius, false).keySet()) {
+            // UPDATED: The method is now getBlocksInRadius.
+            for (Block block : BlockUtil.getBlocksInRadius(location, radius).keySet()) {
                 if (parent.blockTransformations.containsKey(block.getType())) {
                     block.setType(parent.blockTransformations.get(block.getType()));
                 } else if (block.getType().getHardness() < currentSize && block.getType().isSolid()) {

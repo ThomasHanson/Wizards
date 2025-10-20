@@ -103,17 +103,15 @@ public class SpellFireball extends Spell {
         Vector jumpVector = caster.getEyeLocation().toVector().subtract(explosionLocation.toVector());
         if (jumpVector.lengthSquared() < 0.001) jumpVector = new Vector(0, 1, 0);
 
-        MathUtil.setVelocity(
-                caster, jumpVector.normalize(),
-                getStat("jump-strength", level, 1.4), false, 0,
-                getStat("jump-y-add", level, 0.6),
-                getStat("jump-y-max", level, 1.2),
-                caster.isOnGround()
-        );
+        // UPDATED: Method renamed to applyVelocity with a simpler signature.
+        double strength = getStat("jump-strength", level, 1.4);
+        double yAdd = getStat("jump-y-add", level, 0.6);
+        double yMax = getStat("jump-y-max", level, 1.2);
+        MathUtil.applyVelocity(caster, jumpVector.normalize(), strength, 0, yAdd, yMax);
 
         double selfDamage = getStat("self-damage", level);
         if (selfDamage > 0 && caster instanceof Player) {
-            damage(caster, new CustomDamageTick(selfDamage, EntityDamageEvent.DamageCause.CUSTOM, getKey() + ".self", Instant.now(), (Player) caster, null)); // UPDATED
+            damage(caster, new CustomDamageTick(selfDamage, EntityDamageEvent.DamageCause.CUSTOM, getKey() + ".self", Instant.now(), (Player) caster, null));
         }
     }
 
@@ -121,17 +119,15 @@ public class SpellFireball extends Spell {
         Vector direction = target.getEyeLocation().toVector().subtract(explosionLocation.toVector()).normalize();
         if (direction.getY() < 0.15) direction.setY(0.15).normalize();
 
-        MathUtil.setVelocity(
-                target, direction,
-                getStat("knockback-strength", level, 1.2) * proximity, false, 0,
-                getStat("knockback-y-add", level, 0.4) * proximity,
-                getStat("knockback-y-max", level, 1.0),
-                false
-        );
+        // UPDATED: Method renamed to applyVelocity with a simpler signature.
+        double strength = getStat("knockback-strength", level, 1.2) * proximity;
+        double yAdd = getStat("knockback-y-add", level, 0.4) * proximity;
+        double yMax = getStat("knockback-y-max", level, 1.0);
+        MathUtil.applyVelocity(target, direction, strength, 0, yAdd, yMax);
 
         double damageAmount = Math.max(1.0, getStat("damage", level) * proximity);
-        damage(target, new CustomDamageTick(damageAmount, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, getKey(), Instant.now(), caster, null)); // UPDATED
-        
+        damage(target, new CustomDamageTick(damageAmount, EntityDamageEvent.DamageCause.ENTITY_EXPLOSION, getKey(), Instant.now(), caster, null));
+
         int fireTicks = (int) (getStat("fire-duration-ticks", level) * proximity);
         target.setFireTicks(Math.max(target.getFireTicks(), fireTicks));
     }

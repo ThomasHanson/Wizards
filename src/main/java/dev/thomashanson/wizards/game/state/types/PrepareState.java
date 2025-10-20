@@ -74,7 +74,13 @@ public class PrepareState extends GameState {
                 for (Player player : getGame().getPlayers(false)) {
                     double secsUntilStart = (double) ((mode.getPreparationSecs() * 1000) - Duration.between(getStartTime(), Instant.now()).toMillis()) / 1000;
                     secsUntilStart = MathUtil.trim(1, secsUntilStart);
-                    EntityUtil.displayProgress(player, "Game Start", percentage, MathUtil.formatTime(Math.max(0, (long) (secsUntilStart * 1000)), 1));
+                    
+                    // UPDATED: displayProgress now needs Components, and formatTime's signature has changed.
+                    Component prefix = Component.text("Game Start ");
+                    String timeString = MathUtil.formatTime(Math.max(0, (long) (secsUntilStart * 1000)));
+                    Component suffix = Component.text(" " + timeString);
+                    
+                    EntityUtil.displayProgress(player, prefix, percentage, suffix);
                 }
             }
         }.runTaskTimer(plugin, 0L, 1L);

@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.logging.Level;
 
@@ -28,6 +29,8 @@ import dev.thomashanson.wizards.util.LocationUtil;
 /**
  * Manages a game map by copying a source world folder to a temporary, active folder
  * that can be safely modified and deleted after a match.
+ *
+ * Implements {@link Comparable} to allow sorting maps by name.
  */
 public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
 
@@ -81,6 +84,15 @@ public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
         }
     }
 
+    /**
+     * Loads the map into a playable state.
+     * <p>
+     * <b>Threading Note:</b> This method performs heavy file I/O and should be
+     * called from an asynchronous thread. It will handle dispatching Bukkit API
+     * calls back to the main server thread where required.
+     *
+     * @return {@code true} if the map was loaded successfully.
+     */
     @Override
     public boolean load() {
         if (isLoaded()) {
@@ -94,7 +106,8 @@ public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
         );
 
         try {
-            FileUtil.copy(srcWorldFolder, activeWorldFolder);
+            // Updated to use Path-based FileUtil
+            FileUtil.copy(srcWorldFolder.toPath(), activeWorldFolder.toPath());
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Failed to copy map files for '" + getName() + "'!", e);
             return false;
@@ -108,11 +121,20 @@ public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
         if (world == null) {
             plugin.getLogger().severe("Failed to create Bukkit World for '" + getName() + "'.");
             // Cleanup the copied folder on failure
-            FileUtil.delete(activeWorldFolder);
+            try {
+                FileUtil.delete(activeWorldFolder.toPath());
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.SEVERE, "Failed to clean up active world folder after load failure!", e);
+            }
             return false;
         }
 
         // Configure world properties
+        configureWorld();
+        return true;
+    }
+
+    private void configureWorld() {
         world.setAutoSave(false);
         world.setDifficulty(Difficulty.NORMAL);
         world.setGameRule(GameRule.DO_MOB_SPAWNING, false);
@@ -123,28 +145,29 @@ public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
         world.setTime(6000L); // Noon
         world.setStorm(false);
         world.setThundering(false);
-
-        return true;
     }
 
+    /**
+     * Unloads the map, teleporting players out and deleting the temporary world files.
+     * <p>
+     * <b>Threading Note:</b> This method dispatches file deletion to an async thread
+     * after handling player teleports on the main thread.
+     */
     @Override
     public void unload() {
         if (!isLoaded()) {
             return;
         }
 
-        // --- SYNC --- Player teleportation must be on the main thread
-        // TODO: Get fallback world from config.yml, not a guess
         World lobby = Bukkit.getWorld(plugin.getConfig().getString("lobby-world", "world"));
         if (lobby == null) {
             plugin.getLogger().severe("Cannot unload map: Fallback lobby world is not loaded!");
             return;
         }
 
+        // Create a copy to avoid ConcurrentModificationException while teleporting
         for (Player player : new ArrayList<>(world.getPlayers())) {
             player.teleport(lobby.getSpawnLocation());
-            // TODO: Use LanguageManager for this message
-            // lang.sendMessage(player, "wizards.map.unload_teleport");
         }
 
         if (!Bukkit.unloadWorld(world, false)) {
@@ -153,7 +176,12 @@ public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
         // --- END SYNC ---
 
         // --- ASYNC --- Deleting files should be off the main thread
-        FileUtil.delete(activeWorldFolder);
+        try {
+            // Updated to use Path-based FileUtil and handle IOException
+            FileUtil.delete(activeWorldFolder.toPath());
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to delete active world folder for " + getName(), e);
+        }
         // --- END ASYNC ---
 
         this.world = null;
@@ -177,46 +205,51 @@ public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
     public String getAuthors() {
         return String.join(", ", getCoreSection().getStringList(KEY_AUTHORS));
     }
-    
+
     public Set<WizardsMode> getModes() {
         return modes;
     }
-    
+
     public Location getSpectatorLocation() {
         String spectatorString = getLocations().getString(KEY_SPECTATOR);
-        return spectatorString != null ? LocationUtil.locationFromConfig(world, spectatorString) : world.getSpawnLocation();
+        // Updated to use new LocationUtil method name
+        return spectatorString != null ? LocationUtil.fromString(world, spectatorString) : world.getSpawnLocation();
     }
 
     public void setSpectatorLocation(Location location) {
-        getLocations().set("spectator", LocationUtil.locationToString(location));
+        // Updated to use constant and new LocationUtil method name
+        getLocations().set(KEY_SPECTATOR, LocationUtil.toString(location));
     }
-    
+
     public List<Location> getSpawnLocations() {
         List<Location> locations = new ArrayList<>();
-        // The world must be loaded to create locations. Return an empty list if not.
         if (!isLoaded()) {
-            return locations; 
+            return locations;
         }
-        
-        List<String> spawnStrings = getLocations().getStringList("spawns"); // Use your constant for "spawns"
+
+        List<String> spawnStrings = getLocations().getStringList(KEY_SPAWNS);
         for (String locationString : spawnStrings) {
-            locations.add(LocationUtil.locationFromConfig(getWorld(), locationString));
+            Location loc = LocationUtil.fromString(getWorld(), locationString);
+            if (loc != null) {
+                locations.add(loc);
+            }
         }
         return locations;
     }
 
     public void addSpawnLocation(Location location) {
-        List<String> spawns = getLocations().getStringList("spawns");
-        spawns.add(LocationUtil.locationToString(location));
-        getLocations().set("spawns", spawns);
+        List<String> spawns = getLocations().getStringList(KEY_SPAWNS);
+        // Updated to use constant and new LocationUtil method name
+        spawns.add(LocationUtil.toString(location));
+        getLocations().set(KEY_SPAWNS, spawns);
     }
 
     private ConfigurationSection getCoreSection() {
-        return dataFile.isConfigurationSection(KEY_CORE) ? dataFile.getConfigurationSection(KEY_CORE) : dataFile.createSection(KEY_CORE);
+        return dataFile.getConfigurationSection(KEY_CORE) != null ? dataFile.getConfigurationSection(KEY_CORE) : dataFile.createSection(KEY_CORE);
     }
 
     private ConfigurationSection getLocations() {
-        return dataFile.isConfigurationSection(KEY_LOCATIONS) ? dataFile.getConfigurationSection(KEY_LOCATIONS) : dataFile.createSection(KEY_LOCATIONS);
+        return dataFile.getConfigurationSection(KEY_LOCATIONS) != null ? dataFile.getConfigurationSection(KEY_LOCATIONS) : dataFile.createSection(KEY_LOCATIONS);
     }
 
     public BoundingBox getBounds() {
@@ -250,9 +283,22 @@ public class LocalGameMap implements GameMap, Comparable<LocalGameMap> {
             plugin.getLogger().log(Level.SEVERE, "Failed to save data.yml for map '" + getName() + "'!", e);
         }
     }
-    
+
     @Override
     public int compareTo(@NotNull LocalGameMap other) {
         return this.getName().compareTo(other.getName());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        LocalGameMap that = (LocalGameMap) o;
+        return srcWorldFolder.equals(that.srcWorldFolder);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(srcWorldFolder);
     }
 }

@@ -1,548 +1,1026 @@
 # ----------------------------------------------------------------
-# Wizards - Spells Configuration
+# Wizards - spells.yml
 # ----------------------------------------------------------------
-# This file defines all spells available in the game.
+# This file defines the core attributes and behaviors of all spells.
 #
-# key: The unique identifier for the spell (e.g., BOULDER_TOSS).
-#   name: The display name of the spell.
-#   description: A short description of what the spell does.
-#   class: The full Java class path for the spell's logic. REQUIRED.
-#   icon: The Bukkit Material name for the spell's icon.
-#   max-level: The maximum level the spell can reach.
-#   rarity: The rarity of the spell (e.g., COMMON, UNCOMMON, RARE).
-#   element: The spell's category (e.g., ATTACK, SUPPORT, ENVIRONMENTAL).
-#   wand-element: The spell's wand affinity (e.g., FIRE, ICE, EARTH).
-#   slot: The default GUI slot for this spell in the spellbook.
-#
-#   mana/cooldown:
-#     base: The starting value at level 1.
-#     per-level: The value to add/subtract for each level above 1.
-#
-#   stats: Defines specific attributes for the spell's lore and logic.
-#     display: The string that appears in the spell's lore.
-#     formula: (Optional) The key from FormulaRegistry to calculate the value.
-#              Defaults to "STATIC" if not provided.
-#     value: The base number used in the formula or as a static value.
-#     add: (Optional) A secondary value for more complex formulas like (SL*X)+Y.
+# Formula System:
+#   STATIC: A simple, unchanging value.
+#     config: { value: 5.0 }
+#   LEVEL_SCALING: A value that scales linearly with spell level. Formula: (SL * multiplier) + base
+#     config: { base: 10.0, multiplier: 2.0 } -> Level 1=12, Level 2=14, etc.
 # ----------------------------------------------------------------
-
 spells:
   # --- ATTACK SPELLS ---
   MANA_BOLT:
     name: "Mana Bolt"
-    description: "Launch a bolt of pure mana at your enemies."
+    description: "Launch a bolt of pure mana that seeks out the nearest enemy."
     class: "dev.thomashanson.wizards.game.spell.types.SpellManaBolt"
     icon: CYAN_DYE
     max-level: 3
     rarity: COMMON
     element: ATTACK
     wand-element: MANA
-    slot: 10
     mana: { base: 15, per-level: -2 }
     cooldown: { base: 5, per-level: 0 }
     stats:
-      Damage: { display: "SL + 2", formula: "SL_PLUS_X", value: 2 }
-      Range: { display: "(SL * 10) + 20", formula: "SL_MULT_X_PLUS_Y", value: 10, add: 20 }
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 3.0
+        multiplier: 1.0
+      Range:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 30
+        multiplier: 10
+      "Homing Strength":
+        display: "%.2f"
+        formula: "LEVEL_SCALING"
+        base: 0.05
+        multiplier: 0.02
+      # --- Internal Stats ---
+      "speed-bps": { formula: "STATIC", value: 30 }
+      "reflection-damage": { formula: "STATIC", value: 2.0 } # Damage taken by Light Shield
 
   FIREBALL:
     name: "Fireball"
-    description: "Launch a fiery projectile at your enemies."
+    description: "Launch a fiery projectile that explodes on impact, damaging foes and knocking them back. You can also use the explosion to propel yourself."
     class: "dev.thomashanson.wizards.game.spell.types.SpellFireball"
     icon: FIRE_CHARGE
     max-level: 3
     rarity: UNCOMMON
     element: ATTACK
     wand-element: FIRE
-    slot: 11
     mana: { base: 30, per-level: -3 }
     cooldown: { base: 15, per-level: -1 }
     stats:
-      Damage: { display: "SL + 3", formula: "SL_PLUS_X", value: 3 }
-      "Fire Ticks": { display: "80", value: 80 }
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 1.0
+      Radius:
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 0.5
+      "fire-ticks":
+        display: "%.1f seconds"
+        formula: "LEVEL_SCALING"
+        base: 4.0  # 80 ticks
+        multiplier: 1.0 # +20 ticks
+      "Knockback Strength":
+        display: "%.1f"
+        formula: "LEVEL_SCALING"
+        base: 1.2
+        multiplier: 0.2
+      # --- Internal Stats ---
+      velocity: { formula: "STATIC", value: 1.8 }
+      yield: { formula: "STATIC", value: 1.5 }
+      "is-incendiary": { formula: "STATIC", value: 1 }
+      "jump-strength": { formula: "STATIC", value: 1.4 }
+      "jump-y-add": { formula: "STATIC", value: 0.6 }
+      "jump-y-max": { formula: "STATIC", value: 1.2 }
+      "self-damage": { formula: "STATIC", value: 2.0 }
+      "knockback-y-add": { formula: "LEVEL_SCALING", base: 0.4, multiplier: 0.1 }
+      "knockback-y-max": { formula: "STATIC", value: 1.0 }
+      "reflection-damage": { formula: "STATIC", value: 3.0 }
 
   LIGHTNING_STRIKE:
     name: "Lightning Strike"
-    description: "Strike foes with a bolt of lightning."
+    description: "After a short delay, call down a bolt of lightning at your target location, damaging and igniting foes."
     class: "dev.thomashanson.wizards.game.spell.types.SpellLightningStrike"
     icon: GOLDEN_AXE
     max-level: 3
     rarity: UNCOMMON
     element: ATTACK
     wand-element: MANA
-    slot: 12
     mana: { base: 50, per-level: 0 }
     cooldown: { base: 20, per-level: 0 }
     stats:
-      Damage: { display: "(SL * 2) + 1", formula: "SL_MULT_X_PLUS_Y", value: 2, add: 1 }
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 2.0
+      Range:
+        display: "%.0f blocks"
+        formula: "STATIC"
+        value: 50
+      "Explosion Radius":
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 0.5
+      "Strike Delay":
+        display: "%.1f seconds"
+        formula: "STATIC"
+        value: 1.5 # 30 ticks
+      # --- Internal Stats ---
+      "max-range": { formula: "STATIC", value: 50 }
+      "strike-delay-ticks": { formula: "STATIC", value: 30 }
+      "sets-fire": { formula: "STATIC", value: 1 } # 0 for false, 1 for true
+      "fire-ticks-on-hit": { formula: "STATIC", value: 100 } # 5 seconds
 
   RUMBLE:
     name: "Rumble"
-    description: "Create a targeted earthquake in the direction you face! Explodes with damage at the end! Affected players lose their footing!"
+    description: "Create a targeted earthquake in the direction you face that damages and slows foes! Explodes with damage at the end!"
     class: "dev.thomashanson.wizards.game.spell.types.SpellRumble"
     icon: PISTON
     max-level: 3
     rarity: UNCOMMON
     element: ATTACK
     wand-element: EARTH
-    slot: 13
     mana: { base: 30, per-level: 0 }
     cooldown: { base: 15, per-level: -1 }
     stats:
-      Damage: { display: "SL + 2", formula: "SL_PLUS_X", value: 2 }
-      Range: { display: "SL * 10", formula: "SL_MULT_X_PLUS_Y", value: 10 }
-      "Explosion Damage": { display: "SL / 4", formula: "SL_DIV_X", value: 4 }
-      "Slowness Level": { display: "2", value: 2 }
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 3.0
+        multiplier: 1.0
+      "Explosion Damage":
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 0.5
+      Range:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 10.0
+        multiplier: 10.0
+      "Slowness Level":
+        display: "Slowness %.0f"
+        formula: "STATIC"
+        value: 2
+      # --- Internal Stats ---
+      "max-distance": { formula: "LEVEL_SCALING", base: 10, multiplier: 10 }
+      "explosion-power": { formula: "LEVEL_SCALING", base: 2.5, multiplier: 0.5 }
+      "slow-duration-ticks": { formula: "STATIC", value: 40 }
+      "slow-amplifier": { formula: "STATIC", value: 2 }
+      width: # Width grows as the rumble travels
+        formula: "DISTANCE_SCALING"
+        base: 1.0 # Start width
+        distanceMultiplier: 0.1 # Grow by 0.1 blocks per block traveled
+        divisor: 1.0
+        levelMultiplier: 0.0
 
   RAINBOW_BEAM:
     name: "Rainbow Beam"
-    description: "Firing rainbow beams of love and hope! This spell damages the target instantly! Damage decreases by 0.2 per block after 30 blocks."
+    description: "Fire an instantaneous beam of pure energy. The beam's damage falls off over distance."
     class: "dev.thomashanson.wizards.game.spell.types.SpellRainbowBeam"
     icon: EMERALD
     max-level: 5
     rarity: UNCOMMON
     element: ATTACK
     wand-element: MANA
-    slot: 14
     mana: { base: 5, per-level: 3 }
     cooldown: { base: 8, per-level: 1 }
     stats:
-      Damage: { display: "SL + 1", formula: "SL_PLUS_X", value: 1 }
-      Range: { display: "80", value: 80 }
+      Damage:
+        display: "%.1f hearts"
+        formula: "DISTANCE_SCALING" # base - (distance * distanceMultiplier)
+        base: 6.0              # Max damage at point-blank
+        distanceMultiplier: -0.2 # Damage *decreases* by 0.2 per block
+      Range:
+        display: "%.0f blocks"
+        formula: "STATIC"
+        value: 80
+      # --- Internal Stats ---
+      "particle-step": { formula: "STATIC", value: 0.25 }
+      "hitbox-size": { formula: "STATIC", value: 1.0 }
 
   MANA_BOMB:
     name: "Mana Bomb"
-    description: "Lob a tightly-packed ball of mana in an arc! Explodes on contact, dealing damage to anyone nearby. The higher this spell is leveled, the more mana you can fit in for a larger explosion!"
+    description: "Lob a tightly-packed ball of mana in an arc! Explodes on contact, dealing damage to anyone nearby."
     class: "dev.thomashanson.wizards.game.spell.types.SpellManaBomb"
     icon: PRISMARINE_SHARD
     max-level: 5
     rarity: UNCOMMON
     element: ATTACK
     wand-element: MANA
-    slot: 15
     mana: { base: 10, per-level: 10 }
     cooldown: { base: 5, per-level: 5 }
     stats:
-      Damage: { display: "SL + 3", formula: "SL_PLUS_X", value: 3 }
-      Range: { display: "12", value: 12 }
-  
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 1.0
+      "Explosion Radius":
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 2.5
+        multiplier: 0.5
+      Range:
+        display: "%.0f blocks"
+        formula: "STATIC"
+        value: 30
+      # --- Internal Stats ---
+      speed: { formula: "LEVEL_SCALING", base: 1.0, multiplier: 0.1 }
+      gravity: { formula: "STATIC", value: 0.04 }
+      "reflection-damage": { formula: "STATIC", value: 2.5 }
+      
+  ICE_SHARDS:
+    name: "Ice Shards"
+    description: "Rapidly fire a volley of sharp ice shards."
+    class: "dev.thomashanson.wizards.game.spell.types.SpellIceShards"
+    icon: GHAST_TEAR
+    max-level: 3
+    rarity: RARE
+    element: ATTACK
+    wand-element: ICE
+    mana: { base: 30, per-level: 0 }
+    cooldown: { base: 20, per-level: -2 }
+    stats:
+      "Damage (per shard)":
+        display: "%.1f hearts"
+        formula: "STATIC"
+        value: 1.0
+      Shards:
+        display: "%.0f"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 1.0
+      # --- Internal Stats ---
+      "delay-ticks": { formula: "STATIC", value: 4 }
+      "projectile-lifespan-ticks": { formula: "STATIC", value: 40 }
+      "projectile-speed": { formula: "STATIC", value: 2.0 }
+      "reflection-damage": { formula: "STATIC", value: 0.5 } # Low damage per shard
+
   DROOM:
     name: "Droom"
-    description: "Cast a powerful spell that deals damage."
+    description: "Summon a falling anvil above yourself and all nearby enemies, which explodes upon landing."
     class: "dev.thomashanson.wizards.game.spell.types.SpellDroom"
     icon: ANVIL
     max-level: 3
     rarity: UNCOMMON
     element: ATTACK
     wand-element: EARTH
-    slot: 16
     mana: { base: 40, per-level: -3 }
     cooldown: { base: 15, per-level: -4 }
     stats:
-      Damage: { display: "(SL * 2) + 3", formula: "SL_MULT_X_PLUS_Y", value: 2, add: 3 }
-      Radius: { display: "4 + (SL * 2)", formula: "SL_MULT_X_PLUS_Y", value: 2, add: 4 }
-
-  SPLASH:
-    name: "Splash"
-    description: "Splash a large wave of water around you, knocking back anyone within range! You get soaked in the process, extinguishing fire."
-    class: "dev.thomashanson.wizards.game.spell.types.SpellSplash"
-    icon: WATER_BUCKET
-    max-level: 3
-    rarity: COMMON
-    element: ATTACK
-    wand-element: ICE
-    slot: 19
-    mana: { base: 20, per-level: 0 }
-    cooldown: { base: 15, per-level: 0 }
-    stats:
-      Damage: { display: "SL", formula: "SL_PLUS_X", value: 0 }
-      Range: { display: "5", value: 5 }
-      Knockback: { display: "3 + SL", formula: "SL_PLUS_X", value: 3 }
-      "Effect Length": { display: "SL * 5", formula: "SL_MULT_X_PLUS_Y", value: 5 }
-      
-  ICE_SHARDS:
-    name: "Ice Shards"
-    description: "Launch shards of ice at foes."
-    class: "dev.thomashanson.wizards.game.spell.types.SpellIceShards"
-    icon: GHAST_TEAR
-    max-level: 3
-    rarity: MED_RARE
-    element: ATTACK
-    wand-element: ICE
-    slot: 20
-    mana: { base: 30, per-level: 0 }
-    cooldown: { base: 20, per-level: -2 }
-    stats:
-      "Damage (each)": { display: "1", value: 1 }
-      Shards: { display: "SL + 1", formula: "SL_PLUS_X", value: 1 }
+      Radius:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 6.0
+        multiplier: 2.0
+      "Explosion Power":
+        display: "%.1f"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 0.5
+      # --- Internal Stats ---
+      "spawn-height": { formula: "STATIC", value: 12.0 }
 
   BOULDER_TOSS:
     name: "Boulder Toss"
-    description: "Unleash a boulder that crushes enemies."
+    description: "Summon orbiting boulders that damage foes on contact, then launch them forward after a short duration."
     class: "dev.thomashanson.wizards.game.spell.types.SpellBoulderToss"
     icon: GRANITE
     max-level: 5
-    rarity: MEDIUM
+    rarity: RARE
     element: ATTACK
     wand-element: EARTH
-    slot: 21
     mana: { base: 20, per-level: 0 }
     cooldown: { base: 35, per-level: 0 }
     stats:
-      Damage: { display: "2", value: 2 }
-      Boulders: { display: "SL + 1", formula: "SL_PLUS_X", value: 1 }
-
-  SCARLET_STRIKES:
-    name: "Scarlet Strikes"
-    description: "Summon and charge strikes in front of you. Left-click again at any time to send them all forward, stunning and damaging your opponents!"
-    class: "dev.thomashanson.wizards.game.spell.types.SpellScarletStrikes"
-    icon: REDSTONE
-    max-level: 3
-    rarity: MEDIUM
-    element: ATTACK
-    wand-element: FIRE
-    slot: 22
-    mana: { base: 35, per-level: 0 }
-    cooldown: { base: 30, per-level: 0 }
-    stats:
-      Damage: { display: "0.75", value: 0.75 }
-      "Max Strikes": { display: "SL + 2", formula: "SL_PLUS_X", value: 2 }
-      "Stun Time (s)": { display: "0.5", value: 0.5 }
-      "Movement Speed": { display: "12 - Strikes", value: 0 } # Special case
-      Range: { display: "(SL + Strikes) * 10", value: 0 } # Special case
-
-  SPECTRAL_ARROW:
-    name: "Spectral Arrow"
-    description: "Shoot an arrow that penetrates! Further the distance, higher the damage!"
-    class: "dev.thomashanson.wizards.game.spell.types.SpellSpectralArrow"
-    icon: ARROW
-    max-level: 3
-    rarity: MED_RARE
-    element: ATTACK
-    wand-element: DARK
-    slot: 23
-    mana: { base: 40, per-level: -5 }
-    cooldown: { base: 15, per-level: -2 }
-    stats:
-      Damage: { display: "6 + (D / (7 - SL)) + 3", formula: "SPECTRAL_ARROW_DAMAGE" }
-
+      Boulders:
+        display: "%.0f"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 1.0
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 0.5
+      Knockback:
+        display: "%.2f"
+        formula: "LEVEL_SCALING"
+        base: 0.20
+        multiplier: 0.05
+      "Launch Speed":
+        display: "%.0f BPS"
+        formula: "LEVEL_SCALING"
+        base: 20.0
+        multiplier: 2.0
+      # --- Internal Stats ---
+      "rotation-ticks": { formula: "STATIC", value: 60 } # 3 seconds
+      "orbit-radius": { formula: "STATIC", value: 2.5 }
+      gravity: { formula: "STATIC", value: 0.04 }
+      
   HYPER_DASH:
     name: "Hyper Dash"
-    description: "Perform a rapid dash, potentially dealing damage."
+    description: "Dash forward at high speed, damaging enemies and breaking weak blocks you pass through. You are slowed briefly after the dash ends."
     class: "dev.thomashanson.wizards.game.spell.types.SpellHyperDash"
     icon: GLOWSTONE_DUST
     max-level: 3
-    rarity: MED_RARE
+    rarity: RARE
     element: ATTACK
     wand-element: FIRE
-    slot: 24
     mana: { base: 10, per-level: -1 }
     cooldown: { base: 20, per-level: -1 }
     stats:
-      Stat: { display: "1", value: 1 } # Note: Consider a more descriptive stat name
-
+      Distance:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 10.0
+        multiplier: 2.0
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 1.0
+      "Launch Power":
+        display: "%.1f"
+        formula: "LEVEL_SCALING"
+        base: 0.5
+        multiplier: 0.1
+      # --- Internal Stats ---
+      "speed-bps": { formula: "STATIC", value: 40.0 }
+      "recovery-base-ticks": { formula: "STATIC", value: 20 }
+      "recovery-per-block-ticks": { formula: "STATIC", value: 5 }
+      
   NAPALM:
     name: "Napalm"
-    description: "Creates a ball of fire that grows the longer it lives. At a large size, it even burns away nearby blocks!"
+    description: "Creates a ball of fire that grows the longer it lives, damaging foes and transforming the terrain. At a large size, it even burns away nearby blocks!"
     class: "dev.thomashanson.wizards.game.spell.types.SpellNapalm"
     icon: BLAZE_POWDER
     max-level: 5
     rarity: RARE
     element: ATTACK
     wand-element: FIRE
-    slot: 25
     mana: { base: 60, per-level: 5 }
     cooldown: { base: 60, per-level: -10 }
+    block-transformations:
+      STONE: COBBLESTONE
+      GRASS_BLOCK: DIRT
+      SAND: GLASS
+      STONE_BRICKS: NETHER_BRICK
+      OAK_LOG: NETHERRACK
     stats:
-      Length: { display: "(SL * 10) + 5", formula: "SL_MULT_X_PLUS_Y", value: 10, add: 5 }
-      Speed: { display: "6 BPS", value: 6 }
-      "Explosion Size": { display: "SL * 2", formula: "SL_MULT_X_PLUS_Y", value: 2 }
+      Distance:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 20.0
+        multiplier: 5.0
+      "Damage per Tick":
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 0.5
+        multiplier: 0.1
+      "Max Size":
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 1.0
+      # --- Internal Stats ---
+      "speed-bps": { formula: "STATIC", value: 6.0 }
+      "initial-size": { formula: "STATIC", value: 1.0 }
+      "size-growth-per-tick": { formula: "STATIC", value: 0.03 }
+      "fire-ticks": { formula: "STATIC", value: 80 }
+      "explosion-damage": { formula: "LEVEL_SCALING", base: 3.0, multiplier: 1.0 }
+      "explosion-fire-ticks": { formula: "STATIC", value: 120 }
+
+  SCARLET_STRIKES:
+    name: "Scarlet Strikes"
+    description: "Summon and charge strikes in front of you. Cast again at any time to send them all forward, damaging and stunning your opponents!"
+    class: "dev.thomashanson.wizards.game.spell.types.SpellScarletStrikes"
+    icon: REDSTONE
+    max-level: 3
+    rarity: RARE
+    element: ATTACK
+    wand-element: FIRE
+    mana: { base: 35, per-level: 0 }
+    cooldown: { base: 30, per-level: 0 }
+    stats:
+      "Max Strikes":
+        display: "%.0f"
+        formula: "LEVEL_SCALING"
+        base: 3.0 # Level 1 has 3 strikes
+        multiplier: 1.0
+      Damage:
+        display: "%.2f hearts/hit"
+        formula: "STATIC"
+        value: 0.75
+      "Stun Duration":
+        display: "%.1f sec/hit"
+        formula: "STATIC"
+        value: 0.5 # 10 ticks
+      # --- Internal Stats (Not shown in lore unless you add a display format) ---
+      "summon-interval-ticks": { formula: "STATIC", value: 10 }
+      "auto-launch-ticks": { formula: "STATIC", value: 600 } # 30 seconds
+      "stun-ticks": { formula: "STATIC", value: 10 }
+      "hitbox-size": { formula: "STATIC", value: 0.75 }
+      "speed-base-bps": { formula: "STATIC", value: 12.0 }
+      "speed-reduction-per-strike": { formula: "STATIC", value: 1.0 }
+      "range-multiplier": { formula: "STATIC", value: 10.0 }
 
   # --- SUPPORT SPELLS ---
   HEAL:
     name: "Heal"
-    description: "Heal yourself or allies."
+    description: "Bestow a powerful regenerative effect upon yourself, rapidly healing you over a short period."
     class: "dev.thomashanson.wizards.game.spell.types.SpellHeal"
     icon: APPLE
     max-level: 5
-    rarity: MEDIUM
-    element: SUPPORT
+    rarity: UNCOMMON
+    element: UTILITY
     wand-element: LIFE
-    slot: 28
     mana: { base: 20, per-level: 0 }
     cooldown: { base: 90, per-level: -1 }
     stats:
-      "Regen Level": { display: "1", value: 1 }
-      "Regen Length (s)": { display: "SL + 5", formula: "SL_PLUS_X", value: 5 }
-
-  FOCUS:
-    name: "Focus"
-    description: "Concentrate to enhance your spellcasting."
-    class: "dev.thomashanson.wizards.game.spell.types.SpellFocus"
-    icon: CARROT_ON_A_STICK
-    max-level: 1
-    rarity: MEDIUM
-    element: SUPPORT
-    wand-element: LIFE
-    slot: 29
-    mana: { base: 30, per-level: 0 }
-    cooldown: { base: 60, per-level: 0 }
-    stats: {}
+      "Regeneration Level":
+        display: "Regen %.0f"
+        formula: "LEVEL_SCALING"
+        base: 1.0
+        multiplier: 1.0
+      "Duration":
+        display: "%.1f seconds"
+        formula: "LEVEL_SCALING"
+        base: 6.0
+        multiplier: 1.0
+      # --- Internal Stats ---
+      amplifier: { formula: "LEVEL_SCALING", base: 1.0, multiplier: 1.0 }
+      "particle-count": { formula: "STATIC", value: 15 }
 
   LIGHT_SHIELD:
     name: "Light Shield"
-    description: "Create a shield of light for defense."
+    description: "Create a shield of light that absorbs incoming damage and reflects projectiles. You gain absorption hearts equal to the shield's health."
     class: "dev.thomashanson.wizards.game.spell.types.SpellLightShield"
     icon: GOLD_INGOT
     max-level: 3
-    rarity: MED_RARE
-    element: SUPPORT
+    rarity: RARE
+    element: UTILITY
     wand-element: MANA
-    slot: 30
     mana: { base: 30, per-level: 0 }
     cooldown: { base: 45, per-level: 0 }
     stats:
-      Durability: { display: "6", value: 6 }
-      "Length (s)": { display: "SL * 3", formula: "SL_MULT_X_PLUS_Y", value: 3 }
-      Height: { display: "4", value: 4 }
-      Width: { display: "SL + 2", formula: "SL_PLUS_X", value: 2 }
-  
+      Durability:
+        display: "%.0f HP"
+        formula: "LEVEL_SCALING"
+        base: 6.0
+        multiplier: 2.0
+      Duration:
+        display: "%.0f seconds"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 3.0
+      Width:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 3.0
+        multiplier: 1.0
+      Height:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 0.0
+      # --- Internal Stats ---
+      health: { formula: "LEVEL_SCALING", base: 6.0, multiplier: 2.0 }
+      "duration-seconds": { formula: "LEVEL_SCALING", base: 4.0, multiplier: 3.0 }
+      "particle-width": { formula: "LEVEL_SCALING", base: 3.0, multiplier: 1.0 }
+      "particle-height": { formula: "LEVEL_SCALING", base: 4.0, multiplier: 0.0 }
+      "self-damage-on-reflect": { formula: "STATIC", value: 1.0 }
+
   FLASH:
     name: "Flash"
-    description: "Quickly dash to evade attacks."
+    description: "Instantly teleport a short distance in the direction you are looking. Grants temporary immunity to fall damage."
     class: "dev.thomashanson.wizards.game.spell.types.SpellFlash"
     icon: ENDER_PEARL
     max-level: 3
-    rarity: MED_RARE
-    element: SUPPORT
+    rarity: RARE
+    element: UTILITY
     wand-element: LIFE
-    slot: 31
     mana: { base: 20, per-level: 0 }
     cooldown: { base: 50, per-level: -5 }
     stats:
-      Range: { display: "(SL * 10) + 20", formula: "SL_MULT_X_PLUS_Y", value: 10, add: 20 }
-      "Fall Immunity (s)": { display: "SL", formula: "SL_PLUS_X", value: 0 }
+      Range:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 30.0
+        multiplier: 10.0
+      "Fall Immunity":
+        display: "%.0f seconds"
+        formula: "LEVEL_SCALING"
+        base: 1.0
+        multiplier: 1.0
+      # --- Internal Stats ---
+      "fall-immunity-seconds": { formula: "LEVEL_SCALING", base: 1.0, multiplier: 1.0 }
 
-  SPEED_BOOST:
-    name: "Speed Boost"
-    description: "Gain a speed potion effect to outrun your enemies."
-    class: "dev.thomashanson.wizards.game.spell.types.SpellSpeedBoost"
-    icon: SUGAR
-    max-level: 2
-    rarity: MED_RARE
-    element: SUPPORT
+  FOCUS:
+    name: "Focus"
+    description: "Channel your energy, increasing your mana regeneration. Your next spell cast will be empowered based on how long you focused. Taking spell damage while focusing will stun you."
+    class: "dev.thomashanson.wizards.game.spell.types.SpellFocus"
+    icon: CARROT_ON_A_STICK
+    max-level: 1
+    rarity: RARE
+    element: UTILITY
     wand-element: LIFE
-    slot: 32
-    mana: { base: 20, per-level: 0 }
-    cooldown: { base: 45, per-level: 0 }
+    mana: { base: 30, per-level: 0 }
+    cooldown: { base: 60, per-level: 0 }
     stats:
-      "Speed Level": { display: "SL + 1", formula: "SL_PLUS_X", value: 1 }
-      "Effect Length": { display: "20", value: 20 }
+      "Tier 1 Power":
+        display: "%.1fx"
+        formula: "STATIC"
+        value: 1.5
+      "Tier 2 Power":
+        display: "%.1fx"
+        formula: "STATIC"
+        value: 2.0
+      "Tier 3 Power":
+        display: "%.1fx"
+        formula: "STATIC"
+        value: 2.5
+      # --- Internal Stats ---
+      "max-duration-seconds": { formula: "STATIC", value: 10.0 }
+      "stun-duration-ticks": { formula: "STATIC", value: 60 }
+      "stun-slowness-amplifier": { formula: "STATIC", value: 3 }
+      "mana-regen-multiplier": { formula: "STATIC", value: 3.0 }
+      "tier-1-seconds": { formula: "STATIC", value: 2 }
+      "tier-1-multiplier": { formula: "STATIC", value: 1.5 }
+      "tier-2-seconds": { formula: "STATIC", value: 4 }
+      "tier-2-multiplier": { formula: "STATIC", value: 2.0 }
+      "tier-3-seconds": { formula: "STATIC", value: 6 }
+      "tier-3-multiplier": { formula: "STATIC", value: 2.5 }
 
   # --- ENVIRONMENTAL SPELLS ---
   GUST:
     name: "Gust"
-    description: "Generate a strong gust of wind."
+    description: "Unleash a powerful gust of wind, knocking back enemies in a cone in front of you. The effect is stronger on closer targets."
     class: "dev.thomashanson.wizards.game.spell.types.SpellGust"
     icon: QUARTZ
     max-level: 3
-    rarity: MEDIUM
-    element: ENVIRONMENTAL
+    rarity: COMMON
+    element: TACTICAL
     wand-element: MANA
-    slot: 37
     mana: { base: 15, per-level: 0 }
     cooldown: { base: 20, per-level: 0 }
     stats:
-      "Gust Size": { display: "(SL * 3) + 10", formula: "SL_MULT_X_PLUS_Y", value: 3, add: 10 }
-      "Gust Strength": { display: "SL * 30%", formula: "SL_MULT_X_PLUS_Y", value: 0.3 }
-
-  SUMMON_WOLVES:
-    name: "Summon Wolves"
-    description: "Summons a pack of wolves and assigns you as the leader. They will fight for you and after 30 seconds, will disappear."
-    class: "dev.thomashanson.wizards.game.spell.types.SpellSummonWolves"
-    icon: BONE
-    max-level: 3
-    rarity: MEDIUM
-    element: ENVIRONMENTAL
-    wand-element: LIFE
-    slot: 38
-    mana: { base: 80, per-level: -10 }
-    cooldown: { base: 160, per-level: 0 }
-    stats:
-      Wolves: { display: "SL + 2", formula: "SL_PLUS_X", value: 2 }
-      "Wolves Speed Level": { display: "SL", formula: "SL_PLUS_X", value: 0 }
+      Range:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 13.0
+        multiplier: 3.0
+      Strength:
+        display: "%.2f"
+        formula: "LEVEL_SCALING"
+        base: 0.60
+        multiplier: 0.30
 
   GRAPPLING_BEAM:
     name: "Grappling Beam"
-    description: "Use a beam to grapple onto surfaces."
+    description: "Fire a hook that pulls you towards terrain. Hit an enemy to pull them to you. Sneak to pull a block from the terrain towards you, damaging enemies it passes through."
     class: "dev.thomashanson.wizards.game.spell.types.SpellGrapplingBeam"
     icon: FISHING_ROD
     max-level: 3
     rarity: UNCOMMON
-    element: ENVIRONMENTAL
+    element: UTILITY
     wand-element: MANA
-    slot: 39
     mana: { base: 25, per-level: 0 }
     cooldown: { base: 20, per-level: 0 }
     stats:
-      Damage: { display: "SL + 1", formula: "SL_PLUS_X", value: 1 }
-      Range: { display: "(SL * 5) + 5", formula: "SL_MULT_X_PLUS_Y", value: 5, add: 5 }
-      "Slam Damage": { display: "3", value: 3 }
-      
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 1.0
+      "Pulled Block Damage":
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 3.0
+        multiplier: 1.0
+      # --- Internal Stats ---
+      "max-ticks": { formula: "STATIC", value: 60 }
+      "projectile-speed": { formula: "STATIC", value: 2.5 }
+      "player-pull-speed": { formula: "STATIC", value: 2.0 }
+      "caster-pull-speed": { formula: "STATIC", value: 2.0 }
+      "pulled-block-speed-bps": { formula: "STATIC", value: 30.0 }
+      "pulled-block-lifespan-ticks": { formula: "STATIC", value: 100 }
+
   RAINBOW_ROAD:
     name: "Rainbow Road"
-    description: "Summon into being a mighty road of rainbows for thee to walk on! No fall damage when landing on your own road."
+    description: "Summon a mighty road of rainbows for you to walk on. You take no fall damage when landing on your own road."
     class: "dev.thomashanson.wizards.game.spell.types.SpellRainbowRoad"
     icon: LIME_STAINED_GLASS
     max-level: 3
-    rarity: MED_RARE
-    element: ENVIRONMENTAL
+    rarity: RARE
+    element: UTILITY
     wand-element: EARTH
-    slot: 40
     mana: { base: 30, per-level: 0 }
     cooldown: { base: 15, per-level: -1 }
+    rainbow-materials:
+      - 'RED_STAINED_GLASS'
+      - 'ORANGE_STAINED_GLASS'
+      - 'YELLOW_STAINED_GLASS'
+      - 'LIME_STAINED_GLASS'
+      - 'LIGHT_BLUE_STAINED_GLASS'
+      - 'BLUE_STAINED_GLASS'
+      - 'PURPLE_STAINED_GLASS'
     stats:
-      Length: { display: "SL * 10", formula: "SL_MULT_X_PLUS_Y", value: 10 }
-
-  SPITE:
-    name: "Spite"
-    description: "A dark aura surrounds the users of this spell momentarily after casting. If hit with a spell during this time, the foe who hit you will be unable to use that spell for one minute. In addition, spells they use will cost extra mana. They can only have one disabled spell at a time."
-    class: "dev.thomashanson.wizards.game.spell.types.SpellSpite"
-    icon: CHARCOAL
-    max-level: 1
-    rarity: MED_RARE
-    element: ENVIRONMENTAL
-    wand-element: DARK
-    slot: 41
-    mana: { base: 15, per-level: 0 }
-    cooldown: { base: 50, per-level: 0 }
-    stats: {}
+      Length:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 10.0
+        multiplier: 10.0
+      Duration:
+        display: "%.0f seconds"
+        formula: "LEVEL_SCALING"
+        base: 5.0
+        multiplier: 2.0
+      # --- Internal Stats ---
+      "duration-seconds": { formula: "LEVEL_SCALING", base: 5.0, multiplier: 2.0 }
 
   IMPLODE:
     name: "Implode"
-    description: "Cause an implosion that damages surrounding enemies."
+    description: "Cause a targeted area of blocks to charge up and violently implode, destroying the terrain and damaging nearby players."
     class: "dev.thomashanson.wizards.game.spell.types.SpellImplode"
     icon: IRON_SHOVEL
     max-level: 3
-    rarity: MED_RARE
-    element: ENVIRONMENTAL
+    rarity: RARE
+    element: TACTICAL
     wand-element: EARTH
-    slot: 42
     mana: { base: 50, per-level: -2 }
     cooldown: { base: 30, per-level: -3 }
     stats:
-      Range: { display: "50", value: 50 }
-      "Implosion Height": { display: "SL", formula: "SL_PLUS_X", value: 0 }
-      "Implosion Width": { display: "SL * 2", formula: "SL_MULT_X_PLUS_Y", value: 2 }
-
-  TRAP_RUNE:
-    name: "Trap Rune"
-    description: "Draws an explosion rune on the ground! The rune takes 5 seconds to prepare and also damages you!"
-    class: "dev.thomashanson.wizards.game.spell.types.SpellTrapRune"
-    icon: TNT_MINECART
-    max-level: 3
-    rarity: MED_RARE
-    element: ENVIRONMENTAL
-    wand-element: DARK
-    slot: 43
-    mana: { base: 25, per-level: 0 }
-    cooldown: { base: 30, per-level: -1 }
-    stats:
-      Damage: { display: "(SL * 2) + 3", formula: "SL_MULT_X_PLUS_Y", value: 2, add: 3 }
-      Range: { display: "(SL * 4) + 12", formula: "SL_MULT_X_PLUS_Y", value: 4, add: 12 }
-      "Rune Size": { display: "SL", formula: "SL_PLUS_X", value: 0 }
+      Radius:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 1.0
+      "Explosion Power":
+        display: "%.1f"
+        formula: "LEVEL_SCALING"
+        base: 3.0
+        multiplier: 0.5
+      Range:
+        display: "%.0f blocks"
+        formula: "STATIC"
+        value: 50
+      "Charge-up":
+        display: "%.1f seconds"
+        formula: "STATIC"
+        value: 2.0 # 40 ticks
+      # --- Internal Stats ---
+      "duration-ticks": { formula: "STATIC", value: 40 }
+      size: { formula: "LEVEL_SCALING", base: 2.0, multiplier: 1.0 }
 
   FROSTBITE:
     name: "Frostbite"
-    description: "Inflict frost damage and slow enemies."
+    description: "Launch a freezing projectile that covers the impact area in magical snow, slowing and preventing enemies from jumping."
     class: "dev.thomashanson.wizards.game.spell.types.SpellFrostbite"
     icon: SNOWBALL
     max-level: 3
-    rarity: MED_RARE
-    element: ENVIRONMENTAL
+    rarity: RARE
+    element: TACTICAL
     wand-element: ICE
-    slot: 46
     mana: { base: 20, per-level: 0 }
     cooldown: { base: 40, per-level: 0 }
     stats:
-      Radius: { display: "SL * 2", formula: "SL_MULT_X_PLUS_Y", value: 2 }
-      "Length (s)": { display: "15", value: 15 }
-      "Slowness Level": { display: "2", value: 2 }
-      "Effect Length (s)": { display: "15", value: 15 }
+      Radius:
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 2.0
+      Duration:
+        display: "%.0f seconds"
+        formula: "LEVEL_SCALING"
+        base: 15.0
+        multiplier: 5.0
+      "Slowness Level":
+        display: "Slowness %.0f"
+        formula: "STATIC"
+        value: 2
+      # --- Internal Stats ---
+      "projectile-lifespan-ticks": { formula: "STATIC", value: 140 }
+      "projectile-speed": { formula: "STATIC", value: 1.7 }
+      "spread-duration-ticks": { formula: "STATIC", value: 20 }
+      "slowness-amplifier": { formula: "STATIC", value: 2 }
+      "effect-duration-ticks": { formula: "STATIC", value: 30 }
+      "lifespan-seconds": { formula: "LEVEL_SCALING", base: 15.0, multiplier: 5.0 }
+      "lifespan-random-offset": { formula: "STATIC", value: 5.0 }
 
   FROST_BARRIER:
     name: "Frost Barrier"
-    description: "Create a barrier of ice for protection."
+    description: "Erect a temporary wall of solid ice in front of you."
     class: "dev.thomashanson.wizards.game.spell.types.SpellFrostBarrier"
     icon: PACKED_ICE
     max-level: 3
-    rarity: MED_RARE
-    element: ENVIRONMENTAL
+    rarity: UNCOMMON
+    element: TACTICAL
     wand-element: ICE
-    slot: 47
     mana: { base: 10, per-level: 0 }
     cooldown: { base: 20, per-level: -5 }
     stats:
-      Height: { display: "SL + 1", formula: "SL_PLUS_X", value: 1 }
-      Width: { display: "(SL * 2) + 4", formula: "SL_MULT_X_PLUS_Y", value: 2, add: 4 }
+      Width:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 6.0
+        multiplier: 2.0
+      Height:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 1.0
+      Duration:
+        display: "%.0f seconds"
+        formula: "LEVEL_SCALING"
+        base: 8.0
+        multiplier: 2.0
+      # --- Internal Stats ---
+      "duration-seconds": { formula: "LEVEL_SCALING", base: 8.0, multiplier: 2.0 }
 
   ICE_PRISON:
     name: "Ice Prison"
-    description: "Trap your enemies in a prison of ice."
+    description: "Fire a projectile that encases a small area in ice upon impact, trapping your enemies."
     class: "dev.thomashanson.wizards.game.spell.types.SpellIcePrison"
     icon: ICE
     max-level: 3
-    rarity: MED_RARE
-    element: ENVIRONMENTAL
+    rarity: RARE
+    element: TACTICAL
     wand-element: ICE
-    slot: 48
     mana: { base: 25, per-level: 2 }
     cooldown: { base: 20, per-level: 0 }
     stats:
-      "Prison Radius": { display: "SL + 3", formula: "SL_PLUS_X", value: 3 }
+      Radius:
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 3.5
+        multiplier: 0.5
+      Duration:
+        display: "%.0f seconds"
+        formula: "LEVEL_SCALING"
+        base: 6.0
+        multiplier: 2.0
+      # --- Internal Stats ---
+      "projectile-lifespan-ticks": { formula: "STATIC", value: 60 }
+      "projectile-speed": { formula: "STATIC", value: 1.8 }
+      "duration-seconds": { formula: "LEVEL_SCALING", base: 6.0, multiplier: 2.0 }
+      "melt-random-offset-seconds": { formula: "STATIC", value: 3.0 }
       
   DOPPELGANGER:
     name: "Doppelganger"
-    description: "Summon a clone to aid you in battle."
+    description: "Become invisible and create a clone of yourself that follows your movements. Your mana regeneration is halted, and the clone drains mana while active."
     class: "dev.thomashanson.wizards.game.spell.types.SpellDoppelganger"
     icon: ARMOR_STAND
     max-level: 1
     rarity: RARE
-    element: ENVIRONMENTAL
+    element: TACTICAL
     wand-element: LIFE
-    slot: 49
     mana: { base: 15, per-level: 0 }
     cooldown: { base: 50, per-level: 0 }
     stats:
-      "Clone Health": { display: "6", value: 6 }
-      "Length (s)": { display: "12", value: 12 }
+      Duration:
+        display: "%.1f seconds"
+        formula: "STATIC"
+        value: 12.0
+      "Mana Drain":
+        display: "%.1f/sec"
+        formula: "STATIC"
+        value: 5.0
+      # --- Internal Stats ---
+      "lifespan-ticks": { formula: "STATIC", value: 240 }
+      "mana-drain": { formula: "STATIC", value: 5.0 }
 
   SOUL_EXCHANGE:
     name: "Soul Exchange"
-    description: "Sacrifice one heart permanently in exchange for max mana, along with a little bonus. Beware, sacrificing your life force often has severe side effects!"
+    description: "Sacrifice one heart permanently in exchange for instant mana and an increased mana pool. This pact has severe, temporary side effects."
     class: "dev.thomashanson.wizards.game.spell.types.SpellSoulExchange"
     icon: END_CRYSTAL
     max-level: 1
     rarity: RARE
-    element: ENVIRONMENTAL
+    element: UTILITY
     wand-element: LIFE
-    slot: 50
     mana: { base: 0, per-level: 0 }
     cooldown: { base: 60, per-level: 0 }
     stats:
-      "Instant Mana": { display: "30", value: 30 }
-      "Extra Max Mana": { display: "15", value: 15 }
+      "Instant Mana":
+        display: "+%.0f"
+        formula: "STATIC"
+        value: 30
+      "Max Mana Increase":
+        display: "+%.0f"
+        formula: "STATIC"
+        value: 15
+      "Wither Duration":
+        display: "%.1f seconds"
+        formula: "STATIC"
+        value: 10.0 # 200 ticks
+      # --- Internal Stats ---
+      "health-sacrifice": { formula: "STATIC", value: 2.0 } # 1 heart
+      "min-health": { formula: "STATIC", value: 6.0 } # 3 hearts
+      "mana-gain": { formula: "STATIC", value: 30.0 }
+      "max-mana-increase": { formula: "STATIC", value: 15.0 }
+      "wither-duration-ticks": { formula: "STATIC", value: 200 }
+      "wither-amplifier": { formula: "STATIC", value: 2 } # Wither II
+  
+  SPEED_BOOST:
+    name: "Speed Boost"
+    description: "Gain a burst of speed for a short duration."
+    class: "dev.thomashanson.wizards.game.spell.types.SpellSpeedBoost"
+    icon: SUGAR
+    max-level: 2
+    rarity: COMMON
+    element: UTILITY
+    wand-element: LIFE
+    mana: { base: 20, per-level: 0 }
+    cooldown: { base: 45, per-level: 0 }
+    stats:
+      "Speed Level":
+        display: "Speed %.0f"
+        formula: "LEVEL_SCALING"
+        base: 2.0 # Speed II at level 1
+        multiplier: 1.0
+      Duration:
+        display: "%.0f seconds"
+        formula: "STATIC"
+        value: 20.0
+      # --- Internal Stats ---
+      "duration-seconds": { formula: "STATIC", value: 20.0 }
+      "speed-amplifier": { formula: "LEVEL_SCALING", base: 2.0, multiplier: 1.0 }
 
-  # --- UTILITY SPELLS (No Element) ---
   WIZARDS_COMPASS:
     name: "Wizard's Compass"
-    description: "Displays particles pointing to the closest enemy!"
+    description: "Casts out magical particles that seek and reveal the location of all nearby enemies."
     class: "dev.thomashanson.wizards.game.spell.types.SpellWizardsCompass"
     icon: COMPASS
     max-level: 1
-    rarity: NONE # Special Rarity
-    element: ENVIRONMENTAL
-    wand-element: LIFE
-    slot: 8 # Example slot in hotbar/off-hand GUI area
+    rarity: UNCOMMON
+    element: UTILITY
+    wand-element: MANA
     mana: { base: 5, per-level: 0 }
     cooldown: { base: 4, per-level: 0 }
-    stats: {}
+    stats:
+      # --- Internal Stats ---
+      "particle-lifespan-ticks": { formula: "STATIC", value: 50 }
+      "particle-speed": { formula: "STATIC", value: 0.2 }
+
+  SPLASH:
+    name: "Splash"
+    description: "Unleash a wave of water, knocking back nearby enemies and extinguishing flames on yourself and others."
+    class: "dev.thomashanson.wizards.game.spell.types.SpellSplash"
+    icon: WATER_BUCKET
+    max-level: 3
+    rarity: COMMON
+    element: ATTACK
+    wand-element: ICE
+    mana: { base: 20, per-level: 0 }
+    cooldown: { base: 15, per-level: 0 }
+    stats:
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 1.0
+        multiplier: 1.0
+      Radius:
+        display: "%.0f blocks"
+        formula: "STATIC"
+        value: 5
+      Knockback:
+        display: "%.1f"
+        formula: "LEVEL_SCALING"
+        base: 4.0
+        multiplier: 1.0
+      # --- Internal Stats ---
+      "fire-resistance-ticks": { formula: "LEVEL_SCALING", base: 100, multiplier: 100 } # 5s per level
+      "knockback-strength": { formula: "LEVEL_SCALING", base: 4.0, multiplier: 1.0 }
+      "knockback-y-lift": { formula: "STATIC", value: 0.35 }
+      "p-drop-count": { formula: "STATIC", value: 250 }
+      "p-drop-spread": { formula: "STATIC", value: 2.0 }
+      "p-drop-speed": { formula: "STATIC", value: 0.01 }
+      "p-fall-count": { formula: "STATIC", value: 70 }
+      "p-fall-spread": { formula: "STATIC", value: 2.2 }
+      "p-fall-speed": { formula: "STATIC", value: 0.05 }
+      "p-splash-count": { formula: "STATIC", value: 120 }
+      "p-splash-spread-xz": { formula: "STATIC", value: 1.5 }
+      "p-splash-spread-y": { formula: "STATIC", value: 0.8 }
+      "p-splash-speed": { formula: "STATIC", value: 0.25 }
+      
+  SPECTRAL_ARROW:
+    name: "Spectral Arrow"
+    description: "Shoot a penetrating arrow! The further it travels, the higher the damage!"
+    class: "dev.thomashanson.wizards.game.spell.types.SpellSpectralArrow"
+    icon: SPECTRAL_ARROW
+    max-level: 6
+    rarity: RARE
+    element: ATTACK
+    wand-element: DARK
+    mana: { base: 40, per-level: -5 }
+    cooldown: { base: 15, per-level: -2 }
+    stats:
+      Damage:
+        display: "Varies"
+        formula: "DISTANCE_SCALING"
+        base: 6.0              # Base damage
+        distanceMultiplier: 1.0 # Standard distance effect
+        divisor: 7.0           # The '7' in (7 - SL)
+        levelMultiplier: 1.0   # The 'SL' in (7 - SL)
+        maxLevel: 6            # The level at which scaling caps
+        maxValue: 20.0         # Max damage if denominator is invalid
+      # --- Internal Stats ---
+      "velocity-multiplier": { formula: "STATIC", value: 1.5 }
+
+  SUMMON_WOLVES:
+    name: "Summon Wolves"
+    description: "Summons a pack of temporary wolves to fight for you."
+    class: "dev.thomashanson.wizards.game.spell.types.SpellSummonWolves"
+    icon: BONE
+    max-level: 3
+    rarity: RARE
+    element: TACTICAL
+    wand-element: LIFE
+    mana: { base: 80, per-level: -10 }
+    cooldown: { base: 160, per-level: 0 }
+    stats:
+      Wolves:
+        display: "%.0f"
+        formula: "LEVEL_SCALING"
+        base: 3.0 # SL 1 -> 3 wolves
+        multiplier: 1.0
+      Duration:
+        display: "%.0f seconds"
+        formula: "STATIC"
+        value: 30.0
+      "Wolf Health":
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 4.0 # 2 hearts
+        multiplier: 2.0 # +1 heart per level
+      "Wolf Speed":
+        display: "Speed %.0f"
+        formula: "LEVEL_SCALING"
+        base: 1.0 # Speed I at level 1
+        multiplier: 1.0
+      # --- Internal Stats ---
+      "wolf-count": { formula: "LEVEL_SCALING", base: 3, multiplier: 1 }
+      "duration-seconds": { formula: "STATIC", value: 30.0 }
+      "wolf-speed-amplifier": { formula: "LEVEL_SCALING", base: 1, multiplier: 1 }
+      "damage-modifier": { formula: "STATIC", value: 0.3 }
+
+  SPITE:
+    name: "Spite"
+    description: "A dark aura surrounds you. If hit with a spell during this time, the foe who hit you will incur an increased mana cost on all their spells for a long duration."
+    class: "dev.thomashanson.wizards.game.spell.types.SpellSpite"
+    icon: CHARCOAL
+    max-level: 1
+    rarity: RARE
+    element: TACTICAL
+    wand-element: DARK
+    mana: { base: 15, per-level: 0 }
+    cooldown: { base: 50, per-level: 0 }
+    stats:
+      Duration:
+        display: "%.0f seconds"
+        formula: "STATIC"
+        value: 3.0
+      "Debuff Duration":
+        display: "%.0f seconds"
+        formula: "STATIC"
+        value: 60.0
+      "Extra Mana Cost":
+        display: "+%.0f mana"
+        formula: "STATIC"
+        value: 8.0
+      # --- Internal Stats ---
+      "aura-duration-seconds": { formula: "STATIC", value: 3.0 }
+      "debuff-duration-seconds": { formula: "STATIC", value: 60.0 }
+      "particle-count": { formula: "STATIC", value: 5 }
+      "aura-radius": { formula: "STATIC", value: 0.8 }
+
+  TRAP_RUNE:
+    name: "Trap Rune"
+    description: "Draws an explosive rune on the ground which arms after a short delay. The rune will detonate when an enemy walks over it."
+    class: "dev.thomashanson.wizards.game.spell.types.SpellTrapRune"
+    icon: TNT_MINECART
+    max-level: 3
+    rarity: RARE
+    element: TACTICAL
+    wand-element: DARK
+    mana: { base: 25, per-level: 0 }
+    cooldown: { base: 30, per-level: -1 }
+    stats:
+      Damage:
+        display: "%.1f hearts"
+        formula: "LEVEL_SCALING"
+        base: 5.0
+        multiplier: 2.0
+      Radius:
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 1.6
+        multiplier: 0.8
+      Range:
+        display: "%.0f blocks"
+        formula: "LEVEL_SCALING"
+        base: 8.0
+        multiplier: 4.0
+      "Arming Time":
+        display: "%.1f seconds"
+        formula: "STATIC"
+        value: 5.0 # 100 ticks
+      # --- Internal Stats ---
+      "max-runes": { formula: "STATIC", value: 3 }
+      "rune-size": { formula: "LEVEL_SCALING", base: 1.6, multiplier: 0.8 }
+      "arming-ticks": { formula: "STATIC", value: 100 }
+      "lifespan-ticks": { formula: "STATIC", value: 2000 } # 100 seconds
+      "knockback-strength": { formula: "LEVEL_SCALING", base: 1.0, multiplier: 0.2 }

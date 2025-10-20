@@ -195,20 +195,29 @@ public class DamageManager {
     }
 
     private double calculatePlayerDamage(Player victimPlayer, double rawDamage) {
+        // Get attributes and effects
         AttributeInstance armorAttribute = victimPlayer.getAttribute(Attribute.GENERIC_ARMOR);
         AttributeInstance toughnessAttribute = victimPlayer.getAttribute(Attribute.GENERIC_ARMOR_TOUGHNESS);
         PotionEffect resistanceEffect = victimPlayer.getPotionEffect(PotionEffectType.DAMAGE_RESISTANCE);
 
         double armorPoints = (armorAttribute != null) ? armorAttribute.getValue() : 0;
         double armorToughness = (toughnessAttribute != null) ? toughnessAttribute.getValue() : 0;
-        int resistance = (resistanceEffect != null) ? resistanceEffect.getAmplifier() : 0;
+        int epf = EntityUtil.getEPF(victimPlayer.getInventory());
 
-        return EntityUtil.calculateDamage(
-                rawDamage,
-                armorPoints, armorToughness,
-                resistance,
-                EntityUtil.getEPF(victimPlayer.getInventory())
-        );
+        // Step 1: Calculate damage after armor and enchantments using the updated utility method.
+        double damageAfterArmor = EntityUtil.calculateDamage(rawDamage, armorPoints, armorToughness, epf);
+
+        // Step 2: Manually apply the damage resistance potion effect.
+        if (resistanceEffect != null) {
+            // Resistance reduces damage by 20% per level. Level = amplifier + 1.
+            int resistanceLevel = resistanceEffect.getAmplifier() + 1;
+            double reductionMultiplier = 1.0 - (resistanceLevel * 0.20);
+            
+            // Ensure multiplier isn't negative from an overly high resistance level
+            damageAfterArmor *= Math.max(0, reductionMultiplier);
+        }
+
+        return damageAfterArmor;
     }
     
     private void applyKnockback(LivingEntity entity, DamageTick tick, double rawDamage) {
@@ -224,13 +233,24 @@ public class DamageManager {
         Location origin = Optional.ofNullable(tick.getKnockbackOrigin())
                 .orElseGet(() -> tick instanceof PlayerDamageTick pdt && pdt.getPlayer() != null ? pdt.getPlayer().getLocation() : entity.getLocation());
 
-        // This logic is now cleaner. The trajectory is purely horizontal.
-        // Vertical knockback is handled entirely by the MathUtil.setVelocity method.
-        Vector trajectory = MathUtil.getTrajectory2D(origin, entity.getLocation());
-        trajectory.multiply(0.6 * kbStrength);
+        // Step 1: Get a normalized 2D direction vector using the new utility method.
+        Vector direction = MathUtil.getDirection(origin, entity.getLocation()).setY(0).normalize();
 
-        double velocity = 0.2 + trajectory.length() * 0.8;
-        MathUtil.setVelocity(entity, trajectory, velocity, false, 0, Math.abs(0.2 * kbStrength), 0.4 + (0.04 * kbStrength), true);
+        // Prevent NaN vectors if origin and entity location are identical.
+        if (Double.isNaN(direction.getX()) || Double.isNaN(direction.getZ())) {
+            return;
+        }
+        
+        // Step 2: Calculate the final velocity strength based on your original formula.
+        // trajectory.length() is now (0.6 * kbStrength) since direction vector has a length of 1.
+        double strength = 0.2 + (0.6 * kbStrength) * 0.8;
+
+        // Step 3: Calculate Y components.
+        double yAdd = Math.abs(0.2 * kbStrength);
+        double yMax = 0.4 + (0.04 * kbStrength);
+
+        // Step 4: Call the new applyVelocity method with the separated direction and strength.
+        MathUtil.applyVelocity(entity, direction, strength, 0, yAdd, yMax);
     }
     
     private void trackStats(LivingEntity victim, DamageTick tick, double finalDamage) {
