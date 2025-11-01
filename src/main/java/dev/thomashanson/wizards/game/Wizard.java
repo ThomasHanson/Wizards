@@ -2,7 +2,6 @@ package dev.thomashanson.wizards.game;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -18,6 +17,7 @@ import org.bukkit.entity.Player;
 
 import com.google.common.base.Function;
 
+import dev.thomashanson.wizards.game.manager.WizardManager;
 import dev.thomashanson.wizards.game.overtime.types.DisasterLightning;
 import dev.thomashanson.wizards.game.potion.PotionType;
 import dev.thomashanson.wizards.game.spell.Spell;
@@ -25,6 +25,20 @@ import dev.thomashanson.wizards.game.spell.SpellManager;
 import dev.thomashanson.wizards.game.spell.types.SpellSpite;
 import dev.thomashanson.wizards.util.MathUtil;
 
+/**
+ * Represents a player who is an active participant in a Wizards game.
+ * <p>
+ * This class acts as a data-holder and state machine for a player, storing all
+ * game-specific information such as mana, cooldowns, known spells, wand assignments,
+ * and active potion effects. It is created when a player enters a game and
+ * destroyed when they are eliminated or the game ends.
+ * <p>
+ * It provides the core API for interacting with a player's in-game status,
+ * separate from their persistent Bukkit {@link Player} entity.
+ *
+ * @see WizardManager
+ * @see Wizards
+ */
 public class Wizard {
 
     // --- Attribute System for Commands ---
@@ -43,28 +57,19 @@ public class Wizard {
         public void set(Wizard wizard, T value) { setter.accept(wizard, value); }
         public Class<T> getType() { return type; }
     }
-
-    private static final Map<String, Attribute<?>> ATTRIBUTES = new HashMap<>();
-
-    static {
-        ATTRIBUTES.put("mana", new Attribute<>(Float.class, Wizard::getMana, Wizard::setMana));
-        ATTRIBUTES.put("maxMana", new Attribute<>(Float.class, Wizard::getMaxMana, Wizard::setMaxMana));
-        ATTRIBUTES.put("wandsOwned", new Attribute<>(Integer.class, Wizard::getWandsOwned, Wizard::setWandsOwned));
-        ATTRIBUTES.put("maxWands", new Attribute<>(Integer.class, Wizard::getMaxWands, Wizard::setMaxWands));
-        ATTRIBUTES.put("soulStars", new Attribute<>(Integer.class, wizard -> wizard.soulStars, (wizard, val) -> wizard.soulStars = val));
-        // Add other attributes as needed
-    }
-
-    public static Map<String, Attribute<?>> getAttributes() {
-        return Collections.unmodifiableMap(ATTRIBUTES);
-    }
-    // --- End Attribute System ---
-
-
+    
+    /**
+     * Defines the visual state of a spell on a wand, used to determine
+     * the lore, item amount, and Bukkit cooldown graphic.
+     */
     public enum DisplayType {
+        /** Spell is ready to be cast. */
         AVAILABLE,
+        /** Spell is blocked by the Spite spell. */
         DISABLED_BY_SPITE,
+        /** Spell cannot be cast due to insufficient mana. */
         NOT_ENOUGH_MANA,
+        /** Spell is on its normal cooldown. */
         SPELL_COOLDOWN
     }
 
@@ -106,6 +111,11 @@ public class Wizard {
         setMaxWands(maxWands);
     }
     
+    /**
+     * Cleans up all Bukkit-specific resources tied to this Wizard.
+     * This is called by {@link WizardManager#reset()} when the game ends
+     * to prevent BossBar memory leaks.
+     */
     public void cleanup() {
         if (manaBar != null) manaBar.removeAll();
         if (potionStatusBar != null) potionStatusBar.removeAll();

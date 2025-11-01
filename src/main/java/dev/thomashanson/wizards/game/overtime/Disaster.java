@@ -19,6 +19,25 @@ import dev.thomashanson.wizards.damage.DamageTick;
 import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.spell.SpellType;
 
+
+/**
+ * Represents an abstract Overtime Disaster.
+ * <p>
+ * This class provides the core logic for a disaster, including:
+ * <ul>
+ * <li>Managing the timing and acceleration of strikes.</li>
+ * <li>Playing global sound effects.</li>
+ * <li>Calculating the next strike location with scaling accuracy.</li>
+ * </ul>
+ * <p>
+ * Subclasses must implement {@link #strikeAt(Location)} to define the
+ * unique visual and mechanical effects of the disaster (e.g., spawning meteors,
+ * creating lightning).
+ *
+ * @see OvertimeState
+ * @see DisasterMeteors
+ * @see DisasterLightning
+ */
 public abstract class Disaster {
 
     // --- State Variables ---

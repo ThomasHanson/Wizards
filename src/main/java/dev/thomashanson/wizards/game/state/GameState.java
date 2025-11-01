@@ -18,6 +18,18 @@ import dev.thomashanson.wizards.game.state.listener.StateListenerProvider;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+
+/**
+ * Represents an abstract state of the game server (e.g., Lobby, Active, Reset).
+ * <p>
+ * This class forms the basis of a state machine pattern managed by {@link GameManager}.
+ * Each implementation defines the behavior and listeners active during that specific
+ * part of the minigame's lifecycle.
+ *
+ * @see GameManager
+ * @see dev.thomashanson.wizards.game.state.types.LobbyState
+ * @see dev.thomashanson.wizards.game.state.types.ActiveState
+ */
 public abstract class GameState {
 
     private WizardsPlugin plugin;

@@ -28,6 +28,19 @@ import dev.thomashanson.wizards.damage.types.CustomDamageTick;
 import dev.thomashanson.wizards.game.Tickable;
 import dev.thomashanson.wizards.game.spell.Spell;
 
+
+/**
+ * Implementation of the "Boulder Toss" spell.
+ * <p>
+ * This spell operates in two phases, managed by {@link BoulderInstance}:
+ * 1.  **Rotation Phase:** Summons several {@link BoulderProjectile}s that orbit
+ * the caster, damaging any enemies they touch.
+ * 2.  **Launch Phase:** After a set duration, all orbiting boulders are
+ * launched forward in the caster's direction as projectiles.
+ * <p>
+ * This class implements {@link Tickable} to update the state of all
+ * active boulders every tick.
+ */
 public class SpellBoulderToss extends Spell implements Tickable {
 
     private final Map<UUID, BoulderInstance> activeInstances = new ConcurrentHashMap<>();
@@ -76,6 +89,11 @@ public class SpellBoulderToss extends Spell implements Tickable {
         activeInstances.clear();
     }
 
+    /**
+     * Manages the state for a single "Boulder Toss" cast by a player.
+     * It controls the phase (ROTATING, LAUNCHED) and owns the list of
+     * individual boulders.
+     */
     private static class BoulderInstance {
         private enum Phase { ROTATING, LAUNCHED }
 
@@ -171,6 +189,13 @@ public class SpellBoulderToss extends Spell implements Tickable {
         boolean isDone() { return done; }
     }
 
+    /**
+     * Represents a single boulder, acting as both an orbiting hazard
+     * and a final projectile.
+     * <p>
+     * This class wraps an {@link ArmorStand} to represent the boulder visually
+     * and handles its own movement, collision, and cleanup logic.
+     */
     private static class BoulderProjectile {
         private final BoulderInstance parent;
         private final ArmorStand armorStand;

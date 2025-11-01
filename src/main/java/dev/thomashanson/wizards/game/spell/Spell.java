@@ -23,11 +23,13 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.damage.DamageTick;
+import dev.thomashanson.wizards.game.Tickable;
 import dev.thomashanson.wizards.game.Wizard;
 import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.manager.DamageManager;
@@ -41,6 +43,26 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 
+/**
+ * Represents the abstract base for all spells in the Wizards minigame.
+ * <p>
+ * This class provides the core framework for a spell, including:
+ * <ul>
+ * <li>Configuration loading from {@code spells.yml}.</li>
+ * <li>Data-driven stat calculation via {@link FormulaRegistry}.</li>
+ * <li>Core attributes (mana cost, cooldown, element, rarity).</li>
+ * <li>Item and lore generation for wands and the {@link SpellBook}.</li>
+ * <li>Utility methods for accessing game state and damaging entities.</li>
+ * </ul>
+ * <p>
+ * Implementations must override the {@link #cast(Player, int)} method
+ * to define the spell's unique behavior. If a spell requires per-tick logic
+ * (e.g., projectiles, charging), it should also implement {@link Tickable}.
+ *
+ * @see SpellManager
+ * @see Tickable
+ * @see Spell.SpellBlock
+ */
 public abstract class Spell implements Listener {
 
     // --- Nested Interfaces & Classes for specialized spell types ---
@@ -120,8 +142,27 @@ public abstract class Spell implements Listener {
         this.stats = Collections.unmodifiableMap(loadedStats);
     }
 
+    /**
+     * The primary execution logic of the spell.
+     * <p>
+     * This method is called by the {@link Wizards} game instance after all
+     * prerequisite checks (mana, cooldown, events) have been successfully passed.
+     *
+     * @param player The player casting the spell.
+     * @param level  The current level of the spell for this caster.
+     * @return {@code true} if the spell cast was successful (and costs should be applied),
+     * {@code false} if the cast failed internally (e.g., no target, invalid location)
+     * and costs should be refunded.
+     */
     public abstract boolean cast(Player player, int level);
 
+    /**
+     * Called when the game ends or the server shuts down.
+     * <p>
+     * Implement this method to clean up any persistent state, such as removing
+     * active {@link BukkitRunnable} tasks, clearing static maps, or
+     * removing summoned entities to prevent memory leaks.
+     */
     public void cleanup() {}
 
     public ItemStack createItemStack(@Nullable Player viewer, int spellLevel, int model) {

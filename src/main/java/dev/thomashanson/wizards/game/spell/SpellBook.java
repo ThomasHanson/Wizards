@@ -27,8 +27,25 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+
+/**
+ * Manages the "Spell Book" GUI, allowing players to view, bind,
+ * and quick-cast their known spells.
+ * <p>
+ * This class is responsible for:
+ * <ul>
+ * <li>Building the {@link Gui} with all spell categories and elements.</li>
+ * <li>Populating the GUI with the spells the player has learned.</li>
+ * <li>Handling player sort preferences (Default, Rarity, etc.).</li>
+ * <li>Processing {@link InventoryClickEvent}s to bind spells to wands
+ * or to quick-cast them.</li>
+ * </ul>
+ */
 public class SpellBook {
 
+    /**
+     * Defines the sorting methods available to the player in the spell book.
+     */
     public enum SortType {
         DEFAULT("Default"),
         RARITY("Rarity"),
@@ -48,6 +65,12 @@ public class SpellBook {
 
     private final Map<UUID, SortType> playerSortPreferences = new HashMap<>();
 
+    /**
+     * Creates a new SpellBook manager for a specific game instance.
+     *
+     * @param game           The active {@link Wizards} game.
+     * @param spellManager   The global {@link SpellManager}.
+     */
     public SpellBook(Wizards game, SpellManager spellManager) {
         this.game = game;
         this.lang = game.getPlugin().getLanguageManager();
@@ -55,6 +78,11 @@ public class SpellBook {
         this.spellManager = spellManager;
     }
 
+    /**
+     * Builds and displays the spell book GUI for a specific player.
+     *
+     * @param player The player to show the GUI to.
+     */
     public void showBook(Player player) {
         Wizard wizard = game.getWizard(player);
 
@@ -142,6 +170,12 @@ public class SpellBook {
         menu.open(player);
     }
     
+    /**
+     * Fills a GUI slot with a grayed-out "Unknown Spell" item.
+     *
+     * @param slot   The GUI slot to fill.
+     * @param player The player viewing the GUI (for localization).
+     */
     private void showUnknownSpellItem(int slot, Player player) {
         menu.setItem(slot, ItemBuilder.from(Material.GRAY_DYE)
                 .name(lang.getTranslated(player, "wizards.gui.spellbook.unknown.name"))
@@ -149,6 +183,13 @@ public class SpellBook {
                 .asGuiItem());
     }
 
+    /**
+     * Populates the spell book GUI using the default sorting method (by GUI slot).
+     *
+     * @param menu   The {@link Gui} to populate.
+     * @param player The player viewing the GUI.
+     * @param wizard The wizard data for the player.
+     */
     private void populateGuiByDefault(Gui menu, Player player, Wizard wizard) {
         Map<Integer, Spell> spellSlotMap = spellManager.getAllSpells().values().stream()
                 .filter(s -> s.getGuiSlot() >= 0)
@@ -158,6 +199,13 @@ public class SpellBook {
         // ... from "Set<Integer> spellColumns = new HashSet<>();" to the end of the main for-loop ...
     }
 
+    /**
+     * Handles a click on a known spell icon in the spell book.
+     *
+     * @param event  The {@link InventoryClickEvent}.
+     * @param spell  The {@link Spell} that was clicked.
+     * @param wizard The {@link Wizard} who clicked.
+     */
     private void handleSpellClick(InventoryClickEvent event, Spell spell, Wizard wizard) {
         Player player = (Player) event.getWhoClicked();
 
@@ -181,6 +229,13 @@ public class SpellBook {
         game.getWandManager().updateAllWandDisplays(player);
     }
 
+    /**
+     * Builds the action lore (Left-Click to Bind, Right-Click to Quick-Cast)
+     * for a spell item in the GUI.
+     *
+     * @param player The player viewing the GUI (for localization).
+     * @return A list of action {@link Component}s.
+     */
     private List<Component> buildActionLore(Player player) {
         return List.of(
             Component.empty(),

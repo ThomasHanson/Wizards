@@ -93,6 +93,24 @@ import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
 
+/**
+ * Represents a single, self-contained instance of a Wizards game.
+ * <p>
+ * This class is the central "hub" for one match, managing all game-specific
+ * components such as the {@link WizardManager}, {@link TeamManager}, {@link WandManager},
+ * and the active {@link SpellBook}. It implements {@link Listener} to handle
+ * game-specific events and {@link Tickable} to be driven by the main {@link GameManager} loop.
+ * <p>
+ * A new instance of this class is created by the {@link GameManager} when the server
+ * transitions from the {@link dev.thomashanson.wizards.game.state.types.LobbyState}
+ * to the {@link dev.thomashanson.wizards.game.state.types.PrepareState}. It is
+ * destroyed upon the game's conclusion in the
+ * {@link dev.thomashanson.wizards.game.state.types.ResetState}.
+ *
+ * @see GameManager
+ * @see WizardManager
+ * @see TeamManager
+ */
 public class Wizards implements Listener, Tickable {
 
     private final WizardsPlugin plugin;

@@ -7,6 +7,22 @@ import org.bukkit.event.HandlerList;
 
 import dev.thomashanson.wizards.damage.DamageTick;
 
+/**
+ * Fired immediately before a {@link DamageTick} is applied to a {@link LivingEntity}.
+ * <p>
+ * This event is the primary API endpoint for modifying or canceling damage dealt
+ * by the custom {@link DamageManager}. It allows other systems (spells, potions,
+ * kits) to intercept a damage event and apply modifiers, such as:
+ * <ul>
+ * <li>Increasing damage (e.g., Focus spell).</li>
+ * <li>Decreasing damage (e.g., Iron potion).</li>
+ * <li>Canceling the damage entirely.</li>
+ * </ul>
+ * This event is fired *after* initial armor/enchantment calculations but *before*
+ * Bukkit/potion resistance effects.
+ *
+ * @see DamageManager#damage(LivingEntity, DamageTick)
+ */
 public class CustomDamageEvent extends Event implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();

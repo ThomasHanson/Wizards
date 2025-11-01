@@ -193,5 +193,11 @@ public class WizardsPlugin extends JavaPlugin {
     public PotionManager getPotionManager() { return potionManager; }
     public LootManager getLootManager() { return lootManager; }
     public WandManager getWandManager() { return wandManager; }
-    public static WizardsPlugin getInstance() { return INSTANCE; }
+    
+    public static WizardsPlugin getInstance() { 
+        if (INSTANCE == null) {
+            throw new IllegalStateException("WizardsPlugin has not been enabled yet!");
+        }
+        return INSTANCE; 
+    }
 }

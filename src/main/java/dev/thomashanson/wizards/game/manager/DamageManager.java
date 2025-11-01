@@ -41,6 +41,27 @@ import dev.thomashanson.wizards.util.MathUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+
+/**
+ * Manages all custom damage, death, and assist logic for the plugin.
+ * <p>
+ * This service intercepts all Bukkit {@link org.bukkit.event.entity.EntityDamageEvent}s
+ * and translates them into custom {@link DamageTick} objects. It is responsible for:
+ * <ul>
+ * <li>Logging all damage taken by players.</li>
+ * <li>Applying custom damage calculations (armor, resistance, etc.).</li>
+ * <li>Applying custom knockback.</li>
+ * <li>Tracking stats for damage dealt and taken.</li>
+ * <li>Handling custom death messages via {@link DeathListener}.</li>
+ * <li>Calculating kill assists based on damage history.</li>
+ * </ul>
+ * This manager persists for the life of the plugin.
+ *
+ * @see DamageTick
+ * @see DamageListener
+ * @see DeathListener
+ * @see DamageConfig
+ */
 public class DamageManager {
 
     private final WizardsPlugin plugin;

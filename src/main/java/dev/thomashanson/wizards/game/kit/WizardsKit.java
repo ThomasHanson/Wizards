@@ -11,6 +11,20 @@ import org.bukkit.event.Listener;
 import dev.thomashanson.wizards.game.Wizard;
 import dev.thomashanson.wizards.game.spell.Spell;
 
+/**
+ * Represents the abstract base for all player kits.
+ * <p>
+ * This class stores all data-driven properties for a kit, loaded from the
+ * database (e.g., name, description, cost, base stats).
+ * <p>
+ * Subclasses must implement abstract methods to define the kit's unique,
+ * code-driven behaviors, such as applying special modifiers ({@link #applyModifiers}),
+ * granting initial spells ({@link #applyInitialSpells}), or handling
+ * game events by implementing {@link Listener} methods.
+ *
+ * @see KitManager
+ * @see KitSelectMenu
+ */
 public abstract class WizardsKit implements Listener {
 
     // --- Fields loaded from the database ---

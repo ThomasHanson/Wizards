@@ -37,6 +37,23 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.Style;
 import net.kyori.adventure.text.format.TextDecoration;
 
+
+/**
+ * Manages the lifecycle and state of all {@link Wizard} objects within a
+ * single {@link Wizards} game instance.
+ * <p>
+ * This class is responsible for:
+ * <ul>
+ * <li>Creating, storing, and retrieving {@link Wizard} instances for players.</li>
+ * <li>Handling player eliminations (death or quit) and managing their transition.</li>
+ * <li>Orchestrating the per-player {@code updatePlayerTick} loop, which handles
+ * mana regeneration, cooldowns, potion effects, and action bar updates.</li>
+ * <li>Acting as the central hub for game-wide events like power surges.</li>
+ * </ul>
+ *
+ * @see Wizards
+ * @see Wizard
+ */
 public class WizardManager implements Listener {
 
     private final WizardsPlugin plugin;

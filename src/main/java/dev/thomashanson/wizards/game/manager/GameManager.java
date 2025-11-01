@@ -36,6 +36,21 @@ import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 
+
+/**
+ * Manages the high-level state of the Wizards server, including game transitions,
+ * player sessions, and the master game loop.
+ * <p>
+ * This class is a singleton for the plugin, responsible for:
+ * <ul>
+ * <li>Transitioning between {@link GameState}s (e.g., Lobby, Prepare, Active).</li>
+ * <li>Creating, managing, and destroying {@link Wizards} game instances.</li>
+ * <li>Running the master {@link Tickable} loop that drives all active game components.</li>
+ * <li>Managing global managers that persist between games, like {@link KitManager}.</li>
+ * <li>Handling player connections and disconnections, and managing scoreboards.</li>
+ * </ul>
+ * It acts as the "kernel" for the minigame, coordinating all other managers.
+ */
 public class GameManager implements Listener {
 
     private final WizardsPlugin plugin;

@@ -30,6 +30,21 @@ import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.format.TextDecoration;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+
+/**
+ * The {@link GameState} implementation for the pre-game lobby.
+ * <p>
+ * This state is responsible for:
+ * <ul>
+ * <li>Managing the game start countdown.</li>
+ * <li>Broadcasting randomized game tips to players.</li>
+ * <li>Handling player setup upon joining (giving items, teleporting to spawn).</li>
+ * <li>Updating the scoreboard and server MOTD with lobby information.</li>
+ * <li>Preventing all game-related actions (damage, block breaking, etc.).</li>
+ * </ul>
+ * When the countdown completes and {@link GameManager#canStart()} is true,
+ * it transitions to the {@link PrepareState}.
+ */
 public class LobbyState extends GameState {
 
     private LobbyListener listener;
