@@ -76,23 +76,16 @@ public class LobbyState extends GameState {
 
             if (lastTip == null || Duration.between(lastTip, Instant.now()).toSeconds() >= tipInterval) {
 
-                // Alternate the text color
-                tipColor = (tipColor == NamedTextColor.YELLOW) ? NamedTextColor.GOLD : NamedTextColor.YELLOW;
-                lastTip = Instant.now();
-
-                // Get the key for the current tip
                 String tipKey = gameTipKeys.get(tipIndex);
-                
-                // Build the "TIP: " prefix as a Component
+                tipIndex = (tipIndex + 1) % gameTipKeys.size(); // Move this up
+
+                // Alternate color based on the index
+                tipColor = (tipIndex % 2 == 0) ? NamedTextColor.YELLOW : NamedTextColor.GOLD;
+
                 Component prefix = Component.text("TIP: ", NamedTextColor.WHITE, TextDecoration.BOLD);
 
-                // Broadcast to all players
                 for (Player player : Bukkit.getOnlinePlayers()) {
-                    
-                    // Translate the tip for each player
                     Component translatedTip = lang.getTranslated(player, tipKey);
-                    
-                    // Combine the prefix with the colored, translated tip
                     Component finalMessage = prefix.append(translatedTip.color(tipColor));
 
                     player.playSound(player.getLocation(), Sound.ENTITY_CHICKEN_EGG, 1F, 1F);

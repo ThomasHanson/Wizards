@@ -149,17 +149,11 @@ public class Wizards implements Listener, Tickable {
         this.spellManager = plugin.getSpellManager();
         this.wizardManager = new WizardManager(plugin, this);
         this.lootManager = plugin.getLootManager();
-        this.wandManager = new WandManager(plugin, this);
+        this.wandManager = plugin.getWandManager();
         this.teamManager = new TeamManager(this);
 
         this.kitSelectMenu = new KitSelectMenu(plugin);
         this.spellBook = new SpellBook(this, this.spellManager);
-
-        // getGameManager().addKits(
-        //     new KitScholar(this), new KitMage(this), new KitSorcerer(this),
-        //     new KitMystic(this), new KitWarlock(this), new KitEnchantress(this),
-        //     new KitLich(this)
-        // );
 
         disasters.add(new DisasterHail(this));
         disasters.add(new DisasterLightning(this));

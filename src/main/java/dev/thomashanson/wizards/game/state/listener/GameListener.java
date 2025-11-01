@@ -125,7 +125,7 @@ public class GameListener implements Listener {
         if (game == null)
             return;
 
-        game.getWandManager().handleWandSwap(event.getPlayer(), event.getPreviousSlot(), event.getNewSlot());
+        game.getWandManager().handleItemHeld(event);
     }
 
     @EventHandler

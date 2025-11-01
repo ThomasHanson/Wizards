@@ -1,6 +1,7 @@
 package dev.thomashanson.wizards.game.spell.types;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -140,12 +141,22 @@ public class SpellHyperDash extends Spell implements Tickable {
         }
 
         private void checkPlayerCollision() {
-            for (Entity entity : caster.getWorld().getNearbyEntities(caster.getBoundingBox().expand(1.0))) {
-                if (!(entity instanceof LivingEntity target) || entity.equals(caster) || hitPlayers.contains(entity.getUniqueId())) continue;
+            Collection<Entity> targets = caster.getWorld().getNearbyEntities(
+                caster.getBoundingBox().expand(1.0), // The bounding box to search
+                entity -> { // The predicate
+                    return (entity instanceof LivingEntity)   // Must be a LivingEntity
+                        && !entity.equals(caster)           // Cannot be the caster
+                        && !hitPlayers.contains(entity.getUniqueId()); // Not already hit
+                }
+            );
+
+            // This loop is now much cleaner and runs fewer times, as the list is pre-filtered.
+            for (Entity entity : targets) {
+                LivingEntity target = (LivingEntity) entity; // Safe cast because of our predicate
                 
                 parent.damage(target, new CustomDamageTick(damage, EntityDamageEvent.DamageCause.ENTITY_ATTACK, parent.getKey(), Instant.now(), caster, null));
                 target.setVelocity(new Vector(0, launchPower, 0));
-                hitPlayers.add(entity.getUniqueId());
+                hitPlayers.add(target.getUniqueId());
             }
         }
         

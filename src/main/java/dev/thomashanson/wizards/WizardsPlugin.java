@@ -17,7 +17,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 import dev.jorel.commandapi.CommandAPI;
 import dev.jorel.commandapi.CommandAPIBukkitConfig;
 import dev.thomashanson.wizards.commands.WizardsCommand;
-import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.loot.LootManager;
 import dev.thomashanson.wizards.game.manager.DamageManager;
 import dev.thomashanson.wizards.game.manager.DatabaseManager;
@@ -25,6 +24,7 @@ import dev.thomashanson.wizards.game.manager.GameManager;
 import dev.thomashanson.wizards.game.manager.LanguageManager;
 import dev.thomashanson.wizards.game.manager.MapManager;
 import dev.thomashanson.wizards.game.manager.PlayerStatsManager;
+import dev.thomashanson.wizards.game.manager.WandManager;
 import dev.thomashanson.wizards.game.potion.PotionManager;
 import dev.thomashanson.wizards.game.spell.SpellManager;
 import dev.thomashanson.wizards.game.state.types.SetupState;
@@ -39,7 +39,8 @@ public class WizardsPlugin extends JavaPlugin {
     private LanguageManager languageManager;
     private MapManager mapManager;
     private GameManager gameManager;
-    private LootManager lootManager; // The one and only instance
+    private WandManager wandManager;
+    private LootManager lootManager;
     private DamageManager damageManager;
     private SpellManager spellManager;
     private PotionManager potionManager;
@@ -82,10 +83,11 @@ public class WizardsPlugin extends JavaPlugin {
         this.statsManager = new PlayerStatsManager(this);
         new TutorialManager(this);
 
-        // --- Load LootManager ONCE ---
-        loadLootTables(); // This is the new, centralized loading method.
+        this.wandManager = new WandManager(this); 
 
-        // --- GameManager must be initialized AFTER other managers it might depend on ---
+        this.lootManager = new LootManager(this);
+        loadLootTables();
+
         this.gameManager = new GameManager(this);
         
         CommandAPI.onLoad(new CommandAPIBukkitConfig(this).verboseOutput(false));
@@ -127,15 +129,7 @@ public class WizardsPlugin extends JavaPlugin {
         }
         FileConfiguration lootConfig = YamlConfiguration.loadConfiguration(lootFile);
 
-        // 1. Create the manager instance.
-        this.lootManager = new LootManager(this);
-
-        // 2. Call the manager's load method to parse the config.
-        // We create a temporary, lightweight game object ONLY to get a WandManager instance,
-        // which is needed for loading custom items. This is a clean way to solve the dependency.
-        Wizards tempGameForConfig = new Wizards(this);
-        this.lootManager.load(lootConfig, tempGameForConfig.getWandManager());
-
+        this.lootManager.load(lootConfig, this.wandManager);
         getLogger().info("Loot tables loaded successfully.");
     }
     
@@ -198,5 +192,6 @@ public class WizardsPlugin extends JavaPlugin {
     public SpellManager getSpellManager() { return spellManager; }
     public PotionManager getPotionManager() { return potionManager; }
     public LootManager getLootManager() { return lootManager; }
+    public WandManager getWandManager() { return wandManager; }
     public static WizardsPlugin getInstance() { return INSTANCE; }
 }

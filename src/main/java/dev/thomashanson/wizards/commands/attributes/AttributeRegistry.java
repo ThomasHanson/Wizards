@@ -85,6 +85,10 @@ public class AttributeRegistry {
         }
     }
 
+    public Wizard.Attribute<?> getAttributeObject(Wizard wizard, String attributeName) {
+        return attributes.get(attributeName.toLowerCase());
+    }
+
     /**
      * Gets all registered attribute names.
      * @return An array of attribute names.
