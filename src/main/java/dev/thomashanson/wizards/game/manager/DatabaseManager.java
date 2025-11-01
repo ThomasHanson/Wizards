@@ -1,10 +1,5 @@
 package dev.thomashanson.wizards.game.manager;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import org.bukkit.Bukkit;
-import org.bukkit.plugin.java.JavaPlugin;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,11 +11,34 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
 
+import org.bukkit.Bukkit;
+import org.bukkit.plugin.java.JavaPlugin;
+
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
+
+/**
+ * Manages the connection pool and executes asynchronous database queries.
+ * <p>
+ * This class uses a {@link HikariDataSource} for high-performance connection pooling.
+ * It provides methods for executing updates (INSERT, UPDATE) and queries (SELECT)
+ * on a separate thread, returning results to the main server thread via a callback.
+ */
 public class DatabaseManager {
 
     private final JavaPlugin plugin;
     private final HikariDataSource dataSource;
 
+    /**
+     * Creates a new DatabaseManager and initializes the Hikari connection pool.
+     *
+     * @param plugin   The main plugin instance, used for scheduling.
+     * @param host     The database host address.
+     * @param port     The database port.
+     * @param database The name of the database.
+     * @param username The username for the database.
+     * @param password The password for the database.
+     */
     public DatabaseManager(JavaPlugin plugin, String host, int port, String database, String username, String password) {
         this.plugin = plugin;
 
@@ -40,7 +58,7 @@ public class DatabaseManager {
     }
 
     /**
-     * Closes the connection pool. Should be called in your plugin's onDisable().
+     * Closes the database connection pool.
      */
     public void disconnect() {
         if (dataSource != null && !dataSource.isClosed()) {
@@ -49,7 +67,8 @@ public class DatabaseManager {
     }
 
     /**
-     * Executes an update query (INSERT, UPDATE, DELETE) asynchronously.
+     * Executes an update query (INSERT, UPDATE, DELETE) asynchronously
+     * on a separate thread.
      *
      * @param sql    The SQL statement with '?' placeholders.
      * @param params The parameters to be safely inserted into the query.
@@ -72,10 +91,12 @@ public class DatabaseManager {
     }
 
     /**
-     * Executes a query that returns data (SELECT) asynchronously.
+     * Executes a query that returns data (SELECT) asynchronously on a separate
+     * thread, then runs the provided callback with the results on the main server thread.
      *
      * @param sql      The SQL statement with '?' placeholders.
-     * @param callback A consumer that will handle the result list on the main server thread.
+     * @param callback A {@link Consumer} that will handle the result list on the main server thread.
+     * The list will be empty if no results are found or an error occurs.
      * @param params   The parameters to be safely inserted into the query.
      */
     public void executeQueryAsync(String sql, Consumer<List<Map<String, Object>>> callback, Object... params) {

@@ -31,6 +31,7 @@ import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.manager.PlayerStatsManager.StatType;
 import dev.thomashanson.wizards.game.potion.PotionType;
 import dev.thomashanson.wizards.game.spell.Spell;
+import dev.thomashanson.wizards.game.spell.types.SpellSpite;
 import dev.thomashanson.wizards.util.EntityUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -58,11 +59,22 @@ public class WizardManager implements Listener {
 
     private final WizardsPlugin plugin;
     private final Wizards game;
+
+    /** Caches all active {@link Wizard} objects, keyed by player UUID. */
     private final Map<UUID, Wizard> wizards = new HashMap<>();
+    
+    /** Tracks the timestamp of the last global power surge. */
     private Instant lastSurge = Instant.now();
 
+    /** Tracks active custom potion effects and their start times. */
     private final Map<UUID, Map<PotionType, Instant>> activePotionTimes = new HashMap<>();
 
+    /**
+     * Creates a new WizardManager for a specific game instance.
+     *
+     * @param plugin The main plugin instance.
+     * @param game   The active {@link Wizards} game.
+     */
     public WizardManager(WizardsPlugin plugin, Wizards game) {
         this.plugin = plugin;
         this.game = game;
@@ -70,14 +82,18 @@ public class WizardManager implements Listener {
         Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
+    /**
+     * Resets the manager for a new game.
+     * This unregisters its listeners, cleans up all {@link Wizard} BossBars,
+     * and clears all cached data.
+     */
     public void reset() {
         // --- 1. Unregister this manager's listener ---
         HandlerList.unregisterAll(this);
 
         // --- 2. Clean up individual Wizard objects ---
-        // Each wizard holds Bukkit BossBar objects that need to be cleared.
         for (Wizard wizard : wizards.values()) {
-            wizard.cleanup(); // We will create this method next.
+            wizard.cleanup();
         }
 
         // --- 3. Clear all collections ---
@@ -88,11 +104,24 @@ public class WizardManager implements Listener {
         lastSurge = Instant.now();
     }
 
+    /**
+     * Handles a player quitting, triggering their elimination from the game.
+     *
+     * @param event The player quit event.
+     */
     @EventHandler
     public void onPlayerQuit(PlayerQuitEvent event) {
         handleDeathOrQuit(event.getPlayer(), false);
     }
 
+    /**
+     * The core logic for eliminating a player from the game,
+     * either via death or quitting. This handles item drops,
+     * stats tracking, and transitions them to spectator mode.
+     *
+     * @param player The player being eliminated.
+     * @param death  True if the player died, false if they quit.
+     */
     public void handleDeathOrQuit(Player player, boolean death) {
         activePotionTimes.remove(player.getUniqueId());
         Wizard wizard = wizards.get(player.getUniqueId());
@@ -169,6 +198,13 @@ public class WizardManager implements Listener {
     //     }
     // }
 
+    /**
+     * Creates and initializes a new {@link Wizard} object for a player,
+     * applying their selected kit, setting up their initial spells
+     * and wands, and creating their BossBars.
+     *
+     * @param player The player to set up.
+     */
     public void setupWizard(Player player) {
         if (wizards.containsKey(player.getUniqueId())) return;
 
@@ -210,14 +246,30 @@ public class WizardManager implements Listener {
         game.getWandManager().issueInitialWands(player);
     }
 
+    /**
+     * @param player The player.
+     * @return The {@link Wizard} object for the player, or null if they are not
+     * an active participant in the game.
+     */
     public Wizard getWizard(Player player) {
         return wizards.get(player.getUniqueId());
     }
 
+    /**
+     * @return An unmodifiable collection of all active {@link Wizard}s in the game.
+     */
     public Collection<Wizard> getActiveWizards() {
         return wizards.values();
     }
 
+    /**
+     * The main per-player update loop, called by {@link Wizards#tick(long)}.
+     * This method orchestrates all per-tick updates for a single wizard,
+     * such as mana, cooldowns, potions, and UI.
+     *
+     * @param player           The player to update.
+     * @param gameTickCounter  The current game tick (unused in this implementation).
+     */
     public void updatePlayerTick(Player player, float gameTickCounter) {
         Wizard wizard = getWizard(player);
         if (wizard == null || !game.isLive() || player.getGameMode() != GameMode.SURVIVAL) {
@@ -230,6 +282,11 @@ public class WizardManager implements Listener {
         updateActionBar(wizard);
     }
 
+    /**
+     * Updates a wizard's mana regeneration and BossBar display.
+     *
+     * @param wizard The wizard to update.
+     */
     private void updateMana(Wizard wizard) {
         if (wizard.getMana() < wizard.getMaxMana()) {
             wizard.addMana(wizard.getManaPerTick());
@@ -243,12 +300,25 @@ public class WizardManager implements Listener {
         }
     }
 
+    /**
+     * Updates a wizard's internal cooldown states, such as checking
+     * if a {@link SpellSpite} spell / debuff has expired.
+     *
+     * @param wizard The wizard to update.
+     */
     public void updateWizardInternalCooldownStates(Wizard wizard) {
         if (!game.isLive()) return;
         // This is handled inside wizard.getDisabledSpellBySpite() now
         wizard.getDisabledSpellBySpite();
     }
 
+    /**
+     * Updates all visual cooldown indicators for a player, including
+     * the Bukkit cooldown graphic on the held item and the item count
+     * (as a timer) on non-held wand slots.
+     *
+     * @param wizard The wizard to update.
+     */
     public void updatePlayerCooldownVisuals(Wizard wizard) {
         Player player = wizard.getPlayer();
         if (player == null || !player.isOnline() || !game.isLive()) return;
@@ -286,6 +356,12 @@ public class WizardManager implements Listener {
         }
     }
 
+    /**
+     * Updates a wizard's active potion effect, checking its duration
+     * and deactivating it if it has expired.
+     *
+     * @param wizard The wizard to update.
+     */
     private void updatePotions(Wizard wizard) {
         Player player = wizard.getPlayer();
         if (player == null || !game.isLive()) return;
@@ -318,6 +394,14 @@ public class WizardManager implements Listener {
         }
     }
 
+    /**
+     * Registers that a player has consumed a custom potion, setting it
+     * as their active potion and tracking its start time.
+     *
+     * @param player       The player.
+     * @param potionType   The potion they consumed.
+     * @param consumedAt   The {@link Instant} of consumption.
+     */
     public void playerConsumedPotion(Player player, PotionType potionType, Instant consumedAt) {
         activePotionTimes.computeIfAbsent(player.getUniqueId(), k -> new HashMap<>()).put(potionType, consumedAt);
         Wizard wizard = getWizard(player);
@@ -329,6 +413,13 @@ public class WizardManager implements Listener {
         }
     }
     
+    /**
+     * Clears an active potion effect from a player, removing it from
+     * the tracking map and their {@link Wizard} object.
+     *
+     * @param player     The player.
+     * @param potionType The potion effect to remove.
+     */
     public void playerPotionEffectCancelled(Player player, PotionType potionType) {
         Map<PotionType, Instant> playerTimes = activePotionTimes.get(player.getUniqueId());
         if (playerTimes != null) {
@@ -346,6 +437,12 @@ public class WizardManager implements Listener {
         }
     }
 
+    /**
+     * Updates the player's action bar to display information about their
+     * currently held spell, including its name and cooldown status.
+     *
+     * @param wizard The wizard to update.
+     */
     public void updateActionBar(Wizard wizard) {
         Player player = wizard.getPlayer();
         if (player == null || !player.isOnline()) return;
@@ -375,6 +472,14 @@ public class WizardManager implements Listener {
         }
     }
 
+    /**
+     * Gets the remaining {@link Duration} of a specific potion
+     * effect on a player.
+     *
+     * @param player The player.
+     * @param type   The potion type to check.
+     * @return The remaining duration, or {@link Duration#ZERO} if not active or expired.
+     */
     public Duration getPotionDuration(Player player, PotionType type) {
         Map<PotionType, Instant> playerTimes = activePotionTimes.get(player.getUniqueId());
         if (playerTimes == null || !playerTimes.containsKey(type)) {
@@ -387,6 +492,10 @@ public class WizardManager implements Listener {
         return Duration.between(Instant.now(), consumedAtWithDuration);
     }
 
+    /**
+     * Triggers a global "Power Surge" event, applying modifiers to all
+     * active wizards and broadcasting announcements.
+     */
     public void handleGlobalPowerSurge() {
         if (game.isOvertime()) return;
         this.lastSurge = Instant.now();
@@ -395,7 +504,6 @@ public class WizardManager implements Listener {
         Component effectMessage = Component.text("Mana cost and spell cooldown has been lowered!", NamedTextColor.YELLOW);
 
         for (Player p : Bukkit.getOnlinePlayers()) {
-            // CORRECTED: Send each message with a separate call.
             p.sendMessage(Component.empty());
             p.sendMessage(surgeMessage);
             p.sendMessage(effectMessage);
@@ -409,6 +517,9 @@ public class WizardManager implements Listener {
         }
     }
 
+    /**
+     * @return The {@link Instant} the last power surge occurred.
+     */
     public Instant getLastSurgeTime() {
         return lastSurge;
     }

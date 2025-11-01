@@ -17,9 +17,16 @@ import dev.thomashanson.wizards.game.mode.GameTeam;
 import dev.thomashanson.wizards.game.mode.WizardsMode;
 
 /**
- * Manages player statistics for the Wizards minigame.
- * This class can be instantiated and used to add, retrieve, and manage player stats.
- * It can also optionally implement Listener to handle common Bukkit events for stat tracking.
+ * Manages all player statistics, both for the current game session and for
+ * persistent storage in the database.
+ * <p>
+ * This class is responsible for:
+ * <ul>
+ * <li>Tracking in-memory "session" stats (kills, damage, etc.) during a game.</li>
+ * <li>Calculating and awarding coins based on performance and placement.</li>
+ * <li>Pushing final session stats to the database at the end of a game.</li>
+ * <li>Resetting session stats to prepare for a new game.</li>
+ * </ul>
  */
 public class PlayerStatsManager {
 
@@ -37,15 +44,27 @@ public class PlayerStatsManager {
     private static final double MIN_DAMAGE_DEALT = 15.0;
     private static final int MIN_ASSISTS = 2;
 
+    /**
+     * Creates a new PlayerStatsManager.
+     *
+     * @param plugin The main plugin instance.
+     */
     public PlayerStatsManager(WizardsPlugin plugin) {
         this.plugin = plugin;
     }
 
-    // Main storage for player stats: UUID -> (StatName -> StatValue)
-    // Using ConcurrentHashMap for thread safety if stats might be accessed/modified asynchronously.
+    /**
+     * In-memory cache for all stats accumulated *during the current game session*.
+     * This map is cleared after {@link #saveAllPlayerStats(WizardsMode)} is called.
+     * <p>
+     * Format: {@literal Map<PlayerUUID, Map<StatKey, Value>>}
+     */
     private final Map<UUID, Map<String, Double>> playerStats = new ConcurrentHashMap<>();
 
-    // Enum for stat keys for better type safety, readability, and maintainability
+    /**
+     * Defines all valid, trackable statistics.
+     * Using an enum for stat keys provides type-safety and centralizes stat names.
+     */
     public enum StatType {
         // --- Core Combat Stats ---
         KILLS("kills"),
@@ -86,7 +105,6 @@ public class PlayerStatsManager {
             return key;
         }
 
-        // Optional: a method to get StatType from its key string
         private static final Map<String, StatType> BY_KEY = new HashMap<>();
         static {
             for (StatType st : values()) {
@@ -223,6 +241,16 @@ public class PlayerStatsManager {
         return new HashMap<>(stats);
     }
 
+    /**
+     * Creates a {@link CoinSummary.Builder} and populates it with performance-based
+     * coin calculations (kills, assists) for a player.
+     * <p>
+     * This method respects the minimum participation requirements
+     * (e.g., {@link #MIN_DAMAGE_DEALT}) before awarding performance coins.
+     *
+     * @param playerUuid The player to calculate coins for.
+     * @return A {@link CoinSummary.Builder} pre-filled with performance coins.
+     */
     private CoinSummary.Builder calculateCoinSummaryBuilder(UUID playerUuid) {
         double damageDealt = getStat(playerUuid, StatType.DAMAGE_DEALT);
         int assists = (int) getStat(playerUuid, StatType.ASSISTS);
@@ -245,8 +273,13 @@ public class PlayerStatsManager {
     }
 
     /**
-     * Saves all accumulated in-memory stats for ALL players to the database.
+     * Saves all accumulated in-memory session stats for ALL players to the database.
+     * This performs an "UPSERT" (INSERT ... ON DUPLICATE KEY UPDATE) to add the
+     * session stats to the player's persistent totals.
+     * <p>
      * After saving, it clears all session stats to prepare for the next game.
+     *
+     * @param mode The {@link WizardsMode} that was just played.
      */
     public void saveAllPlayerStats(WizardsMode mode) {
         String gameModeName = mode.name();
@@ -280,9 +313,10 @@ public class PlayerStatsManager {
 
     /**
      * Processes all end-game rewards, including performance and placement bonuses.
-     * This now iterates through the final rankings to assign coins and win stats.
+     * This method iterates through the final team rankings to assign win stats,
+     * win streaks, and coin summaries for every player.
      *
-     * @param game The game instance that just ended.
+     * @param game          The game instance that just ended.
      * @param finalRankings The ordered list of teams, from 1st place down.
      */
     public void processEndGameRewards(Wizards game, List<GameTeam> finalRankings) {
@@ -361,12 +395,9 @@ public class PlayerStatsManager {
     }
 
     /**
-     * Exports all stats for all players.
-     * Useful for saving data to a database or for leaderboard calculations.
+     * Exports a deep copy of all current session stats for all players.
      *
-     * @return A new Map where the key is the player's UUID and the value is another
-     * Map of their stats (StatName -> StatValue).
-     * This is a deep copy; modifying it will not affect stored stats.
+     * @return A new Map of all player session stats.
      */
     public Map<UUID, Map<String, Double>> exportAllPlayerStats() {
         Map<UUID, Map<String, Double>> defensiveCopy = new HashMap<>();
@@ -375,7 +406,7 @@ public class PlayerStatsManager {
     }
 
     /**
-     * Clears all recorded stats for a specific player.
+     * Clears all recorded session stats for a specific player from memory.
      *
      * @param player The player whose stats should be cleared.
      */
@@ -387,7 +418,8 @@ public class PlayerStatsManager {
     }
 
     /**
-     * Clears all recorded stats for a specific player by UUID.
+     * Clears all recorded session stats for a specific player by UUID from memory.
+     *
      * @param playerUuid The UUID of the player.
      */
     public void clearPlayerStats(UUID playerUuid) {
@@ -398,8 +430,8 @@ public class PlayerStatsManager {
     }
 
     /**
-     * Clears all stats for all players. Typically used at the end of a game
-     * if stats are not persisted across games, or for a server-wide reset.
+     * Clears all session stats for all players from memory.
+     * Typically called at the end of a game after stats have been saved.
      */
     public void clearAllGameStats() {
         playerStats.clear();

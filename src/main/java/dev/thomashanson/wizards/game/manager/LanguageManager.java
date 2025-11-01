@@ -14,12 +14,28 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 import net.kyori.adventure.util.UTF8ResourceBundleControl;
 
+/**
+ * Manages all localization and translation for the plugin.
+ * <p>
+ * This class loads {@link ResourceBundle}s (e.g., {@code Bundle_en_US.properties})
+ * and provides methods to retrieve translated, MiniMessage-formatted {@link Component}s
+ * based on a player's client {@link Locale}.
+ */
 public class LanguageManager {
 
-    private WizardsPlugin plugin;
+    private final WizardsPlugin plugin;
+
+    /** Caches the loaded resource bundles, keyed by their Locale. */
     private final Map<Locale, ResourceBundle> bundles = new HashMap<>();
+
+    /** The fallback locale to use if a player's locale is not available. */
     private final Locale defaultLocale = Locale.US;
 
+    /**
+     * Creates a new LanguageManager and loads the default bundles.
+     *
+     * @param plugin The main plugin instance.
+     */
     public LanguageManager(WizardsPlugin plugin) {
         this.plugin = plugin;
         // Load your languages here. For now, just English.
@@ -28,6 +44,12 @@ public class LanguageManager {
         // loadBundle(new Locale("es", "ES")); // Example for Spanish
     }
 
+    /**
+     * Loads a specific {@link ResourceBundle} from the plugin's resources
+     * and caches it.
+     *
+     * @param locale The {@link Locale} to load (e.g., {@code Locale.US}).
+     */
     private void loadBundle(Locale locale) {
         try {
             ResourceBundle bundle = ResourceBundle.getBundle("Bundle", locale, UTF8ResourceBundleControl.get());
@@ -41,13 +63,12 @@ public class LanguageManager {
     /**
      * Gets a translated string for a player, with MiniMessage formatting and placeholders.
      *
-     * @param player The player whose locale to use.
-     * @param key    The translation key from your .properties file.
+     * @param player    The player whose locale to use. If null, the default locale is used.
+     * @param key       The translation key from your .properties file.
      * @param resolvers Placeholders for MiniMessage (e.g., Placeholder.unparsed("player", player.getName())).
      * @return A formatted, translated Component.
      */
     public Component getTranslated(Player player, String key, TagResolver... resolvers) {
-        // MODIFIED: If player is null, use the default locale. Otherwise, use the player's locale.
         Locale locale = (player != null) ? player.locale() : defaultLocale;
         
         ResourceBundle bundle = bundles.getOrDefault(locale, bundles.get(defaultLocale));
@@ -64,13 +85,12 @@ public class LanguageManager {
      * Gets a translated string for a player using legacy MessageFormat style placeholders.
      * This is useful for simpler cases without complex color/styling in the arguments.
      *
-     * @param player The player whose locale to use.
-     * @param key The translation key.
-     * @param args The arguments to insert into the string (e.g., for {0}, {1}).
+     * @param player The player whose locale to use. If null, the default locale is used.
+     * @param key    The translation key.
+     * @param args   The arguments to insert into the string (e.g., for {0}, {1}).
      * @return A formatted, translated Component.
      */
     public Component getTranslatedLegacy(Player player, String key, Object... args) {
-        // MODIFIED: If player is null, use the default locale. Otherwise, use the player's locale.
         Locale locale = (player != null) ? player.locale() : defaultLocale;
 
         ResourceBundle bundle = bundles.getOrDefault(locale, bundles.get(defaultLocale));

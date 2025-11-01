@@ -103,6 +103,9 @@ public class WizardsPlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
+
+        this.databaseManager.disconnect();
+
         if (mapManager != null) {
             mapManager.handleListeners();
             LocalGameMap activeMap = mapManager.getActiveMap();
@@ -114,7 +117,9 @@ public class WizardsPlugin extends JavaPlugin {
                 activeMap.unload();
             }
         }
+
         if (gameManager != null) gameManager.handleListeners();
+
         if (projectileManager != null) projectileManager.stopUpdates();
 
         if (hologramManager != null) {

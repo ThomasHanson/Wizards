@@ -23,16 +23,32 @@ import dev.thomashanson.wizards.util.LocationUtil;
 /**
  * Manages all team-related logic for a single game instance, including
  * team creation, player assignment, eliminations, and win conditions.
+ *
+ * @see Wizards
  */
 public class TeamManager {
 
     private final Wizards game;
     private final WizardManager wizardManager;
 
+    /** Tracks all teams that are still alive and in the game. */
     private final List<GameTeam> activeTeams = new ArrayList<>();
+    
+    /** A map for O(1) lookups of a player's {@link GameTeam}. */
     private final Map<UUID, GameTeam> playerTeamMap = new HashMap<>();
+
+    /**
+     * Stores teams in the order they are eliminated (LIFO).
+     * The last team in is 2nd place, the first team in is last place.
+     * The winner is the last team remaining in {@link #activeTeams}.
+     */
     private final LinkedList<GameTeam> placementRankings = new LinkedList<>();
 
+    /**
+     * Creates a new TeamManager for a specific game instance.
+     *
+     * @param game The active {@link Wizards} game.
+     */
     public TeamManager(Wizards game) {
         this.game = game;
         this.wizardManager = game.getWizardManager();
@@ -40,6 +56,7 @@ public class TeamManager {
 
     /**
      * Creates the initial team structures based on the game mode.
+     * For solo, this will be run as players are assigned.
      */
     public void setupTeams() {
         WizardsMode mode = game.getCurrentMode();
@@ -51,7 +68,9 @@ public class TeamManager {
     }
 
     /**
-     * Assigns a list of players to teams.
+     * Assigns a list of shuffled players to teams.
+     * In solo mode, creates a new 1-player {@link GameTeam} for each player.
+     *
      * @param players The list of players to assign.
      */
     public void assignTeams(List<Player> players) {
@@ -77,9 +96,11 @@ public class TeamManager {
     }
 
     /**
-     * Central logic to run when a player dies. Checks if their team is eliminated
-     * and then checks if the game has been won.
-     * @param player The player who died.
+     * Central logic to run when a player dies or quits.
+     * This method checks if the player's team is now fully eliminated
+     * and then checks if a game-ending condition has been met.
+     *
+     * @param player The player who died or quit.
      */
     public void handlePlayerDeath(Player player) {
         GameTeam team = getTeam(player);
@@ -94,8 +115,9 @@ public class TeamManager {
     }
 
     /**
-     * Finds an appropriate spawn location for a player based on game mode and other players.
-     * This logic was moved from the old GameTeam.getSpawn() method.
+     * Finds an appropriate spawn location for a player based on game mode,
+     * ally locations, and enemy locations.
+     *
      * @param player The player to find a spawn for.
      * @return A suitable spawn location.
      */
@@ -137,7 +159,7 @@ public class TeamManager {
     }
 
     /**
-     * Resets all team data for a new game.
+     * Resets all team data, clearing all lists and maps for a new game.
      */
     public void reset() {
         activeTeams.clear();
@@ -146,7 +168,9 @@ public class TeamManager {
     }
 
     /**
-     * Handles the elimination of a team, removing it from active play and recording its rank.
+     * Handles the elimination of a team, removing it from active play
+     * and adding it to the front of the {@link #placementRankings} list.
+     *
      * @param team The team that has been eliminated.
      */
     private void eliminateTeam(GameTeam team) {
@@ -157,8 +181,8 @@ public class TeamManager {
     }
 
     /**
-     * Checks if the game has a winner. If so, it finalizes the rankings
-     * and transitions the game to the WinnerState.
+     * Checks if only one or zero teams remain. If so, it finalizes the
+     * rankings and transitions the game to the {@link WinnerState}.
      */
     private void checkEndGameCondition() {
         if (activeTeams.size() <= 1) {
@@ -169,14 +193,24 @@ public class TeamManager {
         }
     }
 
+    /**
+     * @param player The player.
+     * @return The {@link GameTeam} the player is on, or null if they are not on a team.
+     */
     public GameTeam getTeam(Player player) {
         return playerTeamMap.get(player.getUniqueId());
     }
 
+    /**
+     * @return An unmodifiable list of all teams still alive in the game.
+     */
     public List<GameTeam> getActiveTeams() {
         return Collections.unmodifiableList(activeTeams);
     }
     
+    /**
+     * @return An unmodifiable list of the final team placements, from 1st to last.
+     */
     public List<GameTeam> getFinalRankings() {
         return Collections.unmodifiableList(placementRankings);
     }
