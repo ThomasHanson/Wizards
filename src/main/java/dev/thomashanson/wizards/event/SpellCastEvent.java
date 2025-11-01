@@ -5,6 +5,7 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 
+import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.spell.Spell;
 
 /**
@@ -12,6 +13,8 @@ import dev.thomashanson.wizards.game.spell.Spell;
  * <p>
  * This event allows for the modification of the spell being cast or its mana cost.
  * Cancelling this event will prevent the spell from activating and the mana from being spent.
+ *
+ * @see Wizards#castSpell(Player, dev.thomashanson.wizards.game.Wizard, Spell, Object, boolean)
  */
 public class SpellCastEvent extends PlayerEvent implements Cancellable {
 
@@ -21,6 +24,12 @@ public class SpellCastEvent extends PlayerEvent implements Cancellable {
     private float manaMultiplier = 1.0F;
     private boolean cancelled;
 
+    /**
+     * Creates a new SpellCastEvent.
+     *
+     * @param who   The player casting the spell.
+     * @param spell The {@link Spell} that is about to be cast.
+     */
     public SpellCastEvent(Player who, Spell spell) {
         super(who);
         this.spell = spell;

@@ -1,5 +1,17 @@
 package dev.thomashanson.wizards.util;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.WeakHashMap;
+
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
+import org.bukkit.inventory.EquipmentSlot;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.plugin.Plugin;
+
 import com.comphenix.protocol.PacketType;
 import com.comphenix.protocol.ProtocolLibrary;
 import com.comphenix.protocol.ProtocolManager;
@@ -9,17 +21,20 @@ import com.comphenix.protocol.events.PacketEvent;
 import com.comphenix.protocol.events.PacketListener;
 import com.comphenix.protocol.wrappers.EnumWrappers;
 import com.comphenix.protocol.wrappers.Pair;
-import dev.thomashanson.wizards.event.EquipmentSendingEvent;
-import org.bukkit.entity.LivingEntity;
-import org.bukkit.entity.Player;
-import org.bukkit.inventory.EquipmentSlot;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 
-import java.util.*;
+import dev.thomashanson.wizards.event.EquipmentSendingEvent;
 
 /**
- * Modify player equipment.
+ * An abstract utility class for intercepting and modifying entity equipment packets
+ * sent to players. This allows for client-side customization of what a player sees
+ * other entities wearing, without changing the server-side reality.
+ * <p>
+ * This class relies on ProtocolLib to listen to {@link PacketType.Play.Server#ENTITY_EQUIPMENT}
+ * and {@link PacketType.Play.Server#NAMED_ENTITY_SPAWN} packets.
+ * <p>
+ * Implementations must override {@link #onEquipmentSending(EquipmentSendingEvent)}
+ * to define the custom logic for modifying equipment.
+ *
  * @author Kristian
  */
 public abstract class FakeEquipment {
@@ -152,14 +167,22 @@ public abstract class FakeEquipment {
     }
 
     /**
-     * Invoked when the equipment or held item of an living entity is sent to a client.
+     * Invoked when the equipment or held item of a living entity is sent to a client.
      * <p>
-     * This can be fully modified. Please return TRUE if you do, though.
-     * @param equipmentEvent - the equipment event.
-     * @return TRUE if the equipment was modified, FALSE otherwise.
+     * This method can be used to modify the {@link EquipmentSendingEvent} to change
+     * the {@link ItemStack} or {@link EnumWrappers.ItemSlot} being sent.
+     *
+     * @param equipmentEvent The event containing packet and entity data.
+     * @return {@code true} if the equipment was modified, {@code false} otherwise.
      */
     protected abstract boolean onEquipmentSending(EquipmentSendingEvent equipmentEvent);
 
+    /**
+     * Converts a ProtocolLib {@link EnumWrappers.ItemSlot} to a Bukkit {@link EquipmentSlot}.
+     *
+     * @param slot The ProtocolLib slot.
+     * @return The corresponding Bukkit slot.
+     */
     public EquipmentSlot getSlot(EnumWrappers.ItemSlot slot) {
 
         switch (slot) {
@@ -174,10 +197,11 @@ public abstract class FakeEquipment {
     }
 
     /**
-     * Update the given slot.
-     * @param client - the observing client.
-     * @param visibleEntity - the visible entity that will be updated.
-     * @param slot - the equipment slot to update.
+     * Forcibly sends an update packet for a specific slot to a client.
+     *
+     * @param client        The observing client.
+     * @param visibleEntity The entity that will be updated.
+     * @param slot          The equipment slot to update.
      */
     public void updateSlot(final Player client, LivingEntity visibleEntity, EquipmentSlot slot) {
 
@@ -200,7 +224,8 @@ public abstract class FakeEquipment {
     }
 
     /**
-     * Close the current equipment modifier.
+     * Disposes of this listener, unregistering it from ProtocolLib.
+     * This must be called when the plugin is disabled to prevent memory leaks.
      */
     public void close() {
 

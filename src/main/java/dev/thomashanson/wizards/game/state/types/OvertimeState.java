@@ -40,6 +40,15 @@ import dev.thomashanson.wizards.util.BlockUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+/**
+ * The {@link GameState} for the "Overtime" period of the game.
+ * <p>
+ * This state activates a {@link Disaster} and initiates a high-performance,
+ * asynchronous map shrinking process to force the game to a conclusion.
+ * It uses a producer-consumer pattern (async collector, sync processor)
+ * to remove blocks from the world border inwards, replacing them with
+ * fake falling block packets for visual effect without causing server lag.
+ */
 public class OvertimeState extends GameState implements Listener {
 
     // A unique entity ID counter for the fake packets to prevent collision with real entities.
@@ -60,6 +69,11 @@ public class OvertimeState extends GameState implements Listener {
     private Disaster disaster;
 
     // --- High-Performance Map Shrinking Fields ---
+
+    /**
+     * A thread-safe queue of blocks marked for removal by the async collector task.
+     * The sync processor task consumes blocks from this queue.
+     */
     private final Queue<Location> blockProcessingQueue = new ConcurrentLinkedQueue<>();
     private BukkitTask asyncCollectorTask;
     private BukkitTask syncProcessorTask;
@@ -68,6 +82,10 @@ public class OvertimeState extends GameState implements Listener {
     private double mapMinY, mapMaxY;
     private double totalShrinkableWidth, totalShrinkableDepth;
 
+    /**
+     * Initializes the overtime state, starts the disaster, and begins the
+     * asynchronous map shrinking tasks.
+     */
     @Override
     public void onEnable(WizardsPlugin plugin) {
         super.onEnable(plugin);
@@ -88,6 +106,12 @@ public class OvertimeState extends GameState implements Listener {
         Bukkit.getLogger().info("[OvertimeState] Enabled. High-performance map shrinking initiated.");
     }
 
+    /**
+     * Caches the initial map dimensions from the {@link LocalGameMap} BoundingBox
+     * to be used as the starting point for all shrinking calculations.
+     *
+     * @param map The active game map.
+     */
     private void initializeDimensions(LocalGameMap map) {
         this.initialMinX = map.getBounds().getMinX();
         this.initialMaxX = map.getBounds().getMaxX();
@@ -108,6 +132,12 @@ public class OvertimeState extends GameState implements Listener {
         this.totalShrinkableDepth = Math.max(0, (this.initialMaxZ - this.initialMinZ) - MINIMUM_MAP_DIMENSION);
     }
 
+    /**
+     * Starts the core overtime logic task, which handles disaster updates,
+     * game-end timers, and periodic announcements.
+     *
+     * @param plugin The main plugin instance.
+     */
     private void startCoreTasks(WizardsPlugin plugin) {
         AtomicInteger messageIndex = new AtomicInteger(0);
         this.lastMessageTime = Instant.now();
@@ -139,9 +169,13 @@ public class OvertimeState extends GameState implements Listener {
         }.runTaskTimer(plugin, 0L, 1L);
     }
 
+    /**
+     * Starts the asynchronous "Producer" (Collector) and synchronous "Consumer" (Processor)
+     * tasks that manage the high-performance map shrinking.
+     *
+     * @param plugin The main plugin instance.
+     */
     private void startShrinkerTasks(WizardsPlugin plugin) {
-        // ---- ASYNC COLLECTOR TASK (Producer) ----
-        // Periodically calculates which block layers should be removed and adds their locations to the queue.
         this.asyncCollectorTask = new BukkitRunnable() {
             // Store the last integer coordinate boundaries that we have processed.
             private int lastMinX = (int) Math.floor(initialMinX);
@@ -206,8 +240,6 @@ public class OvertimeState extends GameState implements Listener {
             }
         }.runTaskTimerAsynchronously(plugin, 0L, ASYNC_COLLECTOR_INTERVAL_TICKS);
 
-        // ---- SYNC PROCESSOR TASK (Consumer) ----
-        // Runs every tick to process a small batch of blocks from the queue.
         this.syncProcessorTask = new BukkitRunnable() {
             int ticksElapsed = 0;
 
@@ -247,6 +279,14 @@ public class OvertimeState extends GameState implements Listener {
         }.runTaskTimer(plugin, 5L, 1L);
     }
 
+    /**
+     * Spawns a client-side (fake) falling block entity packet at a given location.
+     * This creates the visual effect of the block falling into the void without
+     * creating a real, physics-enabled entity.
+     *
+     * @param loc       The location to spawn the fake block.
+     * @param blockData The {@link BlockData} to use for the block's appearance.
+     */
     private void sendFakeFallingBlockPacket(Location loc, BlockData blockData) {
 
         if (syncProcessorTask == null || syncProcessorTask.isCancelled()) {

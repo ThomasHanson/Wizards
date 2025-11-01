@@ -33,6 +33,11 @@ import dev.thomashanson.wizards.map.LocalGameMap;
 import dev.thomashanson.wizards.projectile.ProjectileManager;
 import dev.thomashanson.wizards.tutorial.TutorialManager;
 
+/**
+ * The main entry point for the Wizards Bukkit plugin.
+ * This class handles the enabling and disabling of the plugin,
+ * initialization of all core managers, and loading of configuration files.
+ */
 public class WizardsPlugin extends JavaPlugin {
 
     private DatabaseManager databaseManager;
@@ -118,8 +123,8 @@ public class WizardsPlugin extends JavaPlugin {
     }
 
     /**
-     * Handles the one-time loading of loot tables from loot.yml during server setup.
-     * This method instantiates the LootManager and populates its data.
+     * Loads loot tables from the {@code loot.yml} file.
+     * If the file does not exist, it is created from the plugin's resources.
      */
     private void loadLootTables() {
         getLogger().info("Loading loot tables...");
@@ -133,7 +138,10 @@ public class WizardsPlugin extends JavaPlugin {
         getLogger().info("Loot tables loaded successfully.");
     }
     
-    // ... (rest of the class is the same) ...
+    /**
+     * Loads the lobby world and sets the lobby spawn point from {@code config.yml}.
+     * If the lobby world is not loaded, it attempts to load it.
+     */
     private void loadLobbyLocation() {
         String worldName = getConfig().getString("lobby.world");
         if (worldName == null || worldName.isEmpty()) {
@@ -164,6 +172,11 @@ public class WizardsPlugin extends JavaPlugin {
         getLogger().info("Lobby spawn location set successfully!");
     }
 
+    /**
+     * Applies specific, non-griefing gamerules to the lobby world.
+     *
+     * @param world The lobby world to configure.
+     */
     private void configureLobbyWorld(World world) {
         world.setGameRule(GameRule.DO_DAYLIGHT_CYCLE, false);
         world.setGameRule(GameRule.DO_WEATHER_CYCLE, false);
@@ -180,7 +193,11 @@ public class WizardsPlugin extends JavaPlugin {
         getLogger().info("Applied custom gamerules to lobby world '" + world.getName() + "'.");
     }
 
+    /**
+     * @return The pre-configured spawn location for the lobby.
+     */
     public Location getLobbySpawnLocation() { return this.lobbySpawnLocation; }
+    
     public LanguageManager getLanguageManager() { return languageManager; }
     public DatabaseManager getDatabaseManager() { return databaseManager; }
     public MapManager getMapManager() { return mapManager; }
@@ -194,6 +211,10 @@ public class WizardsPlugin extends JavaPlugin {
     public LootManager getLootManager() { return lootManager; }
     public WandManager getWandManager() { return wandManager; }
     
+    /**
+     * @return The static singleton instance of the main plugin class.
+     * @throws IllegalStateException if the plugin has not been enabled yet.
+     */
     public static WizardsPlugin getInstance() { 
         if (INSTANCE == null) {
             throw new IllegalStateException("WizardsPlugin has not been enabled yet!");

@@ -2,6 +2,10 @@ package dev.thomashanson.wizards.game.spell;
 
 import java.util.Comparator;
 
+/**
+ * Provides various {@link Comparator} implementations for sorting {@link Spell} objects
+ * based on different criteria like rarity, name, or stats.
+ */
 public enum SpellComparator implements Comparator<Spell> {
     
     /**

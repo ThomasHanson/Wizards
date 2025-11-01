@@ -14,12 +14,29 @@ import org.bukkit.util.BoundingBox;
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.map.LocalGameMap;
 
+/**
+ * Handles the legacy Bukkit `/setlocation` command for map administration.
+ * This command allows setting spawn points, spectator points, and map corners
+ * for the currently active map.
+ * <p>
+ * Note: This uses the Bukkit {@link CommandExecutor} interface and is registered
+ * separately from the CommandAPI-based `/wizards` command.
+ */
 public class SetLocationCommand implements CommandExecutor {
 
     private final WizardsPlugin plugin;
-    // This is not a robust system for multiple users editing at once,
-    // but works for a single admin setting up a map.
+
+    /**
+     * Stores the first corner selection for a player defining map boundaries.
+     * This is not robust for multiple simultaneous editors but works for a single admin.
+     */
     private static final Map<UUID, Location> corner1 = new HashMap<>();
+
+    /**
+     * Stores the second corner selection for a player defining map boundaries.
+     * @deprecated This field is unused, as the second corner is used immediately
+     * with the first corner and then discarded. Only `corner1` is needed for state.
+     */
     private static final Map<UUID, Location> corner2 = new HashMap<>();
 
     public SetLocationCommand(WizardsPlugin plugin) {

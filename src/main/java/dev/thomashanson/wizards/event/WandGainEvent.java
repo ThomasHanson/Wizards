@@ -6,12 +6,23 @@ import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 
+/**
+ * Fired when a player picks up a new wand item (from a chest or the ground),
+ * unlocking a new wand slot.
+ * <p>
+ * This event can be cancelled to prevent the player from gaining the new wand.
+ */
 public class WandGainEvent extends PlayerEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
 
     private boolean cancelled;
 
+    /**
+     * Creates a new WandGainEvent.
+     *
+     * @param who The player gaining the wand.
+     */
     public WandGainEvent(Player who) {
         super(who);
         Bukkit.getLogger().info(player.getName() + " picked up a new wand");

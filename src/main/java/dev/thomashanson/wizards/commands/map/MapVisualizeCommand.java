@@ -17,12 +17,34 @@ import dev.thomashanson.wizards.map.LocalGameMap;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+/**
+ * Handles the logic for the `/wizards map visualize` sub-command.
+ * This command toggles a client-side {@link WorldBorder} for the player
+ * that matches the boundaries of the currently active map, allowing for
+ * easy visualization of the playable area.
+ */
 public class MapVisualizeCommand {
 
+    /**
+     * Tracks which players are currently visualizing the border.
+     * The boolean value is unused (maps to `true`), but a Map is
+     * used for efficient Set-like behavior with player UUIDs.
+     */
     private final Map<UUID, Boolean> visualizing = new HashMap<>();
 
+    /**
+     * Creates a new instance of the map visualize command.
+     *
+     * @param command The parent {@link WizardsCommand} helper (currently unused).
+     */
     public MapVisualizeCommand(WizardsCommand command) {}
 
+    /**
+     * Builds the CommandAPI argument tree for the "map visualize" sub-command.
+     *
+     * @param plugin The main plugin instance.
+     * @return The configured {@link Argument} for this command branch.
+     */
     public Argument<String> getCommand(WizardsPlugin plugin) {
         return new LiteralArgument("visualize")
             .executesPlayer((player, args) -> {

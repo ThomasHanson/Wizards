@@ -17,17 +17,32 @@ import dev.thomashanson.wizards.game.state.types.OvertimeState;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+/**
+ * Handles the `/wizards overtime` admin command, allowing manual starting
+ * of overtime or pre-selection of the next disaster.
+ */
 public class OvertimeCommand {
 
     private final WizardsPlugin plugin = WizardsPlugin.getInstance();
     private final GameManager gameManager;
     private final LanguageManager lang;
 
+    /**
+     * Creates a new instance of the overtime command handler.
+     *
+     * @param command The parent {@link WizardsCommand} helper.
+     */
     public OvertimeCommand(WizardsCommand command) {
         this.gameManager = plugin.getGameManager();
         this.lang = plugin.getLanguageManager();
     }
 
+    /**
+     * Builds the CommandAPI argument tree for the `/wizards overtime [start|set disaster <name>]` command.
+     *
+     * @param plugin The main plugin instance.
+     * @return The configured {@link Argument} for this command branch.
+     */
     public Argument<String> getCommand(WizardsPlugin plugin) {
         return new LiteralArgument("overtime")
             .withPermission("wizards.admin.overtime")

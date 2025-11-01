@@ -4,6 +4,10 @@ import org.bukkit.Material;
 
 import net.kyori.adventure.text.format.NamedTextColor;
 
+/**
+ * Defines the primary categories for spells, used to organize the Spell Book GUI.
+ * Each element has a corresponding icon, color, and GUI slot layout.
+ */
 public enum SpellElement {
 
     ATTACK(

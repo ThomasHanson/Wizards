@@ -17,14 +17,28 @@ import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.spell.Spell;
 import dev.thomashanson.wizards.game.spell.SpellManager;
 
+/**
+ * Handles the logic for the `/wizards give <player> spell <spell_key|all> <level|max>` sub-command.
+ */
 public class GiveSpellCommand {
 
     private final WizardsCommand command;
 
+    /**
+     * Creates a new instance of the give-spell command.
+     *
+     * @param command The parent {@link WizardsCommand} helper.
+     */
     public GiveSpellCommand(WizardsCommand command) {
         this.command = command;
     }
 
+    /**
+     * Builds the CommandAPI argument tree for the "give spell" sub-command.
+     *
+     * @param plugin The main plugin instance.
+     * @return The configured {@link Argument} for this command branch.
+     */
     public Argument<String> getCommand(WizardsPlugin plugin) {
         return new LiteralArgument("spell")
             // The list of spells is now fetched dynamically from the SpellManager
@@ -47,7 +61,15 @@ public class GiveSpellCommand {
 
     
     /**
-     * The main dispatcher for the command.
+     * The main execution logic that dispatches the give spell action.
+     * Handles the "all" keyword or gives a specific spell.
+     *
+     * @param sender   The command sender, to receive feedback.
+     * @param target   The player to receive the spell(s).
+     * @param wizard   The wizard object for the target player.
+     * @param game     The active game instance.
+     * @param spellKey The raw string key of the spell, or "all".
+     * @param levelArg The raw string argument for the level, or "max".
      */
     private void giveSpell(CommandSender sender, Player target, Wizard wizard, Wizards game, String spellKey, String levelArg) {
         SpellManager spellManager = game.getPlugin().getSpellManager();
@@ -80,7 +102,13 @@ public class GiveSpellCommand {
     }
 
     /**
-     * Gives a single spell to a wizard up to the specified level.
+     * Gives levels for a single spell to a wizard until the target level is reached.
+     *
+     * @param target The player receiving the spell.
+     * @param wizard The wizard object for the target player.
+     * @param game   The active game instance.
+     * @param spell  The {@link Spell} object to give.
+     * @param level  The target level to reach.
      */
     private void giveSingleSpell(Player target, Wizard wizard, Wizards game, Spell spell, int level) {
         int currentLevel = wizard.getLevel(spell.getKey());
@@ -94,6 +122,15 @@ public class GiveSpellCommand {
         }
     }
 
+    /**
+     * Parses the string argument for the spell level.
+     *
+     * @param levelArg The raw string input (e.g., "3" or "max").
+     * @param wizard   The target wizard.
+     * @param spell    The specific spell being given (can be null if `levelArg` is "all").
+     * @param game     The active game instance.
+     * @return The parsed integer level.
+     */
     private int parseSpellLevel(String levelArg, Wizard wizard, Spell spell, Wizards game) {
         if (levelArg.equalsIgnoreCase("max")) {
 
@@ -119,7 +156,11 @@ public class GiveSpellCommand {
     }
 
     /**
-     * Gets all registered spell keys for the command auto-completion.
+     * Generates a string array of all spell keys, prefixed with "all",
+     * for use in CommandAPI argument suggestions.
+     *
+     * @param plugin The main plugin instance, used to access the {@link SpellManager}.
+     * @return An array of valid spell key command arguments.
      */
     private String[] getAllSpellKeys(WizardsPlugin plugin) {
         return Stream.concat(

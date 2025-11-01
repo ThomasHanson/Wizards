@@ -34,6 +34,12 @@ import dev.thomashanson.wizards.game.manager.DamageManager;
 import dev.thomashanson.wizards.game.spell.Spell;
 import dev.thomashanson.wizards.util.BlockUtil;
 
+/**
+ * The Enchantress Kit.
+ * <p>
+ * This kit focuses on spell amplification and negating certain types of
+ * environmental or spell damage.
+ */
 public class KitEnchantress extends WizardsKit {
 
     private final Wizards game;
@@ -42,6 +48,12 @@ public class KitEnchantress extends WizardsKit {
     private final int PARTICLE_DELAY = 5; // Particle delay in ticks (adjust as needed)
     private final int FIREWORK_DELAY = 60; // Firework delay in ticks (adjust as needed)
 
+    /**
+     * Creates a new instance of the Enchantress kit.
+     *
+     * @param game The active {@link Wizards} game instance.
+     * @param data The configuration data for this kit from the database.
+     */
     public KitEnchantress(Wizards game, Map<String, Object> data) {
         super(data);
         this.game = game;
@@ -57,9 +69,6 @@ public class KitEnchantress extends WizardsKit {
             "<gray>Duplicate Spellbook Upgrade Chance: <aqua>" + formattedChance
         );
     }
-
-    //             new ItemStack(Material.EXPERIENCE_BOTTLE),
-    //             new ItemStack(WandElement.ICE.getMaterial())
 
     @Override
     public void playSpellEffect(Player player, Location location) {
@@ -113,6 +122,9 @@ public class KitEnchantress extends WizardsKit {
         }.runTaskLater(WizardsPlugin.getPlugin(WizardsPlugin.class), FIREWORK_DELAY);
     }
 
+    /**
+     * Creates the firework effect for the intro.
+     */
     private void spawnFirework(Location location, Color color) {
         Firework firework = (Firework) location.getWorld().spawnEntity(location, EntityType.FIREWORK);
         FireworkMeta fireworkMeta = firework.getFireworkMeta();
@@ -127,6 +139,11 @@ public class KitEnchantress extends WizardsKit {
                 FIREWORK_DELAY + 20); // Remove firework 1 second after explosion
     }
 
+    /**
+     * Event handler to create a "glass floor" effect as the Enchantress moves.
+     *
+     * @param event The player move event.
+     */
     @EventHandler
     public void onMove(PlayerMoveEvent event) {
 
@@ -156,6 +173,12 @@ public class KitEnchantress extends WizardsKit {
         });
     }
 
+    /**
+     * Event handler to provide damage immunity to Rumble and fall damage
+     * if the player hasn't been damaged recently.
+     *
+     * @param event The custom damage event.
+     */
     @EventHandler
     public void onDamage(CustomDamageEvent event) {
 
@@ -182,6 +205,11 @@ public class KitEnchantress extends WizardsKit {
                 event.setCancelled(true);
     }
 
+    /**
+     * Event handler to track the last damage time for fall damage immunity.
+     *
+     * @param event The entity damage event.
+     */
     @EventHandler
     public void onDamage(EntityDamageEvent event) {
 

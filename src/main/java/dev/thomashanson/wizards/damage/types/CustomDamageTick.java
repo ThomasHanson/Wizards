@@ -16,8 +16,25 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+/**
+ * A specialized {@link PlayerDamageTick} for damage caused by a custom source,
+ * typically a Wizard spell. The {@code reason} field is used as the localization
+ * key for the spell's name.
+ *
+ * @see dev.thomashanson.wizards.game.spell.Spell
+ */
 public class CustomDamageTick extends PlayerDamageTick {
 
+    /**
+     * Creates a new damage tick caused by a custom player source, like a spell.
+     *
+     * @param damage      The amount of damage dealt.
+     * @param cause       The underlying {@link EntityDamageEvent.DamageCause}.
+     * @param reason      The internal reason, typically the spell's name key (e.g., "wizards.spell.fireball").
+     * @param timestamp   The time the damage occurred.
+     * @param damager     The {@link Player} who cast the spell or caused the damage.
+     * @param distanceVal The distance from the damager, or null if not applicable.
+     */
     public CustomDamageTick(double damage, EntityDamageEvent.DamageCause cause, String reason, Instant timestamp, Player damager, @Nullable Double distanceVal) {
         super(damage, cause, reason, timestamp, damager, distanceVal);
     }

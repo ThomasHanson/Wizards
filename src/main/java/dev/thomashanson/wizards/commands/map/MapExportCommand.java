@@ -19,6 +19,11 @@ import dev.thomashanson.wizards.util.LocationUtil;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 
+/**
+ * Handles the logic for the `/wizards map export <name> <authors...>` sub-command.
+ * This command saves the currently active map's boundaries and spawn points
+ * to a new `data.yml` file in the `/maps/` directory.
+ */
 public class MapExportCommand {
 
     // The unused 'command' field and the constructor have been removed.

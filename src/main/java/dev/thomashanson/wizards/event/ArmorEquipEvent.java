@@ -6,6 +6,10 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 import org.bukkit.inventory.ItemStack;
 
+/**
+ * Event called when a player equips or unequips a piece of armor.
+ * This event is fired for various equip methods, including hotbar, drag-and-drop, and dispenser.
+ */
 public class ArmorEquipEvent extends PlayerEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
@@ -14,6 +18,14 @@ public class ArmorEquipEvent extends PlayerEvent implements Cancellable {
     private final EquipMethod equipType;
     private ItemStack oldArmorPiece, newArmorPiece;
 
+    /**
+     * Creates a new ArmorEquipEvent.
+     *
+     * @param player        The player equipping or unequipping armor.
+     * @param equipType     The {@link EquipMethod} used.
+     * @param oldArmorPiece The ItemStack that was in the slot (may be null or AIR).
+     * @param newArmorPiece The ItemStack being placed in the slot (may be null or AIR).
+     */
     public ArmorEquipEvent(final Player player, final EquipMethod equipType, final ItemStack oldArmorPiece, final ItemStack newArmorPiece) {
 
         super(player);
@@ -60,6 +72,9 @@ public class ArmorEquipEvent extends PlayerEvent implements Cancellable {
         return equipType;
     }
 
+    /**
+     * Describes the method used to equip or unequip the armor.
+     */
     public enum EquipMethod {
 
         /**

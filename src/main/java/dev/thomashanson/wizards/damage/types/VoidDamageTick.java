@@ -14,10 +14,26 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+/**
+ * A specialized {@link DamageTick} for void damage.
+ * This class stores a reference to the {@link DamageTick} that occurred *just before*
+ * the void damage, allowing for contextual death messages (e.g., "knocked into the void").
+ */
 public class VoidDamageTick extends DamageTick {
 
+    /**
+     * The last damage event that happened before the void, potentially the
+     * knockback source.
+     */
     private final DamageTick previousTick;
 
+    /**
+     * Creates a new damage tick for void damage.
+     *
+     * @param damage       The amount of damage (usually very high).
+     * @param timestamp    The time the damage occurred.
+     * @param previousTick The last {@link DamageTick} recorded for the player, or null.
+     */
     public VoidDamageTick(double damage, Instant timestamp, @Nullable DamageTick previousTick) {
         super(damage, EntityDamageEvent.DamageCause.VOID, "Void", timestamp);
         this.previousTick = previousTick;

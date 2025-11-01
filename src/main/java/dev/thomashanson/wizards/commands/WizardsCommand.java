@@ -14,11 +14,14 @@ import dev.thomashanson.wizards.commands.stats.StatsCommand;
 import dev.thomashanson.wizards.game.Wizard;
 import dev.thomashanson.wizards.game.Wizards;
 
+/**
+ * The main command registrar for the `/wizards` command.
+ * This class builds the {@link CommandTree} and provides shared helper methods
+ * for all sub-commands, such as {@link #executeAction(WizardsPlugin, Player, BiConsumer)}.
+ */
 public class WizardsCommand {
 
-    // Method to register the command
     public void register(WizardsPlugin plugin) {
-        // Main "wizards" command
         new CommandTree("wizards")
             .then(new GiveCommand(this).getCommand(plugin))
             .then(new AttributesCommand(this).getCommand(plugin))
@@ -28,6 +31,16 @@ public class WizardsCommand {
         .register();
     }
 
+    /**
+     * A shared helper method to safely execute an action on a {@link Wizard}.
+     * This method handles all necessary null checks for the active game
+     * and the target player's wizard status.
+     *
+     * @param plugin The main plugin instance.
+     * @param player The target player to execute the action on.
+     * @param action A lambda or method reference to be executed if the player
+     * is a valid, active wizard in the current game.
+     */
     public void executeAction(WizardsPlugin plugin, Player player, BiConsumer<Wizard, Wizards> action) {
 
         Wizards activeGame = plugin.getGameManager().getActiveGame();

@@ -16,14 +16,31 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+/**
+ * A {@link MonsterDamageTick} implementation specialized for damage caused by a {@link Player}.
+ * This is the base class for melee, ranged, and custom spell damage.
+ */
 public class PlayerDamageTick extends MonsterDamageTick {
 
     protected static final DecimalFormat DISTANCE_FORMAT = new DecimalFormat("#.#");
 
+    /**
+     * Creates a new damage tick caused by a player.
+     *
+     * @param damage      The amount of damage dealt.
+     * @param cause       The underlying {@link EntityDamageEvent.DamageCause}.
+     * @param reason      The internal reason (e.g., "Melee Combat").
+     * @param timestamp   The time the damage occurred.
+     * @param attacker    The {@link Player} who dealt the damage.
+     * @param distanceVal The distance of the attack, or null for melee.
+     */
     public PlayerDamageTick(double damage, EntityDamageEvent.DamageCause cause, String reason, Instant timestamp, Player attacker, @Nullable Double distanceVal) {
         super(damage, cause, reason, timestamp, attacker, distanceVal);
     }
 
+    /**
+     * @return The {@link Player} who dealt the damage.
+     */
     public Player getPlayer() {
         return (Player) getEntity();
     }

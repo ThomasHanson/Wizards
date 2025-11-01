@@ -5,6 +5,10 @@ import dev.jorel.commandapi.arguments.LiteralArgument;
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.commands.WizardsCommand;
 
+/**
+ * Registers the main `/wizards map` command branch, which
+ * delegates to sub-commands for map analysis, exporting, and visualization.
+ */
 public class MapCommand {
 
     private final WizardsCommand command;

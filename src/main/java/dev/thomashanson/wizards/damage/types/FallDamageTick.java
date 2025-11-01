@@ -13,11 +13,26 @@ import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+/**
+ * A {@link DamageTick} implementation for damage caused by falling.
+ * It specifically stores the distance fallen to include in the death message.
+ */
 public class FallDamageTick extends DamageTick {
 
     private static final DecimalFormat DISTANCE_FORMAT = new DecimalFormat("#");
+
+    /**
+     * The distance, in blocks, that the player fell.
+     */
     private final double distance;
 
+    /**
+     * Creates a new damage tick caused by falling.
+     *
+     * @param damage       The amount of damage dealt.
+     * @param timestamp    The time the damage occurred.
+     * @param fallDistance The distance the player fell.
+     */
     public FallDamageTick(double damage, Instant timestamp, float fallDistance) {
         super(damage, EntityDamageEvent.DamageCause.FALL, "Fall", timestamp);
         this.distance = fallDistance;

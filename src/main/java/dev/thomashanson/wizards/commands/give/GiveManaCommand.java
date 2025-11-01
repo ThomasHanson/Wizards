@@ -9,6 +9,9 @@ import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.commands.WizardsCommand;
 import dev.thomashanson.wizards.game.Wizard;
 
+/**
+ * Handles the logic for the `/wizards give <player> mana <amount|max>` sub-command.
+ */
 public class GiveManaCommand {
 
     private WizardsCommand command;
@@ -34,6 +37,14 @@ public class GiveManaCommand {
                 );
     }
 
+    /**
+     * Parses the string argument for mana amount.
+     *
+     * @param amount The raw string input (e.g., "50" or "max").
+     * @param wizard The target wizard, used to calculate "max".
+     * @return The integer amount of mana to give.
+     * @throws IllegalArgumentException If the amount is not "max" or a valid number.
+     */
     private int parseManaAmount(String amount, Wizard wizard) {
         if (amount.equalsIgnoreCase("max")) {
             return (int) wizard.getMaxMana();

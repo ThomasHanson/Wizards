@@ -12,18 +12,68 @@ import org.jetbrains.annotations.NotNull;
  * This class provides a set of powerful, data-driven formulas that read their parameters
  * directly from a spell's configuration section in {@code spells.yml}. This allows for
  * complex spell balancing and design without changing any Java code.
+ * <p>
+ * Formulas are retrieved by their constant string key (e.g., {@link #STATIC}, {@link #LEVEL_SCALING}).
+ *
+ * @see SpellStat
+ * @see SpellFormula
+ * @see StatContext
  */
 public final class FormulaRegistry {
 
-    private FormulaRegistry() {} // Prevent instantiation
+    /**
+     * Private constructor to prevent instantiation of this utility class.
+     */
+    private FormulaRegistry() {}
 
     // --- Formula Name Constants for use in spells.yml ---
-    public static final String STATIC = "STATIC";
-    public static final String LEVEL_SCALING = "LEVEL_SCALING";
-    public static final String DISTANCE_SCALING = "DISTANCE_SCALING";
-    public static final String PERCENT_DISTANCE_SCALING = "PERCENT_DISTANCE_SCALING"; // <-- ADD THIS CONSTANT
 
+    /**
+     * A simple, static value.
+     * <p>
+     * <b>Formula:</b> {@code value}
+     * <p>
+     * <b>Config:</b> {@code { value: 5.0 }}
+     */
+    public static final String STATIC = "STATIC";
+
+    /**
+     * A value that scales linearly with the spell's level.
+     * <p>
+     * <b>Formula:</b> {@code (SpellLevel * multiplier) + base}
+     * <p>
+     * <b>Config:</b> {@code { base: 5.0, multiplier: 1.5 }}
+     */
+    public static final String LEVEL_SCALING = "LEVEL_SCALING";
+
+    /**
+     * A complex value that scales with both spell level and distance.
+     * Used for Spectral Arrow's damage calculation.
+     * <p>
+     * <b>Formula:</b> {@code base + (distance * distanceMultiplier) / (divisor - (SpellLevel * levelMultiplier))}
+     * <p>
+     * <b>Config:</b> {@code { base: 6.0, distanceMultiplier: 1.0, divisor: 7.0, levelMultiplier: 1.0, maxLevel: 6 }}
+     */
+    public static final String DISTANCE_SCALING = "DISTANCE_SCALING";
+
+    /**
+     * A value that starts at a base amount and is reduced by a percentage over a specified distance.
+     * Used for Rainbow Beam's damage falloff.
+     * <p>
+     * <b>Formula:</b> {@code baseDamage * (1 - falloffPercent)}
+     * <p>
+     * <b>Config:</b> {@code { base: 10.0, multiplier: 1.0, falloff-start-distance: 30.0, falloff-end-distance: 80.0, min-damage-hearts: 0.5 }}
+     */
+    public static final String PERCENT_DISTANCE_SCALING = "PERCENT_DISTANCE_SCALING";
+
+    /**
+     * The internal map storing the formula implementations.
+     */
     private static final Map<String, SpellFormula> FORMULAS;
+    
+    /**
+     * The default formula to use if a requested formula is not found.
+     */
     private static final SpellFormula DEFAULT_FORMULA;
 
     static {
@@ -39,12 +89,11 @@ public final class FormulaRegistry {
         // Formula: (SL * multiplier) + base
         // Config: { base: 5.0, multiplier: 1.5 }
         formulas.put(LEVEL_SCALING, (context, config) ->
-                // Your system calculates level as 1-based, so we adjust for the formula
+                // System calculates level as 1-based, so we adjust for the formula (level - 1)
                 config.getDouble("base", 0.0) + (config.getDouble("multiplier", 1.0) * (context.spellLevel() - 1))
         );
 
-        // The new, highly configurable distance and level scaling formula.
-        // This completely replaces the hard-coded SPECTRAL_ARROW_DAMAGE.
+        // The configurable distance and level scaling formula.
         // Formula: base + (distance * distanceMultiplier) / (divisor - (SL * levelMultiplier))
         // Config: { base: 6.0, bonus: 3.0, distanceMultiplier: 1.0, divisor: 7.0, levelMultiplier: 1.0, maxLevel: 6 }
         formulas.put(DISTANCE_SCALING, (context, config) -> {
@@ -64,7 +113,7 @@ public final class FormulaRegistry {
 
             // Prevent division by zero or negative denominators, which would invert the damage scaling
             if (denominator <= 0) {
-                // If the denominator is invalid, you can define a max value or a different fallback formula
+                // If the denominator is invalid, use the defined max value.
                 return config.getDouble("maxValue", 20.0);
             }
 
@@ -73,7 +122,6 @@ public final class FormulaRegistry {
             return base + distanceComponent + bonus;
         });
 
-        // --- NEW FORMULA FOR RAINBOW BEAM ---
         // A formula that calculates a base damage, then reduces it by a percentage
         // over a specified distance range.
         formulas.put(PERCENT_DISTANCE_SCALING, (context, config) -> {
@@ -83,7 +131,8 @@ public final class FormulaRegistry {
             // 2. Get the falloff parameters from the config
             double falloffStart = config.getDouble("falloff-start-distance", 0.0);
             double falloffEnd = config.getDouble("falloff-end-distance", 80.0);
-            double minDamage = config.getDouble("min-damage-hearts", 0.5) * 2; // Convert hearts to health points for internal calculation
+            // Convert hearts to health points for internal calculation
+            double minDamage = config.getDouble("min-damage-hearts", 0.5) * 2; 
 
             // 3. If the target is within the no-falloff zone, return full damage
             if (context.distance() <= falloffStart) {
@@ -101,7 +150,6 @@ public final class FormulaRegistry {
             double finalDamage = baseDamage * (1 - reductionPercent);
             return Math.max(minDamage, finalDamage);
         });
-
 
         FORMULAS = Collections.unmodifiableMap(formulas);
     }

@@ -1,8 +1,6 @@
 package dev.thomashanson.wizards.event;
 
 
-import com.comphenix.protocol.wrappers.EnumWrappers;
-import com.google.common.base.Preconditions;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
@@ -10,6 +8,19 @@ import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 import org.bukkit.inventory.ItemStack;
 
+import com.comphenix.protocol.wrappers.EnumWrappers;
+import com.google.common.base.Preconditions;
+
+/**
+ * Fired when the server is about to send an equipment packet (armor or held item)
+ * for any {@link LivingEntity} to a specific {@link Player}.
+ * <p>
+ * This event allows for modifying the {@link ItemStack} that a player sees
+ * on another entity, enabling effects like "invisibility" armor or custom
+ * cosmetic appearances without modifying the underlying entity's actual equipment.
+ * <p>
+ * This event is fired via ProtocolLib and is asynchronous by nature.
+ */
 public class EquipmentSendingEvent extends PlayerEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
@@ -20,6 +31,14 @@ public class EquipmentSendingEvent extends PlayerEvent implements Cancellable {
 
     private boolean cancelled;
 
+    /**
+     * Creates a new EquipmentSendingEvent.
+     *
+     * @param client        The player who will *receive* the packet and see the equipment.
+     * @param visibleEntity The entity whose equipment is being displayed.
+     * @param slot          The {@link EnumWrappers.ItemSlot} being updated.
+     * @param equipment     The {@link ItemStack} that is about to be sent.
+     */
     public EquipmentSendingEvent(Player client, LivingEntity visibleEntity, EnumWrappers.ItemSlot slot, ItemStack equipment) {
 
         super(client);
@@ -30,23 +49,27 @@ public class EquipmentSendingEvent extends PlayerEvent implements Cancellable {
     }
 
     /**
-     * Retrieve the entity whose armor or held item we are updating.
-     * @return The visible entity.
+     * Retrieve the entity whose armor or held item is being updated for the client.
+     *
+     * @return The entity being rendered.
      */
     public LivingEntity getVisibleEntity() {
         return visibleEntity;
     }
 
     /**
-     * @return The equipment
+     * Gets the {@link ItemStack} that will be sent to the client.
+     *
+     * @return The equipment ItemStack.
      */
     public ItemStack getEquipment() {
         return equipment;
     }
 
     /**
-     * Set the equipment we will send to the player.
-     * @param equipment - the equipment, or NULL to sent air.
+     * Sets the {@link ItemStack} that will be sent to the client.
+     *
+     * @param equipment The new equipment to send, or null to send air.
      */
     public void setEquipment(ItemStack equipment) {
         this.equipment = equipment;

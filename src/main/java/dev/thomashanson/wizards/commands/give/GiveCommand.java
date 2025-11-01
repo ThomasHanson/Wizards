@@ -6,6 +6,10 @@ import dev.jorel.commandapi.arguments.PlayerArgument;
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.commands.WizardsCommand;
 
+/**
+ * Registers the main `/wizards give` command branch, which
+ * delegates to sub-commands for giving spells, potions, mana, and wands.
+ */
 public class GiveCommand {
 
     private WizardsCommand command;

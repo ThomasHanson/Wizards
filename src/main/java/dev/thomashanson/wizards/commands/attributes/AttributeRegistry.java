@@ -4,22 +4,33 @@ import java.util.Map;
 
 import dev.thomashanson.wizards.game.Wizard;
 
+/**
+ * A registry that maps simple string names to type-safe {@link Wizard.Attribute} objects.
+ * This allows for getting and setting attributes on a {@link Wizard} using
+ * command-line arguments, with type-checking and parsing handled automatically.
+ *
+ * @see Wizard.Attribute
+ * @see AttributesCommand
+ */
 public class AttributeRegistry {
 
     private final Map<String, Wizard.Attribute<?>> attributes;
 
+    /**
+     * Constructs a new AttributeRegistry and initializes the mapping
+     * of all available wizard attributes.
+     */
     public AttributeRegistry() {
         attributes = Map.ofEntries(
-            // Now we create specific types, like Attribute<Integer> and Attribute<Float>
             Map.entry("max_wands", new Wizard.Attribute<>(
                 Integer.class,
                 Wizard::getMaxWands,
-                Wizard::setMaxWands // No cast needed!
+                Wizard::setMaxWands
             )),
             Map.entry("mana", new Wizard.Attribute<>(
                 Float.class,
                 Wizard::getMana,
-                Wizard::setMana // No parsing needed!
+                Wizard::setMana
             )),
             Map.entry("max_mana", new Wizard.Attribute<>(
                 Float.class,
@@ -48,9 +59,10 @@ public class AttributeRegistry {
 
     /**
      * Gets the value of a specific attribute for a wizard.
-     * @param wizard The wizard to get the attribute from.
-     * @param attribute The name of the attribute.
-     * @return The attribute's value, or null if not found.
+     *
+     * @param wizard    The wizard to get the attribute from.
+     * @param attribute The case-insensitive name of the attribute.
+     * @return The attribute's value, or null if the attribute name is not found.
      */
     public Object getAttribute(Wizard wizard, String attribute) {
         Wizard.Attribute<?> attr = attributes.get(attribute.toLowerCase());
@@ -69,7 +81,6 @@ public class AttributeRegistry {
         if (rawAttr != null) {
             // Check if the provided value is the correct type for the attribute
             if (rawAttr.getType().isInstance(value)) {
-                // This cast is now safe because we just checked the type
                 @SuppressWarnings("unchecked")
                 Wizard.Attribute<T> typedAttr = (Wizard.Attribute<T>) rawAttr;
                 typedAttr.set(wizard, value);
@@ -85,13 +96,21 @@ public class AttributeRegistry {
         }
     }
 
+    /**
+     * Retrieves the raw {@link Wizard.Attribute} object for a given wizard and attribute name.
+     *
+     * @param wizard        The wizard (used for context, though currently unused in implementation).
+     * @param attributeName The case-insensitive name of the attribute.
+     * @return The {@link Wizard.Attribute} object, or null if not found.
+     */
     public Wizard.Attribute<?> getAttributeObject(Wizard wizard, String attributeName) {
         return attributes.get(attributeName.toLowerCase());
     }
 
     /**
      * Gets all registered attribute names.
-     * @return An array of attribute names.
+     *
+     * @return A string array of all attribute keys.
      */
     public String[] getAttributeNames() {
         return attributes.keySet().toArray(new String[0]);

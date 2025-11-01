@@ -29,15 +29,36 @@ import com.google.common.base.Preconditions;
 
 import dev.thomashanson.wizards.WizardsPlugin;
 
+/**
+ * Manages the loading, storing, and retrieval of all {@link Spell} definitions.
+ * <p>
+ * This class is responsible for parsing the {@code spells.yml} file,
+ * instantiating each spell's corresponding Java class using reflection,
+ * and storing them in a map for quick access by their unique string key.
+ * It also handles programmatic assignment of GUI slots for the spellbook.
+ *
+ * @see Spell
+ * @see WizardsPlugin#loadSpells()
+ */
 public class SpellManager {
 
     private final WizardsPlugin plugin;
     private final Map<String, Spell> spells = new HashMap<>();
 
+    /**
+     * Creates a new SpellManager.
+     *
+     * @param plugin The main plugin instance.
+     */
     public SpellManager(@NotNull WizardsPlugin plugin) {
         this.plugin = Objects.requireNonNull(plugin, "Plugin instance cannot be null");
     }
 
+    /**
+     * Loads all spell definitions from {@code spells.yml}.
+     * This method clears any existing spells, reads the config, and uses
+     * reflection to instantiate and register each spell and its listeners.
+     */
     public void loadSpells() {
         spells.clear();
         File spellsFile = new File(plugin.getDataFolder(), "spells.yml");
@@ -90,11 +111,24 @@ public class SpellManager {
         assignGuiSlots();
     }
 
+    /**
+     * Retrieves a {@link Spell} instance by its unique key.
+     *
+     * @param key The case-insensitive key of the spell (e.g., "FIREBALL").
+     * @return The {@link Spell} object, or {@code null} if no spell with that key is loaded.
+     */
     @Nullable
     public Spell getSpell(@NotNull String key) {
         return spells.get(key.toUpperCase());
     }
 
+    /**
+     * Retrieves a {@link Spell} instance from an {@link ItemStack}
+     * by reading its {@link PersistentDataContainer}.
+     *
+     * @param item The item to check.
+     * @return The {@link Spell} object, or {@code null} if the item is not a spell.
+     */
     @Nullable
     public Spell getSpell(@Nullable ItemStack item) {
         if (item == null || !item.hasItemMeta()) {
@@ -119,8 +153,9 @@ public class SpellManager {
     }
     
     /**
-     * Iterates through all loaded spells and assigns them a GUI slot programmatically.
-     * This assigns slots left-to-right, then top-to-bottom within each element's columns.
+     * Assigns GUI slot indices to all loaded spells based on their
+     * {@link SpellElement}, rarity, and name. This ensures a consistent
+     * and organized layout in the spellbook.
      */
     private void assignGuiSlots() {
         // Group spells by their element, handling null elements gracefully.

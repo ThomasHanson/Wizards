@@ -1,14 +1,20 @@
 package dev.thomashanson.wizards.event;
 
-import dev.thomashanson.wizards.game.potion.PotionType;
+import java.time.Instant;
+
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Cancellable;
 import org.bukkit.event.HandlerList;
 import org.bukkit.event.player.PlayerEvent;
 
-import java.time.Instant;
+import dev.thomashanson.wizards.game.potion.PotionType;
 
+/**
+ * Fired when a player successfully consumes a custom Wizards potion.
+ * This event is fired *after* the {@link org.bukkit.event.player.PlayerItemConsumeEvent}
+ * and allows other systems to react to the application of a custom potion effect.
+ */
 public class PotionConsumeEvent extends PlayerEvent implements Cancellable {
 
     private static final HandlerList HANDLERS = new HandlerList();
@@ -18,6 +24,12 @@ public class PotionConsumeEvent extends PlayerEvent implements Cancellable {
 
     private boolean cancelled;
 
+    /**
+     * Creates a new PotionConsumeEvent.
+     *
+     * @param who    The player who consumed the potion.
+     * @param potion The {@link PotionType} that was consumed.
+     */
     public PotionConsumeEvent(Player who, PotionType potion) {
 
         super(who);
@@ -37,18 +49,34 @@ public class PotionConsumeEvent extends PlayerEvent implements Cancellable {
         return HANDLERS;
     }
 
+    /**
+     * @return The {@link PotionType} that was consumed.
+     */
     public PotionType getPotion() {
         return potion;
     }
 
+    /**
+     * Sets the {@link PotionType} for this event.
+     *
+     * @param potion The new potion type.
+     */
     public void setPotion(PotionType potion) {
         this.potion = potion;
     }
 
+    /**
+     * @return The {@link Instant} the potion was consumed.
+     */
     public Instant getInstant() {
         return instant;
     }
 
+    /**
+     * Sets the timestamp for this event.
+     *
+     * @param instant The new {@link Instant}.
+     */
     public void setInstant(Instant instant) {
         this.instant = instant;
     }

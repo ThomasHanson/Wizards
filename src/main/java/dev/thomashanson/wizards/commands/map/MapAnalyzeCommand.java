@@ -13,8 +13,23 @@ import dev.thomashanson.wizards.WizardsPlugin;
 import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.text.minimessage.tag.resolver.Placeholder;
 
+/**
+ * Handles the logic for the `/wizards map analyze` sub-command.
+ * <p>
+ * This command performs an asynchronous scan of the world around the player
+ * to find the minimum and maximum coordinates of all non-air blocks within a
+ * fixed radius. It then displays a client-side {@link WorldBorder} to the
+ * player that visualizes this bounding box, allowing map creators to
+ * easily find the corners for their `data.yml` configuration.
+ */
 public class MapAnalyzeCommand {
 
+    /**
+     * Builds the CommandAPI argument tree for the "map analyze" sub-command.
+     *
+     * @param plugin The main plugin instance.
+     * @return The configured {@link Argument} for this command branch.
+     */
     public Argument<String> getCommand(WizardsPlugin plugin) {
         return new LiteralArgument("analyze")
                 .withPermission("wizards.command.map.analyze")
@@ -28,6 +43,12 @@ public class MapAnalyzeCommand {
                     player.sendMessage(MiniMessage.miniMessage().deserialize("<yellow>Starting map analysis... This may take a moment."));
                     player.sendMessage(MiniMessage.miniMessage().deserialize("<gold>[Debug] <white>Running analysis in world: <world_name>", Placeholder.unparsed("world_name", world.getName())));
 
+                    /**
+                     * This {@link BukkitRunnable} performs the heavy block scanning
+                     * asynchronously to avoid lagging the server. It periodically
+                     * schedules synchronous tasks back to the main thread to
+                     * update the player's world border and send progress messages.
+                     */
                     new BukkitRunnable() {
                         @Override
                         public void run() {
@@ -124,6 +145,14 @@ public class MapAnalyzeCommand {
                 });
     }
 
+    /**
+     * Safely updates a player's client-side world border on the main thread.
+     *
+     * @param player The player to update.
+     * @param border The {@link WorldBorder} object to modify.
+     * @param min    The minimum corner of the bounding box.
+     * @param max    The maximum corner of the bounding box.
+     */
     private void updatePlayerBorder(Player player, WorldBorder border, Location min, Location max) {
         if (player == null || !player.isOnline()) return; // Safety check
 
@@ -137,6 +166,12 @@ public class MapAnalyzeCommand {
         border.setDamageAmount(0);
     }
 
+    /**
+     * Formats a {@link Location} into a simple "x, y, z" string.
+     *
+     * @param loc The location to format.
+     * @return A formatted string of the block coordinates.
+     */
     private String formatLocation(Location loc) {
         return String.format("%d, %d, %d", loc.getBlockX(), loc.getBlockY(), loc.getBlockZ());
     }
