@@ -72,7 +72,9 @@ public class WizardsPlugin extends JavaPlugin {
         this.mapManager = new MapManager(this);
         this.damageManager = new DamageManager(this);
         this.projectileManager = new ProjectileManager(this);
+
         this.hologramManager = new HologramManager(this);
+        this.hologramManager.initialize();
 
         this.spellManager = new SpellManager(this);
         this.spellManager.loadSpells();
@@ -107,7 +109,10 @@ public class WizardsPlugin extends JavaPlugin {
         }
         if (gameManager != null) gameManager.handleListeners();
         if (projectileManager != null) projectileManager.stopUpdates();
-        if (hologramManager != null) hologramManager.stopUpdates();
+
+        if (hologramManager != null) {
+            hologramManager.shutdown();
+        }
     }
 
     /**

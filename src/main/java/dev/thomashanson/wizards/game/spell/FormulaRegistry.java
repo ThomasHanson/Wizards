@@ -20,7 +20,8 @@ public final class FormulaRegistry {
     // --- Formula Name Constants for use in spells.yml ---
     public static final String STATIC = "STATIC";
     public static final String LEVEL_SCALING = "LEVEL_SCALING";
-    public static final String DISTANCE_SCALING = "DISTANCE_SCALING"; // The new generic formula
+    public static final String DISTANCE_SCALING = "DISTANCE_SCALING";
+    public static final String PERCENT_DISTANCE_SCALING = "PERCENT_DISTANCE_SCALING"; // <-- ADD THIS CONSTANT
 
     private static final Map<String, SpellFormula> FORMULAS;
     private static final SpellFormula DEFAULT_FORMULA;
@@ -38,7 +39,8 @@ public final class FormulaRegistry {
         // Formula: (SL * multiplier) + base
         // Config: { base: 5.0, multiplier: 1.5 }
         formulas.put(LEVEL_SCALING, (context, config) ->
-                (context.spellLevel() * config.getDouble("multiplier", 1.0)) + config.getDouble("base", 0.0)
+                // Your system calculates level as 1-based, so we adjust for the formula
+                config.getDouble("base", 0.0) + (config.getDouble("multiplier", 1.0) * (context.spellLevel() - 1))
         );
 
         // The new, highly configurable distance and level scaling formula.
@@ -70,6 +72,36 @@ public final class FormulaRegistry {
 
             return base + distanceComponent + bonus;
         });
+
+        // --- NEW FORMULA FOR RAINBOW BEAM ---
+        // A formula that calculates a base damage, then reduces it by a percentage
+        // over a specified distance range.
+        formulas.put(PERCENT_DISTANCE_SCALING, (context, config) -> {
+            // 1. Calculate the initial damage before any falloff
+            double baseDamage = config.getDouble("base", 0.0) + (config.getDouble("multiplier", 1.0) * (context.spellLevel() - 1));
+
+            // 2. Get the falloff parameters from the config
+            double falloffStart = config.getDouble("falloff-start-distance", 0.0);
+            double falloffEnd = config.getDouble("falloff-end-distance", 80.0);
+            double minDamage = config.getDouble("min-damage-hearts", 0.5) * 2; // Convert hearts to health points for internal calculation
+
+            // 3. If the target is within the no-falloff zone, return full damage
+            if (context.distance() <= falloffStart) {
+                return baseDamage;
+            }
+
+            // 4. Calculate the percentage of damage to remove
+            double falloffRange = falloffEnd - falloffStart;
+            if (falloffRange <= 0) return baseDamage; // Avoid division by zero
+
+            double distanceIntoFalloff = context.distance() - falloffStart;
+            double reductionPercent = Math.max(0, Math.min(1, distanceIntoFalloff / falloffRange));
+
+            // 5. Apply the reduction and ensure it doesn't go below the minimum
+            double finalDamage = baseDamage * (1 - reductionPercent);
+            return Math.max(minDamage, finalDamage);
+        });
+
 
         FORMULAS = Collections.unmodifiableMap(formulas);
     }

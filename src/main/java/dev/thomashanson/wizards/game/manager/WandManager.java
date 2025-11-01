@@ -217,8 +217,8 @@ public class WandManager {
         if (oldSlot >= 0 && oldSlot < wizard.getWandsOwned()) {
             Spell spell = wizard.getSpell(oldSlot);
             ItemStack item = inv.getItem(oldSlot);
-            if (item != null) {
-                item.setType(spell != null ? spell.getIcon() : Material.BARRIER);
+            if (item != null && spell != null) {
+                item.setType(spell.getIcon());
                 // The item's amount (cooldown) will be updated by the tick loop.
             }
         }

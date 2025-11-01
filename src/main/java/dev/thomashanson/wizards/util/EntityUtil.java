@@ -108,7 +108,6 @@ public final class EntityUtil {
      */
     public static void resetPlayer(Player player, GameMode gameMode) {
         player.setGameMode(gameMode);
-        player.setHealth(20.0);
 
         AttributeInstance maxHealth = player.getAttribute(Attribute.GENERIC_MAX_HEALTH);
         if (maxHealth != null) {

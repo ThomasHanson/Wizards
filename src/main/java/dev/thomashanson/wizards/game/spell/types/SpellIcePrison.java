@@ -31,6 +31,7 @@ import dev.thomashanson.wizards.util.BlockUtil;
 public class SpellIcePrison extends Spell implements CustomProjectile, Tickable {
 
     private static final Map<Block, Instant> PRISON_BLOCKS = new ConcurrentHashMap<>();
+    private static final org.bukkit.block.data.BlockData ICE_DATA = Material.ICE.createBlockData();
 
     public SpellIcePrison(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
         super(plugin, key, config);
@@ -58,17 +59,21 @@ public class SpellIcePrison extends Spell implements CustomProjectile, Tickable 
         Integer level = data.getCustomData("level", Integer.class);
         if (level == null) return;
 
-        StatContext context = StatContext.of(level);
         double radius = getStat("radius", level);
-        long durationSeconds = (long) getStat("duration-seconds", level);
+        long durationSeconds = (long) getStat("duration", level);
         long meltOffsetMillis = (long) (getStat("melt-random-offset-seconds", level) * 1000L);
 
-        // UPDATED: The method is now getBlocksInRadius and takes a Location.
         Map<Block, Double> blocksInRadius = BlockUtil.getBlocksInRadius(impactLocation, radius);
 
         for (Block block : blocksInRadius.keySet()) {
             if (block.getType().isAir() || !block.getType().isSolid() || block.isLiquid()) {
+                
+                // --- NEW FORMATION EFFECT ---
                 block.setType(Material.ICE);
+                block.getWorld().spawnParticle(Particle.BLOCK_CRACK, block.getLocation().add(0.5, 0.5, 0.5), 10, 0.3, 0.3, 0.3, 0, ICE_DATA);
+                block.getWorld().playSound(block.getLocation(), Sound.BLOCK_GLASS_PLACE, 1.0F, 1.5F);
+                // --- END NEW ---
+
                 long randomOffset = ThreadLocalRandom.current().nextLong(meltOffsetMillis);
                 PRISON_BLOCKS.put(block, Instant.now().plusSeconds(durationSeconds).plusMillis(randomOffset));
             }
@@ -82,8 +87,12 @@ public class SpellIcePrison extends Spell implements CustomProjectile, Tickable 
         Instant now = Instant.now();
         PRISON_BLOCKS.entrySet().removeIf(entry -> {
             if (now.isAfter(entry.getValue())) {
-                if (entry.getKey().getType() == Material.ICE) {
-                    entry.getKey().setType(Material.AIR);
+                Block block = entry.getKey();
+                if (block.getType() == Material.ICE) {
+                    block.setType(Material.AIR);
+                    // --- NEW MELT EFFECT ---
+                    playMeltEffect(block);
+                    // --- END NEW ---
                 }
                 return true;
             }
@@ -99,6 +108,14 @@ public class SpellIcePrison extends Spell implements CustomProjectile, Tickable 
         PRISON_BLOCKS.clear();
     }
 
+    /**
+     * NEW: Helper method to play a consistent shatter effect.
+     */
+    private void playMeltEffect(Block block) {
+        block.getWorld().playSound(block.getLocation(), Sound.BLOCK_GLASS_BREAK, 0.8F, 1.2F);
+        block.getWorld().spawnParticle(Particle.BLOCK_CRACK, block.getLocation().add(0.5, 0.5, 0.5), 15, 0.3, 0.3, 0.3, 0, ICE_DATA);
+    }
+
     @EventHandler
     public void onMelt(BlockFadeEvent event) {
         if (PRISON_BLOCKS.containsKey(event.getBlock())) {
@@ -111,8 +128,10 @@ public class SpellIcePrison extends Spell implements CustomProjectile, Tickable 
         if (PRISON_BLOCKS.containsKey(event.getBlock())) {
             event.setDropItems(false);
             event.getBlock().setType(Material.AIR);
-            event.getBlock().getWorld().playSound(event.getBlock().getLocation(), Sound.BLOCK_GLASS_BREAK, 1F, 1F);
-            event.getBlock().getWorld().spawnParticle(Particle.BLOCK_CRACK, event.getBlock().getLocation().add(0.5, 0.5, 0.5), 10, Material.ICE.createBlockData());
+            
+            // --- UPDATED to use helper method ---
+            playMeltEffect(event.getBlock());
+            
             PRISON_BLOCKS.remove(event.getBlock());
         }
     }

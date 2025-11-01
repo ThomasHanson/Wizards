@@ -18,7 +18,6 @@ import org.jetbrains.annotations.NotNull;
 
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.game.spell.StatContext;
 
 public class SpellFlash extends Spell {
 
@@ -30,7 +29,6 @@ public class SpellFlash extends Spell {
 
     @Override
     public boolean cast(Player player, int level) {
-        StatContext context = StatContext.of(level);
         double maxRange = getStat("range", level);
 
         Location eyeLocation = player.getEyeLocation();
@@ -57,7 +55,8 @@ public class SpellFlash extends Spell {
         player.getWorld().spawnParticle(Particle.FIREWORKS_SPARK, player.getLocation(), 20, 0.5, 0.5, 0.5, 0.1);
         player.getWorld().playSound(player.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 1F, 1.2F);
 
-        long immunitySeconds = (long) getStat("fall-immunity-seconds", level);
+        // CORRECTED KEY
+        long immunitySeconds = (long) getStat("fall-immunity", level);
         FALL_IMMUNITY_EXPIRY.put(player.getUniqueId(), Instant.now().plusSeconds(immunitySeconds));
 
         return true;

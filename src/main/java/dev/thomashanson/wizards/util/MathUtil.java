@@ -9,6 +9,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.bukkit.Location;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
 import org.bukkit.util.Vector;
 
 /**
@@ -51,7 +52,7 @@ public final class MathUtil {
      * Trims a double to a specified number of decimal places.
      *
      * @param degree The number of decimal places.
-     * @param value The double value to trim.
+     * @param value  The double value to trim.
      * @return The trimmed double.
      */
     public static double trim(int degree, double value) {
@@ -66,7 +67,7 @@ public final class MathUtil {
      * Gets a normalized direction vector pointing from one location to another.
      *
      * @param from The starting location.
-     * @param to The target location.
+     * @param to   The target location.
      * @return A normalized {@link Vector}.
      */
     public static Vector getDirection(Location from, Location to) {
@@ -77,7 +78,7 @@ public final class MathUtil {
      * Gets a normalized 2D direction vector (ignoring Y-axis) from one entity to another.
      *
      * @param from The starting entity.
-     * @param to The target entity.
+     * @param to   The target entity.
      * @return A normalized 2D {@link Vector}.
      */
     public static Vector getDirection2D(Entity from, Entity to) {
@@ -104,12 +105,12 @@ public final class MathUtil {
     /**
      * Applies a velocity to an entity.
      *
-     * @param entity       The entity to apply velocity to.
-     * @param direction    The direction of the velocity.
-     * @param strength     The magnitude of the velocity.
-     * @param yBase        The base Y value to set.
-     * @param yAdd         An additional value to add to the Y velocity.
-     * @param yMax         The maximum value for the Y velocity.
+     * @param entity   The entity to apply velocity to.
+     * @param direction The direction of the velocity.
+     * @param strength The magnitude of the velocity.
+     * @param yBase    The base Y value to set.
+     * @param yAdd     An additional value to add to the Y velocity.
+     * @param yMax     The maximum value for the Y velocity.
      */
     public static void applyVelocity(Entity entity, Vector direction, double strength, double yBase, double yAdd, double yMax) {
         Vector velocity = direction.clone(); // Clone to avoid mutating the original direction vector
@@ -126,5 +127,49 @@ public final class MathUtil {
 
         entity.setFallDistance(0F);
         entity.setVelocity(velocity);
+    }
+
+    /**
+     * Calculates a powerful, arcing knockback vector pushing a target up and away from a source.
+     * This method *only* returns the Vector; it does not apply it.
+     *
+     * @param target           The entity to knock back.
+     * @param source           The source location of the explosion.
+     * @param baseStrength     The base horizontal strength.
+     * @param verticalStrength The base vertical strength.
+     * @param maxRadius        The maximum radius at which knockback applies.
+     * @param enableFalloff    If true, strength scales from 100% (at 0 distance) to 0% (at maxRadius).
+     * @return The calculated knockback {@link Vector}.
+     */
+    public static Vector calculateExplosiveKnockbackVector(LivingEntity target, Location source, double baseStrength, double verticalStrength, double maxRadius, boolean enableFalloff) {
+        double distance = target.getLocation().distance(source);
+        double strengthMultiplier = 1.0;
+
+        if (enableFalloff) {
+            if (distance >= maxRadius) {
+                return new Vector(0, 0, 0); // Out of range
+            }
+            // Linear falloff from 1.0 at 0 distance to 0.0 at maxRadius
+            strengthMultiplier = Math.max(0, 1.0 - (distance / maxRadius));
+        }
+
+        double hStrength = baseStrength * strengthMultiplier;
+        double vStrength = verticalStrength * strengthMultiplier;
+
+        // Calculate direction vector
+        Vector direction = target.getLocation().toVector().subtract(source.toVector());
+
+        // Handle edge case where target is at the source
+        if (direction.lengthSquared() < 0.001) {
+            return new Vector(0, vStrength, 0); // Push straight up
+        }
+
+        // Normalize for horizontal-only direction, then apply horizontal strength
+        Vector knockback = direction.setY(0).normalize().multiply(hStrength);
+
+        // Add the vertical component
+        knockback.setY(vStrength);
+
+        return knockback;
     }
 }

@@ -1,6 +1,7 @@
 package dev.thomashanson.wizards.game.state.listener;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.bukkit.Bukkit;
@@ -30,6 +31,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.util.Vector;
 
 import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.event.CustomDeathEvent;
@@ -41,6 +43,7 @@ import dev.thomashanson.wizards.game.manager.PlayerStatsManager.StatType;
 import dev.thomashanson.wizards.game.potion.PotionType;
 import dev.thomashanson.wizards.game.spell.Spell;
 import dev.thomashanson.wizards.hologram.Hologram;
+import dev.thomashanson.wizards.hologram.HologramProperties;
 import dev.thomashanson.wizards.util.DebugUtil;
 import dev.triumphteam.gui.builder.item.ItemBuilder;
 import net.kyori.adventure.text.Component;
@@ -208,42 +211,46 @@ public class GameListener implements Listener {
         if (game.getDroppedGameItems().contains(event.getEntity())) {
             event.getEntity().setInvulnerable(true);
         }
-        
-        Component hologramComponent = null;
+
+        // Use a List<Component> to properly support multi-line text.
+        List<Component> hologramLines = new ArrayList<>();
 
         if (spell != null) {
-            Component spellNameComponent = lang.getTranslated(null, spell.getName());
-            
-            hologramComponent = lang.getTranslated(null, "wizards.hologram.spell.line1")
-                                .append(Component.newline())
-                                .append(spellNameComponent);
-        
+            // For spells, create two separate Component objects for the two lines.
+            hologramLines.add(lang.getTranslated(null, "wizards.hologram.spell.line1"));
+            hologramLines.add(lang.getTranslated(null, spell.getName()));
+
         } else if (itemStack.getType() == Material.BLAZE_ROD && itemStack.getItemMeta() != null && itemStack.getItemMeta().hasCustomModelData()) {
-            hologramComponent = lang.getTranslated(null, "wizards.hologram.wand");
-            
+            hologramLines.add(lang.getTranslated(null, "wizards.hologram.wand"));
+
             // Restore the glow removal logic for wands that were glowing in chests
             ItemMeta meta = itemStack.getItemMeta();
-            if (meta != null && meta.hasEnchants()) { // A common way to make items glow
+            if (meta != null && meta.hasEnchants()) {
                 event.getEntity().setItemStack(ItemBuilder.from(itemStack).glow(false).build());
             }
 
         } else if (itemStack.getType() == Material.NETHER_STAR) {
-            hologramComponent = lang.getTranslated(null, "wizards.item.soul.name");
+            hologramLines.add(lang.getTranslated(null, "wizards.item.soul.name"));
         }
 
-        if (hologramComponent != null) {
-
+        // Proceed only if we have text to display.
+        if (!hologramLines.isEmpty()) {
             Item itemEntity = event.getEntity();
-            // 1. Create the hologram using the manager.
-            // It takes the location and a List of Components.
-            List<Component> lines = List.of(hologramComponent);
-            Hologram hologram = plugin.getHologramManager().createHologram(itemEntity.getLocation(), lines);
 
-            // 2. Tell the manager to make this hologram follow the item.
-            plugin.getHologramManager().trackEntity(itemEntity, hologram);
+            // 1. Define properties for the hologram. We'll add an offset to raise it above the item.
+            HologramProperties properties = HologramProperties.builder()
+                    .attachmentOffset(new Vector(0, 0.5, 0)) // Lifts the hologram 0.5 blocks up
+                    .build();
 
-            // 3. That's it! No more setText() or showTo(). The manager now handles
-            // showing the hologram to nearby players automatically.
+            // 2. Create the hologram using the manager.
+            Hologram hologram = plugin.getHologramManager().createHologram(
+                itemEntity.getLocation(),
+                hologramLines,
+                properties
+            );
+
+            // 3. Attach the hologram to the item entity. The manager now handles all updates.
+            hologram.attachTo(itemEntity);
 
             // Your existing logic to track the item
             game.getDroppedGameItems().add(itemEntity);

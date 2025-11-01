@@ -16,7 +16,6 @@ import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.loot.LootManager;
-import dev.thomashanson.wizards.game.manager.GameManager;
 import dev.thomashanson.wizards.game.manager.LanguageManager;
 import dev.thomashanson.wizards.game.mode.WizardsMode;
 import dev.thomashanson.wizards.game.state.GameState;
@@ -120,8 +119,7 @@ public class PrepareState extends GameState {
                     .collect(Collectors.toList());
             plugin.getGameManager().gameAnnounce(player, true, translatedIntro);
 
-            if (!player.hasMetadata(GameManager.SPECTATING_KEY))
-                getGame().getWizardManager().setupWizard(player);
+            getGame().getWizardManager().setupWizard(player);
         });
 
         plugin.getServer().getScheduler().scheduleSyncDelayedTask(plugin, () -> setState(new ActiveState()), mode.getPreparationSecs() * 20L);

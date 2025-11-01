@@ -57,7 +57,8 @@ public class SpellIceShards extends Spell implements CustomProjectile, Tickable 
         if (level == null) return;
         
         if (hitEntity != null && data.getThrower() instanceof Player caster) {
-            damage(hitEntity, new CustomDamageTick(getStat("damage", level), EntityDamageEvent.DamageCause.PROJECTILE, getKey(), Instant.now(), caster, null));
+            // CORRECTED KEY
+            damage(hitEntity, new CustomDamageTick(getStat("damage-per-shard", level), EntityDamageEvent.DamageCause.PROJECTILE, getKey(), Instant.now(), caster, null));
         }
 
         Location impact = (hitEntity != null) ? hitEntity.getLocation() : hitBlock.getLocation();
@@ -80,7 +81,7 @@ public class SpellIceShards extends Spell implements CustomProjectile, Tickable 
             this.caster = caster;
             this.level = level;
 
-            StatContext context = StatContext.of(level);
+            // CORRECTED KEY
             this.totalShots = (int) parent.getStat("shards", level);
             this.shotDelay = (int) parent.getStat("delay-ticks", level);
         }

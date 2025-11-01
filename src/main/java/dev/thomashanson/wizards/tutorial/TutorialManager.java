@@ -24,15 +24,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 
-import com.github.juliarn.npclib.api.Npc;
-import com.github.juliarn.npclib.api.Platform;
-import com.github.juliarn.npclib.api.event.InteractNpcEvent;
-import com.github.juliarn.npclib.api.profile.Profile;
-import com.github.juliarn.npclib.bukkit.BukkitPlatform;
-import com.github.juliarn.npclib.bukkit.BukkitWorldAccessor;
-import com.github.juliarn.npclib.bukkit.util.BukkitPlatformUtil;
 import com.sk89q.worldedit.EditSession;
 import com.sk89q.worldedit.WorldEdit;
 import com.sk89q.worldedit.WorldEditException;
@@ -62,8 +54,8 @@ public class TutorialManager implements Listener {
     private final LanguageManager languageManager;
     private final ItemStack exitItem;
 
-    private final Platform<World, Player, ItemStack, Plugin> platform;
-    private final Map<UUID, Npc<World, Player, ItemStack, Plugin>> activeNpcs = new HashMap<>();
+    // private final Platform<World, Player, ItemStack, Plugin> platform;
+    // private final Map<UUID, Npc<World, Player, ItemStack, Plugin>> activeNpcs = new HashMap<>();
 
     private final Map<UUID, TutorialSession> activeSessions = new HashMap<>();
     private final Map<Location, TutorialSession> activeRooms = new HashMap<>(); // Tracks pasted rooms by their origin
@@ -80,11 +72,11 @@ public class TutorialManager implements Listener {
         this.plugin = plugin;
         this.languageManager = plugin.getLanguageManager();
 
-        this.platform = BukkitPlatform.bukkitNpcPlatformBuilder()
-                .extension(plugin) // Required: Links to your plugin for scheduling tasks
-                .actionController(builder -> {}) // Enables the default action controller for automatic visibility
-                .worldAccessor(BukkitWorldAccessor.nameBasedAccessor())
-                .build();
+        // this.platform = BukkitPlatform.bukkitNpcPlatformBuilder()
+        //         .extension(plugin) // Required: Links to your plugin for scheduling tasks
+        //         .actionController(builder -> {}) // Enables the default action controller for automatic visibility
+        //         .worldAccessor(BukkitWorldAccessor.nameBasedAccessor())
+        //         .build();
 
         this.exitItem = ItemBuilder.from(Material.BARRIER)
                 .name(languageManager.getTranslated(null, "wizards.item.tutorial.exit.name"))
@@ -161,15 +153,15 @@ public class TutorialManager implements Listener {
     }
 
     private void registerNpcListeners() {
-        this.platform.eventManager().registerEventHandler(InteractNpcEvent.class, event -> {
-            Player player = event.player();
-            Npc<World, Player, ItemStack, Plugin> clickedNpc = event.npc();
-            Npc<World, Player, ItemStack, Plugin> playerNpc = activeNpcs.get(player.getUniqueId());
+        // this.platform.eventManager().registerEventHandler(InteractNpcEvent.class, event -> {
+        //     Player player = event.player();
+        //     Npc<World, Player, ItemStack, Plugin> clickedNpc = event.npc();
+        //     Npc<World, Player, ItemStack, Plugin> playerNpc = activeNpcs.get(player.getUniqueId());
 
-            if (playerNpc != null && playerNpc.equals(clickedNpc)) {
-                Bukkit.getScheduler().runTask(this.plugin, () -> startTutorial(player));
-            }
-        });
+        //     if (playerNpc != null && playerNpc.equals(clickedNpc)) {
+        //         Bukkit.getScheduler().runTask(this.plugin, () -> startTutorial(player));
+        //     }
+        // });
     }
 
     private void loadSchematic() {
@@ -207,21 +199,21 @@ public class TutorialManager implements Listener {
         Player player = event.getPlayer();
         if (npcLocation == null) return;
 
-        this.platform.newNpcBuilder()
-                .position(BukkitPlatformUtil.positionFromBukkitLegacy(npcLocation))
-                .profile(Profile.unresolved("Wizard"))
-                .thenAccept(builder -> {
-                    builder.flag(Npc.LOOK_AT_PLAYER, true);
-                    builder.npcSettings(settings -> settings.profileResolver((p, n) -> {
-                        var playerProfile = Profile.unresolved(player.getUniqueId());
-                        return this.platform.profileResolver()
-                                .resolveProfile(playerProfile)
-                                .thenApply(profile -> n.profile().withProperties(profile.properties()));
-                    }));
+        // this.platform.newNpcBuilder()
+        //         .position(BukkitPlatformUtil.positionFromBukkitLegacy(npcLocation))
+        //         .profile(Profile.unresolved("Wizard"))
+        //         .thenAccept(builder -> {
+        //             builder.flag(Npc.LOOK_AT_PLAYER, true);
+        //             builder.npcSettings(settings -> settings.profileResolver((p, n) -> {
+        //                 var playerProfile = Profile.unresolved(player.getUniqueId());
+        //                 return this.platform.profileResolver()
+        //                         .resolveProfile(playerProfile)
+        //                         .thenApply(profile -> n.profile().withProperties(profile.properties()));
+        //             }));
 
-                    Npc<World, Player, ItemStack, Plugin> npc = builder.buildAndTrack();
-                    activeNpcs.put(player.getUniqueId(), npc);
-                });
+        //             Npc<World, Player, ItemStack, Plugin> npc = builder.buildAndTrack();
+        //             activeNpcs.put(player.getUniqueId(), npc);
+        //         });
     }
 
     @EventHandler
@@ -231,10 +223,10 @@ public class TutorialManager implements Listener {
             endTutorial(player, false);
         }
 
-        Npc<World, Player, ItemStack, Plugin> npc = activeNpcs.remove(player.getUniqueId());
-        if (npc != null) {
-            npc.unlink();
-        }
+        // Npc<World, Player, ItemStack, Plugin> npc = activeNpcs.remove(player.getUniqueId());
+        // if (npc != null) {
+        //     npc.unlink();
+        // }
     }
 
     public void startTutorial(Player player) {

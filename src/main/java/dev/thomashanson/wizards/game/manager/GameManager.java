@@ -150,16 +150,26 @@ public class GameManager implements Listener {
         // We will move the logic from Wizards#updateGame into Wizards#tick.
         registerTickable(activeGame);
 
+        // Now, find and register all spells that are tickable
+        for (dev.thomashanson.wizards.game.spell.Spell spell : plugin.getSpellManager().getAllSpells().values()) {
+            if (spell instanceof Tickable) {
+                registerTickable((Tickable) spell);
+                plugin.getLogger().info(String.format("Registered tickable spell: ", spell.getKey()));
+            }
+        }
+
         masterTickTask = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             // Iterate through all registered components and tick them.
             for (Tickable component : tickableComponents) {
-                try {
-                    component.tick(gameTickCounter);
-                } catch (Exception e) {
-                    // Catching exceptions here prevents one faulty component
-                    // (e.g., a broken spell) from crashing the entire game loop.
-                    plugin.getLogger().severe(String.format("Error while ticking component: %s", component.getClass().getSimpleName()));
-                    e.printStackTrace();
+                if (gameTickCounter % component.getTickInterval() == 0) {
+                    try {
+                        component.tick(gameTickCounter);
+                    } catch (Exception e) {
+                        // Catching exceptions here prevents one faulty component
+                        // (e.g., a broken spell) from crashing the entire game loop.
+                        plugin.getLogger().severe(String.format("Error while ticking component: %s", component.getClass().getSimpleName()));
+                        e.printStackTrace();
+                    }
                 }
             }
             gameTickCounter++;

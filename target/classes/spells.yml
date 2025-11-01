@@ -23,24 +23,24 @@ spells:
     mana: { base: 15, per-level: -2 }
     cooldown: { base: 5, per-level: 0 }
     stats:
-      Damage:
+      damage:
         display: "%.1f hearts"
         formula: "LEVEL_SCALING"
         base: 3.0
         multiplier: 1.0
-      Range:
+      range:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
-        base: 30
-        multiplier: 10
-      "Homing Strength":
+        base: 30.0
+        multiplier: 10.0
+      homing-strength:
         display: "%.2f"
         formula: "LEVEL_SCALING"
         base: 0.05
         multiplier: 0.02
       # --- Internal Stats ---
-      "speed-bps": { formula: "STATIC", value: 30 }
-      "reflection-damage": { formula: "STATIC", value: 2.0 } # Damage taken by Light Shield
+      speed-bps: { formula: "STATIC", value: 12.0 }
+      reflection-damage: { formula: "STATIC", value: 2.0 } # Damage taken by Light Shield
 
   FIREBALL:
     name: "Fireball"
@@ -52,24 +52,24 @@ spells:
     element: ATTACK
     wand-element: FIRE
     mana: { base: 30, per-level: -3 }
-    cooldown: { base: 15, per-level: -1 }
+    cooldown: { base: 15, per-level: -2 }
     stats:
-      Damage:
+      damage:
         display: "%.1f hearts"
         formula: "LEVEL_SCALING"
-        base: 4.0
-        multiplier: 1.0
-      Radius:
+        base: 3.0
+        multiplier: 0.5
+      radius:
         display: "%.1f blocks"
         formula: "LEVEL_SCALING"
-        base: 4.0
-        multiplier: 0.5
-      "fire-ticks":
+        base: 1.0
+        multiplier: 0.3
+      fire-ticks:
         display: "%.1f seconds"
         formula: "LEVEL_SCALING"
         base: 4.0  # 80 ticks
         multiplier: 1.0 # +20 ticks
-      "Knockback Strength":
+      knockback-strength:
         display: "%.1f"
         formula: "LEVEL_SCALING"
         base: 1.2
@@ -77,93 +77,95 @@ spells:
       # --- Internal Stats ---
       velocity: { formula: "STATIC", value: 1.8 }
       yield: { formula: "STATIC", value: 1.5 }
-      "is-incendiary": { formula: "STATIC", value: 1 }
-      "jump-strength": { formula: "STATIC", value: 1.4 }
-      "jump-y-add": { formula: "STATIC", value: 0.6 }
-      "jump-y-max": { formula: "STATIC", value: 1.2 }
-      "self-damage": { formula: "STATIC", value: 2.0 }
-      "knockback-y-add": { formula: "LEVEL_SCALING", base: 0.4, multiplier: 0.1 }
-      "knockback-y-max": { formula: "STATIC", value: 1.0 }
-      "reflection-damage": { formula: "STATIC", value: 3.0 }
+      is-incendiary: { formula: "STATIC", value: 1 }
+      jump-strength: { formula: "STATIC", value: 1.4 }
+      jump-y-add: { formula: "STATIC", value: 0.6 }
+      jump-y-max: { formula: "STATIC", value: 1.2 }
+      self-damage: { formula: "STATIC", value: 2.0 }
+      knockback-y-add: { formula: "LEVEL_SCALING", base: 0.4, multiplier: 0.1 }
+      knockback-y-max: { formula: "STATIC", value: 1.0 }
+      reflection-damage: { formula: "STATIC", value: 3.0 }
 
   LIGHTNING_STRIKE:
     name: "Lightning Strike"
-    description: "After a short delay, call down a bolt of lightning at your target location, damaging and igniting foes."
+    description: "Summons a lightning bolt at your target location after a short delay."
     class: "dev.thomashanson.wizards.game.spell.types.SpellLightningStrike"
-    icon: GOLDEN_AXE
+    icon: BLAZE_ROD
     max-level: 3
-    rarity: UNCOMMON
+    rarity: RARE
     element: ATTACK
-    wand-element: MANA
-    mana: { base: 50, per-level: 0 }
-    cooldown: { base: 20, per-level: 0 }
+    wand-element: STORM
+    mana: { base: 60, per-level: 5 }
+    cooldown: { base: 25, per-level: -3 }
     stats:
-      Damage:
-        display: "%.1f hearts"
-        formula: "LEVEL_SCALING"
-        base: 4.0
-        multiplier: 2.0
-      Range:
-        display: "%.0f blocks"
+      max-range:
+        display: "%.0f Block Range"
         formula: "STATIC"
-        value: 50
-      "Explosion Radius":
-        display: "%.1f blocks"
-        formula: "LEVEL_SCALING"
-        base: 2.0
-        multiplier: 0.5
-      "Strike Delay":
-        display: "%.1f seconds"
+        value: 50.0
+      strike-delay-ticks:
+        display: "%.1f Second Delay"
         formula: "STATIC"
-        value: 1.5 # 30 ticks
-      # --- Internal Stats ---
-      "max-range": { formula: "STATIC", value: 50 }
-      "strike-delay-ticks": { formula: "STATIC", value: 30 }
-      "sets-fire": { formula: "STATIC", value: 1 } # 0 for false, 1 for true
-      "fire-ticks-on-hit": { formula: "STATIC", value: 100 } # 5 seconds
+        value: 20.0 # 20 ticks = 1 second
+      damage:
+        display: "%.1f Hearts"
+        formula: "STATIC"
+        value: 8.0 # 4 hearts
+      block-velocity:
+        display: "%.1f Debris Velocity"
+        formula: "STATIC"
+        value: 1.0
+      fire-chance:
+        display: "%.0f%% Fire Chance"
+        formula: "STATIC"
+        value: 0.3 # 30% chance
+      fire-ticks-on-hit:
+        display: "%.1f Second Burn"
+        formula: "STATIC"
+        value: 80.0 # 4 seconds
+      debris-damage:
+        display: "%.1f Hearts Debris"
+        formula: "STATIC"
+        value: 2.0 # 1 heart
 
   RUMBLE:
     name: "Rumble"
-    description: "Create a targeted earthquake in the direction you face that damages and slows foes! Explodes with damage at the end!"
+    description: "Sends a fissure of cracking earth that travels along the ground, ending in an explosion."
     class: "dev.thomashanson.wizards.game.spell.types.SpellRumble"
-    icon: PISTON
+    icon: COBBLESTONE
     max-level: 3
-    rarity: UNCOMMON
-    element: ATTACK
+    rarity: RARE
+    element: UTILITY
     wand-element: EARTH
-    mana: { base: 30, per-level: 0 }
-    cooldown: { base: 15, per-level: -1 }
+    mana: { base: 50, per-level: 5 }
+    cooldown: { base: 25, per-level: -3 }
     stats:
-      Damage:
-        display: "%.1f hearts"
-        formula: "LEVEL_SCALING"
-        base: 3.0
-        multiplier: 1.0
-      "Explosion Damage":
-        display: "%.1f hearts"
-        formula: "LEVEL_SCALING"
-        base: 4.0
-        multiplier: 0.5
-      Range:
-        display: "%.0f blocks"
+      range:
+        display: "%.0f Block Range"
         formula: "LEVEL_SCALING"
         base: 10.0
-        multiplier: 10.0
-      "Slowness Level":
-        display: "Slowness %.0f"
+        multiplier: 5.0 # Mineplex was 10*level, so 10/20/30. This is 15/20/25. Adjust as needed.
+      travel-damage:
+        display: "%.1f Hearts"
+        formula: "LEVEL_SCALING"
+        base: 3.0 # 1.5 hearts
+        multiplier: 1.0 # +0.5 heart/lvl. Mineplex was 4/6/8.
+      finale-damage-base:
+        display: "%.1f Hearts Finale"
         formula: "STATIC"
-        value: 2
-      # --- Internal Stats ---
-      "max-distance": { formula: "LEVEL_SCALING", base: 10, multiplier: 10 }
-      "explosion-power": { formula: "LEVEL_SCALING", base: 2.5, multiplier: 0.5 }
-      "slow-duration-ticks": { formula: "STATIC", value: 40 }
-      "slow-amplifier": { formula: "STATIC", value: 2 }
-      width: # Width grows as the rumble travels
-        formula: "DISTANCE_SCALING"
-        base: 1.0 # Start width
-        distanceMultiplier: 0.1 # Grow by 0.1 blocks per block traveled
-        divisor: 1.0
-        levelMultiplier: 0.0
+        value: 4.0 # Base damage for the final explosion
+      slow-duration-ticks:
+        display: "%.1f Sec Slow"
+        formula: "STATIC"
+        value: 60.0 # 3 seconds
+      slow-amplifier:
+        display: "Slowness %.0f"
+        formula: "LEVEL_SCALING"
+        base: 1.0
+        multiplier: 1.0 # Slowness I/II/III
+      block-velocity:
+        display: "%.1f Block Velocity"
+        formula: "STATIC"
+        value: 1.2
 
   RAINBOW_BEAM:
     name: "Rainbow Beam"
@@ -177,101 +179,158 @@ spells:
     mana: { base: 5, per-level: 3 }
     cooldown: { base: 8, per-level: 1 }
     stats:
-      Damage:
+      damage:
         display: "%.1f hearts"
-        formula: "DISTANCE_SCALING" # base - (distance * distanceMultiplier)
-        base: 6.0              # Max damage at point-blank
-        distanceMultiplier: -0.2 # Damage *decreases* by 0.2 per block
-      Range:
+        formula: "PERCENT_DISTANCE_SCALING"
+        # Base damage (Level + 1 hearts)
+        base: 2.0
+        multiplier: 1.0
+        # Falloff parameters
+        falloff-start-distance: 16.0
+        falloff-end-distance: 80.0
+        min-damage-hearts: 0.5
+      range:
         display: "%.0f blocks"
         formula: "STATIC"
         value: 80
       # --- Internal Stats ---
-      "particle-step": { formula: "STATIC", value: 0.25 }
-      "hitbox-size": { formula: "STATIC", value: 1.0 }
+      particle-step: { formula: "STATIC", value: 0.25 }
+      hitbox-size: { formula: "STATIC", value: 1.0 }
 
   MANA_BOMB:
     name: "Mana Bomb"
-    description: "Lob a tightly-packed ball of mana in an arc! Explodes on contact, dealing damage to anyone nearby."
+    description: "Lob a volatile ball of mana in an arc that explodes on contact."
     class: "dev.thomashanson.wizards.game.spell.types.SpellManaBomb"
-    icon: PRISMARINE_SHARD
-    max-level: 5
-    rarity: UNCOMMON
+    icon: HEART_OF_THE_SEA
+    max-level: 3
+    rarity: RARE
     element: ATTACK
     wand-element: MANA
-    mana: { base: 10, per-level: 10 }
-    cooldown: { base: 5, per-level: 5 }
+    
+    # "Mana cost increases by 10 per SL"
+    mana: { base: 30, per-level: 10 } 
+    
+    # "Cooldown is SL*5"
+    cooldown: { base: 0, per-level: 5 }
+    
     stats:
-      Damage:
-        display: "%.1f hearts"
-        formula: "LEVEL_SCALING"
-        base: 4.0
-        multiplier: 1.0
-      "Explosion Radius":
-        display: "%.1f blocks"
-        formula: "LEVEL_SCALING"
-        base: 2.5
-        multiplier: 0.5
-      Range:
-        display: "%.0f blocks"
+      # --- Projectile Stats ---
+      range:
+        display: "%.0f Block Range"
         formula: "STATIC"
-        value: 30
-      # --- Internal Stats ---
-      speed: { formula: "LEVEL_SCALING", base: 1.0, multiplier: 0.1 }
-      gravity: { formula: "STATIC", value: 0.04 }
-      "reflection-damage": { formula: "STATIC", value: 2.5 }
+        value: 12.0 # "12 blocks max range"
+        
+      speed:
+        display: "%.1f Projectile Speed"
+        formula: "STATIC"
+        value: 1.0 # Arcing projectiles are slower
+        
+      gravity:
+        display: "%.2f Gravity"
+        formula: "STATIC"
+        value: 0.05
+
+      # --- Damage Stats (SL+3) ---
+      base-damage:
+        display: "%.1f Hearts Base"
+        formula: "STATIC"
+        value: 3.0 # 1.5 Hearts
+        
+      damage-per-level:
+        display: "+%.1f Hearts Per Lvl"
+        formula: "STATIC"
+        value: 1.0 # +0.5 Hearts
+        
+      # --- Radius Stats (0.6 + 0.2*SL) ---
+      base-radius:
+        display: "%.1f Block Radius"
+        formula: "STATIC"
+        value: 0.6
+        
+      radius-per-level:
+        display: "+%.1f Radius Per Lvl"
+        formula: "STATIC"
+        value: 0.2
       
   ICE_SHARDS:
     name: "Ice Shards"
     description: "Rapidly fire a volley of sharp ice shards."
     class: "dev.thomashanson.wizards.game.spell.types.SpellIceShards"
     icon: GHAST_TEAR
-    max-level: 3
+    max-level: 5
     rarity: RARE
     element: ATTACK
     wand-element: ICE
-    mana: { base: 30, per-level: 0 }
-    cooldown: { base: 20, per-level: -2 }
+    mana: { base: 35, per-level: 5 }
+    cooldown: { base: 20, per-level: -1 }
     stats:
-      "Damage (per shard)":
+      damage-per-shard:
         display: "%.1f hearts"
         formula: "STATIC"
         value: 1.0
-      Shards:
+      shards:
         display: "%.0f"
         formula: "LEVEL_SCALING"
-        base: 2.0
+        base: 3.0 # Level 1 = 3 shards, Level 2 = 4, etc.
         multiplier: 1.0
       # --- Internal Stats ---
-      "delay-ticks": { formula: "STATIC", value: 4 }
-      "projectile-lifespan-ticks": { formula: "STATIC", value: 40 }
-      "projectile-speed": { formula: "STATIC", value: 2.0 }
-      "reflection-damage": { formula: "STATIC", value: 0.5 } # Low damage per shard
+      delay-ticks: { formula: "STATIC", value: 5 }
+      projectile-lifespan-ticks: { formula: "STATIC", value: 40 }
+      projectile-speed: { formula: "STATIC", value: 2.0 }
+      knockback-strength: { formula: "STATIC", value: 0.25 }
 
   DROOM:
     name: "Droom"
-    description: "Summon a falling anvil above yourself and all nearby enemies, which explodes upon landing."
+    description: "Summons anvils from the sky to fall upon you and your nearby enemies."
     class: "dev.thomashanson.wizards.game.spell.types.SpellDroom"
     icon: ANVIL
     max-level: 3
-    rarity: UNCOMMON
+    rarity: RARE
     element: ATTACK
     wand-element: EARTH
-    mana: { base: 40, per-level: -3 }
-    cooldown: { base: 15, per-level: -4 }
+    mana: { base: 60, per-level: 5 }
+    cooldown: { base: 25, per-level: -3 }
     stats:
-      Radius:
-        display: "%.0f blocks"
+      # --- Targeting Stats ---
+      radius:
+        display: "%.0f Block Radius"
         formula: "LEVEL_SCALING"
-        base: 6.0
-        multiplier: 2.0
-      "Explosion Power":
-        display: "%.1f"
+        base: 4.0
+        multiplier: 2.0 # 6 / 8 / 10
+        
+      spawn-height:
+        display: "%.0f Block Height"
         formula: "LEVEL_SCALING"
-        base: 2.0
-        multiplier: 0.5
-      # --- Internal Stats ---
-      "spawn-height": { formula: "STATIC", value: 12.0 }
+        base: 15.0
+        multiplier: 3.0 # 18 / 21 / 24
+
+      # --- Visual Stats ---
+      explosion-power:
+        display: "%.1f Explosion Size"
+        formula: "LEVEL_SCALING"
+        base: 1.0
+        multiplier: 0.5 # 1.5 / 2.0 / 2.5
+        
+      # --- NEW: Damage Stats (from Mineplex) ---
+      base-damage:
+        display: "%.1f Hearts Base"
+        formula: "STATIC"
+        value: 6.0 # 3 Hearts
+      
+      damage-per-level:
+        display: "+%.1f Hearts Per Lvl"
+        formula: "STATIC"
+        value: 4.0 # +2 Hearts per level
+        
+      damage-radius-base:
+        display: "%.1f Block Damage Radius"
+        formula: "STATIC"
+        value: 1.0
+        
+      damage-radius-per-level:
+        display: "+%.1f Radius Per Lvl"
+        formula: "STATIC"
+        value: 0.5 # 1.5 / 2.0 / 2.5
 
   BOULDER_TOSS:
     name: "Boulder Toss"
@@ -344,7 +403,7 @@ spells:
       
   NAPALM:
     name: "Napalm"
-    description: "Creates a ball of fire that grows the longer it lives, damaging foes and transforming the terrain. At a large size, it even burns away nearby blocks!"
+    description: "Launch a fiery projectile that explodes on impact, creating a lingering pool of fire."
     class: "dev.thomashanson.wizards.game.spell.types.SpellNapalm"
     icon: BLAZE_POWDER
     max-level: 5
@@ -353,35 +412,43 @@ spells:
     wand-element: FIRE
     mana: { base: 60, per-level: 5 }
     cooldown: { base: 60, per-level: -10 }
+    
     block-transformations:
       STONE: COBBLESTONE
       GRASS_BLOCK: DIRT
       SAND: GLASS
       STONE_BRICKS: NETHER_BRICK
       OAK_LOG: NETHERRACK
+      SPRUCE_LOG: NETHERRACK
+      BIRCH_LOG: NETHERRACK
+      JUNGLE_LOG: NETHERRACK
+      ACACIA_LOG: NETHERRACK
+      DARK_OAK_LOG: NETHERRACK
+      OAK_FENCE: NETHER_BRICK_FENCE
+      OAK_STAIRS: NETHER_BRICK_STAIRS
+      COBBLESTONE_STAIRS: NETHER_BRICK_STAIRS
+      CLAY: GRAY_TERRACOTTA # Modern equivalent of STAINED_CLAY (byte 8)
+
     stats:
-      Distance:
+      range:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
         base: 20.0
         multiplier: 5.0
-      "Damage per Tick":
-        display: "%.1f hearts"
-        formula: "LEVEL_SCALING"
-        base: 0.5
-        multiplier: 0.1
-      "Max Size":
+      radius:
         display: "%.1f blocks"
         formula: "LEVEL_SCALING"
-        base: 4.0
+        base: 2.0
+        multiplier: 2.0
+      fire-duration-seconds:
+        display: "%.0f seconds"
+        formula: "LEVEL_SCALING"
+        base: 5.0
         multiplier: 1.0
+      
       # --- Internal Stats ---
-      "speed-bps": { formula: "STATIC", value: 6.0 }
-      "initial-size": { formula: "STATIC", value: 1.0 }
-      "size-growth-per-tick": { formula: "STATIC", value: 0.03 }
-      "fire-ticks": { formula: "STATIC", value: 80 }
-      "explosion-damage": { formula: "LEVEL_SCALING", base: 3.0, multiplier: 1.0 }
-      "explosion-fire-ticks": { formula: "STATIC", value: 120 }
+      speed: { formula: "STATIC", value: 0.3 } # 1.2 blocks/tick = 24 b/s
+      damage: { formula: "STATIC", value: 4.0 } # 2 hearts burst damage
 
   SCARLET_STRIKES:
     name: "Scarlet Strikes"
@@ -427,22 +494,23 @@ spells:
     rarity: UNCOMMON
     element: UTILITY
     wand-element: LIFE
-    mana: { base: 20, per-level: 0 }
-    cooldown: { base: 90, per-level: -1 }
+    mana: { base: 40, per-level: 5 }
+    cooldown: { base: 75, per-level: -5 }
     stats:
-      "Regeneration Level":
+      regeneration-level:
         display: "Regen %.0f"
         formula: "LEVEL_SCALING"
         base: 1.0
-        multiplier: 1.0
-      "Duration":
+        multiplier: 0.5
+      duration:
         display: "%.1f seconds"
         formula: "LEVEL_SCALING"
-        base: 6.0
+        base: 4.0
         multiplier: 1.0
       # --- Internal Stats ---
-      amplifier: { formula: "LEVEL_SCALING", base: 1.0, multiplier: 1.0 }
-      "particle-count": { formula: "STATIC", value: 15 }
+      particle-count:
+        formula: "STATIC"
+        value: 15
 
   LIGHT_SHIELD:
     name: "Light Shield"
@@ -495,18 +563,16 @@ spells:
     mana: { base: 20, per-level: 0 }
     cooldown: { base: 50, per-level: -5 }
     stats:
-      Range:
+      range:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
-        base: 30.0
+        base: 20.0
         multiplier: 10.0
-      "Fall Immunity":
+      fall-immunity:
         display: "%.0f seconds"
         formula: "LEVEL_SCALING"
         base: 1.0
         multiplier: 1.0
-      # --- Internal Stats ---
-      "fall-immunity-seconds": { formula: "LEVEL_SCALING", base: 1.0, multiplier: 1.0 }
 
   FOCUS:
     name: "Focus"
@@ -557,16 +623,17 @@ spells:
     mana: { base: 15, per-level: 0 }
     cooldown: { base: 20, per-level: 0 }
     stats:
-      Range:
+      range:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
-        base: 13.0
+        base: 10.0
         multiplier: 3.0
-      Strength:
+      strength:
         display: "%.2f"
         formula: "LEVEL_SCALING"
-        base: 0.60
-        multiplier: 0.30
+        base: 1.2
+        multiplier: 0.4
+      cone-angle: { formula: "STATIC", value: 60.0 }
 
   GRAPPLING_BEAM:
     name: "Grappling Beam"
@@ -607,8 +674,8 @@ spells:
     rarity: RARE
     element: UTILITY
     wand-element: EARTH
-    mana: { base: 30, per-level: 0 }
-    cooldown: { base: 15, per-level: -1 }
+    mana: { base: 10, per-level: 0 }
+    cooldown: { base: 20, per-level: 0 }
     rainbow-materials:
       - 'RED_STAINED_GLASS'
       - 'ORANGE_STAINED_GLASS'
@@ -618,52 +685,53 @@ spells:
       - 'BLUE_STAINED_GLASS'
       - 'PURPLE_STAINED_GLASS'
     stats:
-      Length:
+      length:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
-        base: 10.0
+        base: 13.0
         multiplier: 10.0
-      Duration:
+      duration:
         display: "%.0f seconds"
         formula: "LEVEL_SCALING"
-        base: 5.0
+        base: 10.0
         multiplier: 2.0
-      # --- Internal Stats ---
-      "duration-seconds": { formula: "LEVEL_SCALING", base: 5.0, multiplier: 2.0 }
 
   IMPLODE:
     name: "Implode"
-    description: "Cause a targeted area of blocks to charge up and violently implode, destroying the terrain and damaging nearby players."
+    description: "Draws in nearby blocks over a short duration, then launches them outwards."
     class: "dev.thomashanson.wizards.game.spell.types.SpellImplode"
-    icon: IRON_SHOVEL
+    icon: TNT
     max-level: 3
     rarity: RARE
     element: TACTICAL
     wand-element: EARTH
-    mana: { base: 50, per-level: -2 }
-    cooldown: { base: 30, per-level: -3 }
+    mana: { base: 60, per-level: 5 }
+    cooldown: { base: 20, per-level: -2 }
     stats:
-      Radius:
-        display: "%.0f blocks"
-        formula: "LEVEL_SCALING"
-        base: 2.0
-        multiplier: 1.0
-      "Explosion Power":
-        display: "%.1f"
-        formula: "LEVEL_SCALING"
-        base: 3.0
-        multiplier: 0.5
-      Range:
-        display: "%.0f blocks"
+      range:
+        display: "%.0f Block Range"
         formula: "STATIC"
-        value: 50
-      "Charge-up":
-        display: "%.1f seconds"
+        value: 20.0
+        
+      duration-ticks:
+        display: "%.1f Second Charge"
         formula: "STATIC"
-        value: 2.0 # 40 ticks
-      # --- Internal Stats ---
-      "duration-ticks": { formula: "STATIC", value: 40 }
-      size: { formula: "LEVEL_SCALING", base: 2.0, multiplier: 1.0 }
+        value: 20.0 # 20 ticks = 1 second
+          
+      block-velocity:
+        display: "%.1f Block Velocity"
+        formula: "STATIC"
+        value: 1.3
+          
+      base-size:
+        display: "%.1f Base Radius"
+        formula: "STATIC"
+        value: 1.5
+            
+      size-per-level:
+        display: "+%.1f Radius Per Lvl"
+        formula: "STATIC"
+        value: 0.7
 
   FROSTBITE:
     name: "Frostbite"
@@ -712,23 +780,21 @@ spells:
     mana: { base: 10, per-level: 0 }
     cooldown: { base: 20, per-level: -5 }
     stats:
-      Width:
+      width:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
-        base: 6.0
+        base: 4.0
         multiplier: 2.0
-      Height:
+      height:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
-        base: 2.0
+        base: 1.0
         multiplier: 1.0
-      Duration:
+      duration:
         display: "%.0f seconds"
         formula: "LEVEL_SCALING"
-        base: 8.0
+        base: 12.0
         multiplier: 2.0
-      # --- Internal Stats ---
-      "duration-seconds": { formula: "LEVEL_SCALING", base: 8.0, multiplier: 2.0 }
 
   ICE_PRISON:
     name: "Ice Prison"
@@ -742,21 +808,20 @@ spells:
     mana: { base: 25, per-level: 2 }
     cooldown: { base: 20, per-level: 0 }
     stats:
-      Radius:
+      radius:
         display: "%.1f blocks"
         formula: "LEVEL_SCALING"
-        base: 3.5
-        multiplier: 0.5
-      Duration:
+        base: 3.0
+        multiplier: 1.0
+      duration:
         display: "%.0f seconds"
         formula: "LEVEL_SCALING"
-        base: 6.0
-        multiplier: 2.0
+        base: 10.0
+        multiplier: 3.0
       # --- Internal Stats ---
-      "projectile-lifespan-ticks": { formula: "STATIC", value: 60 }
-      "projectile-speed": { formula: "STATIC", value: 1.8 }
-      "duration-seconds": { formula: "LEVEL_SCALING", base: 6.0, multiplier: 2.0 }
-      "melt-random-offset-seconds": { formula: "STATIC", value: 3.0 }
+      projectile-lifespan-ticks: { formula: "STATIC", value: 40 }
+      projectile-speed: { formula: "STATIC", value: 1.7 }
+      melt-random-offset-seconds: { formula: "STATIC", value: 10.0 }
       
   DOPPELGANGER:
     name: "Doppelganger"
@@ -816,28 +881,27 @@ spells:
   
   SPEED_BOOST:
     name: "Speed Boost"
-    description: "Gain a burst of speed for a short duration."
+    description: "Briefly gain a burst of movement speed."
     class: "dev.thomashanson.wizards.game.spell.types.SpellSpeedBoost"
     icon: SUGAR
-    max-level: 2
+    max-level: 3
     rarity: COMMON
     element: UTILITY
-    wand-element: LIFE
+    wand-element: AIR
     mana: { base: 20, per-level: 0 }
-    cooldown: { base: 45, per-level: 0 }
+    cooldown: { base: 10, per-level: -1 }
     stats:
-      "Speed Level":
-        display: "Speed %.0f"
+      duration-seconds:
+        display: "%.1f Second Duration"
         formula: "LEVEL_SCALING"
-        base: 2.0 # Speed II at level 1
-        multiplier: 1.0
-      Duration:
-        display: "%.0f seconds"
-        formula: "STATIC"
-        value: 20.0
-      # --- Internal Stats ---
-      "duration-seconds": { formula: "STATIC", value: 20.0 }
-      "speed-amplifier": { formula: "LEVEL_SCALING", base: 2.0, multiplier: 1.0 }
+        base: 4.0
+        multiplier: 1.0 # 4s / 5s / 6s
+        
+      speed-amplifier:
+        display: "Speed %.1f"
+        formula: "LEVEL_SCALING"
+        base: 2.0
+        multiplier: 1.0 # Speed II / III / IV
 
   WIZARDS_COMPASS:
     name: "Wizard's Compass"
@@ -908,17 +972,17 @@ spells:
     mana: { base: 40, per-level: -5 }
     cooldown: { base: 15, per-level: -2 }
     stats:
-      Damage:
+      damage:
         display: "Varies"
         formula: "DISTANCE_SCALING"
-        base: 6.0              # Base damage
-        distanceMultiplier: 1.0 # Standard distance effect
-        divisor: 7.0           # The '7' in (7 - SL)
-        levelMultiplier: 1.0   # The 'SL' in (7 - SL)
-        maxLevel: 6            # The level at which scaling caps
-        maxValue: 20.0         # Max damage if denominator is invalid
+        base: 6.0
+        distanceMultiplier: 1.0
+        divisor: 7.0
+        levelMultiplier: 1.0
+        maxLevel: 6
+        maxValue: 20.0
       # --- Internal Stats ---
-      "velocity-multiplier": { formula: "STATIC", value: 1.5 }
+      velocity-multiplier: { formula: "STATIC", value: 2.3 }
 
   SUMMON_WOLVES:
     name: "Summon Wolves"
@@ -932,30 +996,26 @@ spells:
     mana: { base: 80, per-level: -10 }
     cooldown: { base: 160, per-level: 0 }
     stats:
-      Wolves:
+      wolf-count:
         display: "%.0f"
         formula: "LEVEL_SCALING"
-        base: 3.0 # SL 1 -> 3 wolves
+        base: 3.0
         multiplier: 1.0
-      Duration:
+      duration:
         display: "%.0f seconds"
         formula: "STATIC"
         value: 30.0
-      "Wolf Health":
+      wolf-health:
         display: "%.1f hearts"
-        formula: "LEVEL_SCALING"
-        base: 4.0 # 2 hearts
-        multiplier: 2.0 # +1 heart per level
-      "Wolf Speed":
+        formula: "STATIC"
+        value: 2.0 # 1 heart
+      wolf-speed:
         display: "Speed %.0f"
         formula: "LEVEL_SCALING"
         base: 1.0 # Speed I at level 1
         multiplier: 1.0
       # --- Internal Stats ---
-      "wolf-count": { formula: "LEVEL_SCALING", base: 3, multiplier: 1 }
-      "duration-seconds": { formula: "STATIC", value: 30.0 }
-      "wolf-speed-amplifier": { formula: "LEVEL_SCALING", base: 1, multiplier: 1 }
-      "damage-modifier": { formula: "STATIC", value: 0.3 }
+      damage-modifier: { formula: "STATIC", value: 0.3 }
 
   SPITE:
     name: "Spite"
@@ -997,30 +1057,34 @@ spells:
     element: TACTICAL
     wand-element: DARK
     mana: { base: 25, per-level: 0 }
-    cooldown: { base: 30, per-level: -1 }
+    cooldown: { base: 30, per-level: -5 }
     stats:
-      Damage:
+      damage:
         display: "%.1f hearts"
         formula: "LEVEL_SCALING"
         base: 5.0
         multiplier: 2.0
-      Radius:
+      radius:
         display: "%.1f blocks"
         formula: "LEVEL_SCALING"
-        base: 1.6
+        base: 1.0
         multiplier: 0.8
-      Range:
+      range:
         display: "%.0f blocks"
         formula: "LEVEL_SCALING"
         base: 8.0
         multiplier: 4.0
-      "Arming Time":
+      arming-time:
         display: "%.1f seconds"
         formula: "STATIC"
-        value: 5.0 # 100 ticks
+        value: 5.0
+      rune-size:
+        display: "%.1f blocks"
+        formula: "LEVEL_SCALING"
+        base: 2.0  # Starts as a 2-block radius
+        multiplier: 0.5 # Gains 0.5 block radius per level
       # --- Internal Stats ---
-      "max-runes": { formula: "STATIC", value: 3 }
-      "rune-size": { formula: "LEVEL_SCALING", base: 1.6, multiplier: 0.8 }
-      "arming-ticks": { formula: "STATIC", value: 100 }
-      "lifespan-ticks": { formula: "STATIC", value: 2000 } # 100 seconds
-      "knockback-strength": { formula: "LEVEL_SCALING", base: 1.0, multiplier: 0.2 }
+      max-runes: { formula: "STATIC", value: 3 }
+      arming-ticks: { formula: "STATIC", value: 100 }
+      lifespan-ticks: { formula: "STATIC", value: 2000 } # 100 seconds
+      knockback-strength: { formula: "LEVEL_SCALING", base: 1.0, multiplier: 0.2 }

@@ -65,6 +65,7 @@ import dev.thomashanson.wizards.game.manager.TeamManager;
 import dev.thomashanson.wizards.game.manager.WandManager;
 import dev.thomashanson.wizards.game.manager.WizardManager;
 import dev.thomashanson.wizards.game.mode.GameTeam;
+import dev.thomashanson.wizards.game.mode.GameTeam.TeamRelation;
 import dev.thomashanson.wizards.game.mode.WizardsMode;
 import dev.thomashanson.wizards.game.overtime.Disaster;
 import dev.thomashanson.wizards.game.overtime.types.DisasterEarthquake;
@@ -964,12 +965,12 @@ public class Wizards implements Listener, Tickable {
 
         // Filter all online players
         return Bukkit.getOnlinePlayers().stream()
-                // To be "alive", a player MUST be a registered participant AND not be in spectator mode.
-                .filter(player -> participantUuids.contains(player.getUniqueId()) 
-                                && player.getGameMode() != GameMode.SPECTATOR)
+                .filter(player -> participantUuids.contains(player.getUniqueId()))
                 .collect(Collectors.toList());
     }
-    public GameTeam.TeamRelation getRelation(Player a, Player b) { /* ... (unchanged) ... */ return null;} // Placeholder
+    public GameTeam.TeamRelation getRelation(Player a, Player b) {
+        /* ... (unchanged) ... */ return TeamRelation.ENEMY;
+    }
     /**
      * Checks if a location is inside the map's boundaries, plus a grace area.
      * @param location The location to check.

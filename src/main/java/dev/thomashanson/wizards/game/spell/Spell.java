@@ -13,6 +13,7 @@ import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
@@ -124,6 +125,7 @@ public abstract class Spell implements Listener {
     public void cleanup() {}
 
     public ItemStack createItemStack(@Nullable Player viewer, int spellLevel, int model) {
+        plugin.getLogger().info(String.format("Building lore for spell: %s", this.key));
         ItemStack item = ItemBuilder.from(this.icon)
                 .model(model)
                 .amount(Math.max(1, spellLevel))
@@ -174,6 +176,8 @@ public abstract class Spell implements Listener {
 
                 String statNameKey = "wizards.stat." + statKey.toLowerCase(Locale.ROOT).replace(" ", "_");
                 Component translatedStatName = languageManager.getTranslated(viewer, statNameKey, Placeholder.unparsed("default", statKey));
+
+                plugin.getLogger().info(String.format("Building stat lore for %s", statNameKey));
                 
                 double calculatedValue = spellStat.calculate(context);
                 String formattedValue = spellStat.getDisplayFormat().formatted(calculatedValue);
@@ -247,6 +251,7 @@ public abstract class Spell implements Listener {
             plugin.getLogger().log(Level.WARNING, "Spell ''{0}'' is missing required stat ''{1}'' in spells.yml. Using default value of {2}.", new Object[]{this.key, key, defaultValue});
             return defaultValue;
         }
+        Bukkit.broadcast(Component.text(String.format("%s has value: %s for stat: %s", this.key, stat.calculate(context), key)));
         return stat.calculate(context);
     }
     

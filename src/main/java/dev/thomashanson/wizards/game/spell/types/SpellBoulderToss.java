@@ -4,7 +4,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -12,10 +14,9 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.Sound;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
-import org.bukkit.event.entity.EntityDamageEvent;
+import org.bukkit.event.entity.EntityDamageEvent.DamageCause;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.EulerAngle;
@@ -26,11 +27,10 @@ import dev.thomashanson.wizards.WizardsPlugin;
 import dev.thomashanson.wizards.damage.types.CustomDamageTick;
 import dev.thomashanson.wizards.game.Tickable;
 import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.game.spell.StatContext;
 
 public class SpellBoulderToss extends Spell implements Tickable {
 
-    private static final List<BoulderInstance> ACTIVE_INSTANCES = new CopyOnWriteArrayList<>();
+    private final Map<UUID, BoulderInstance> activeInstances = new ConcurrentHashMap<>();
     private final NamespacedKey boulderKey;
 
     public SpellBoulderToss(@NotNull WizardsPlugin plugin, @NotNull String key, @NotNull ConfigurationSection config) {
@@ -40,120 +40,123 @@ public class SpellBoulderToss extends Spell implements Tickable {
 
     @Override
     public boolean cast(Player player, int level) {
-        // Prevent player from casting again if they already have boulders active
-        if (ACTIVE_INSTANCES.stream().anyMatch(inst -> inst.caster.getUniqueId().equals(player.getUniqueId()))) {
-            // Send feedback message
+        if (activeInstances.containsKey(player.getUniqueId())) {
+            // Send feedback message to player
             return false;
         }
 
-        ACTIVE_INSTANCES.add(new BoulderInstance(this, player, level));
+        activeInstances.put(player.getUniqueId(), new BoulderInstance(this, player, level));
         player.playSound(player.getLocation(), Sound.ENTITY_EVOKER_PREPARE_ATTACK, 1F, 1.2F);
         return true;
     }
 
     @Override
     public void tick(long gameTick) {
-        if (ACTIVE_INSTANCES.isEmpty()) return;
+        if (activeInstances.isEmpty()) return;
 
-        Iterator<BoulderInstance> iterator = ACTIVE_INSTANCES.iterator();
+        final Iterator<BoulderInstance> iterator = activeInstances.values().iterator();
         while (iterator.hasNext()) {
-            BoulderInstance instance = iterator.next();
-            if (instance.tick()) {
+            final BoulderInstance instance = iterator.next();
+            if (instance.isDone()) {
                 iterator.remove();
+            } else {
+                instance.tick();
             }
         }
     }
 
     @Override
     public int getTickInterval() {
-        return 1; // Needs frequent updates for smooth rotation and projectiles
+        return 1; // Needs frequent updates for smooth visuals.
     }
 
     @Override
     public void cleanup() {
-        ACTIVE_INSTANCES.forEach(BoulderInstance::cleanup);
-        ACTIVE_INSTANCES.clear();
+        activeInstances.values().forEach(BoulderInstance::cleanup);
+        activeInstances.clear();
     }
 
     private static class BoulderInstance {
-        enum Phase { ROTATING, LAUNCHED, DONE }
+        private enum Phase { ROTATING, LAUNCHED }
 
-        final SpellBoulderToss parentSpell;
-        final Player caster;
-        final int level;
-        final List<BoulderProjectile> boulders = new ArrayList<>();
+        private final SpellBoulderToss parentSpell;
+        private final Player caster;
+        private final int level;
+        private final List<BoulderProjectile> boulders = new ArrayList<>();
+
         private Phase currentPhase = Phase.ROTATING;
         private int ticksLived = 0;
+        private boolean done = false;
 
         // Configurable stats
-        final int rotationDurationTicks;
-        final double angularSpeed;
-        final double orbitRadius;
-        final double damage;
-        final double knockback;
-        final double launchSpeed;
-        final double gravity;
+        private final int rotationDurationTicks;
+        private final double angularSpeed;
+        private final double orbitRadius;
+        private final double orbitYOffset;
+        private final double damage;
+        private final double knockback;
+        private final double launchSpeed;
+        private final double launchArc;
+        private final double gravity;
 
         BoulderInstance(SpellBoulderToss parent, Player caster, int level) {
             this.parentSpell = parent;
             this.caster = caster;
             this.level = level;
 
-            StatContext context = StatContext.of(level);
-            int boulderCount = (int) parent.getStat("boulders", level);
-            this.rotationDurationTicks = (int) parent.getStat("rotation-ticks", level);
-            this.angularSpeed = (2.0 * Math.PI * 2) / rotationDurationTicks; // 2 orbits
-            this.orbitRadius = parent.getStat("orbit-radius", level);
-            this.damage = parent.getStat("damage", level);
-            this.knockback = parent.getStat("knockback", level);
-            this.launchSpeed = parent.getStat("launch-speed", level) / 20.0; // BPS to BPT
-            this.gravity = parent.getStat("gravity", level);
+            final int boulderCount = (int) parent.getStat("boulders", level, 3);
+            final double orbits = parent.getStat("orbits", level, 2.0);
+            this.rotationDurationTicks = (int) parent.getStat("rotation-ticks", level, 100);
+            this.angularSpeed = (2.0 * Math.PI * orbits) / rotationDurationTicks;
+            this.orbitRadius = parent.getStat("orbit-radius", level, 2.5);
+            this.orbitYOffset = parent.getStat("orbit-y-offset", level, 1.0);
+            this.damage = parent.getStat("damage", level, 5.0);
+            this.knockback = parent.getStat("knockback", level, 0.4);
+            this.launchSpeed = parent.getStat("launch-speed-bps", level, 25.0) / 20.0; // BPS to BPT
+            this.launchArc = parent.getStat("launch-arc", level, 0.35);
+            this.gravity = parent.getStat("gravity", level, 0.03);
 
             spawnBoulders(boulderCount);
         }
 
-        void spawnBoulders(int count) {
+        private void spawnBoulders(int count) {
             for (int i = 0; i < count; i++) {
                 double angleOffset = (2.0 * Math.PI / count) * i;
                 boulders.add(new BoulderProjectile(this, angleOffset));
             }
         }
 
-        /** @return true if this entire instance should be removed. */
-        boolean tick() {
+        void tick() {
             ticksLived++;
             if (!caster.isOnline()) {
                 cleanup();
-                return true;
+                return;
             }
 
             if (currentPhase == Phase.ROTATING) {
                 tickRotation();
-            } else if (currentPhase == Phase.LAUNCHED) {
+            } else {
                 tickProjectiles();
             }
 
-            // Remove if all boulders are gone (destroyed or expired)
             if (boulders.isEmpty()) {
-                return true;
+                this.done = true;
             }
-            return false;
         }
 
-        void tickRotation() {
+        private void tickRotation() {
             if (ticksLived > rotationDurationTicks) {
                 launchBoulders();
                 return;
             }
-
             boulders.forEach(boulder -> boulder.tickRotation(ticksLived));
         }
 
-        void tickProjectiles() {
+        private void tickProjectiles() {
             boulders.removeIf(BoulderProjectile::tickProjectile);
         }
 
-        void launchBoulders() {
+        private void launchBoulders() {
             currentPhase = Phase.LAUNCHED;
             caster.playSound(caster.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1F, 1.2F);
             boulders.forEach(boulder -> boulder.launch(caster.getEyeLocation().getDirection()));
@@ -161,66 +164,74 @@ public class SpellBoulderToss extends Spell implements Tickable {
 
         void cleanup() {
             boulders.forEach(BoulderProjectile::remove);
+            boulders.clear();
+            this.done = true;
         }
+        
+        boolean isDone() { return done; }
     }
 
     private static class BoulderProjectile {
-        final BoulderInstance parent;
-        final ArmorStand armorStand;
-        final double initialAngleOffset;
-        private double visualSpinAngle = 0;
+        private final BoulderInstance parent;
+        private final ArmorStand armorStand;
+        private final double initialAngleOffset;
 
-        // Projectile state
+        // Configurable stats
+        private final double rotationHitbox;
+        private final double projectileHitbox;
+        private final int projectileMaxTicks;
+        private final double visualSpinSpeed;
+
+        private double visualSpinAngle = 0;
         private Vector velocity;
         private int projectileTicks = 0;
 
         BoulderProjectile(BoulderInstance parent, double angleOffset) {
             this.parent = parent;
             this.initialAngleOffset = angleOffset;
+
+            final int level = parent.level;
+            final SpellBoulderToss spell = parent.parentSpell;
+            this.rotationHitbox = spell.getStat("rotation-hitbox", level, 1.0);
+            this.projectileHitbox = spell.getStat("projectile-hitbox", level, 1.2);
+            this.projectileMaxTicks = (int) spell.getStat("projectile-max-ticks", level, 200);
+            this.visualSpinSpeed = Math.toRadians(spell.getStat("visual-spin-degrees", level, 15.0));
+
             this.armorStand = spawnArmorStand(parent.caster.getLocation());
         }
 
-        ArmorStand spawnArmorStand(Location loc) {
-            ArmorStand as = (ArmorStand) loc.getWorld().spawnEntity(loc, EntityType.ARMOR_STAND);
-            as.setVisible(false);
-            as.setGravity(false);
-            as.setMarker(true);
-            as.setHelmet(new ItemStack(Material.POLISHED_GRANITE));
-            as.getPersistentDataContainer().set(parent.parentSpell.boulderKey, PersistentDataType.BYTE, (byte)1);
-            return as;
+        private ArmorStand spawnArmorStand(Location loc) {
+            return loc.getWorld().spawn(loc, ArmorStand.class, as -> {
+                as.setVisible(false);
+                as.setGravity(false);
+                as.setMarker(true);
+                as.getEquipment().setHelmet(new ItemStack(Material.POLISHED_GRANITE));
+                as.getPersistentDataContainer().set(parent.parentSpell.boulderKey, PersistentDataType.BYTE, (byte) 1);
+            });
         }
 
         void tickRotation(int totalTicks) {
-            Location orbitCenter = parent.caster.getLocation().add(0, 1.0, 0);
-            double currentAngle = (totalTicks * parent.angularSpeed) + initialAngleOffset;
-            double x = parent.orbitRadius * Math.cos(currentAngle);
-            double z = parent.orbitRadius * Math.sin(currentAngle);
-            armorStand.teleport(orbitCenter.clone().add(x, 0, z));
-            visualSpinAngle += Math.toRadians(15);
-            armorStand.setHeadPose(new EulerAngle(0, visualSpinAngle, 0));
-            checkRotationCollision();
-        }
+            final Location orbitCenter = parent.caster.getLocation().add(0, parent.orbitYOffset, 0);
+            final double currentAngle = (totalTicks * parent.angularSpeed) + initialAngleOffset;
+            final double x = parent.orbitRadius * Math.cos(currentAngle);
+            final double z = parent.orbitRadius * Math.sin(currentAngle);
 
-        void checkRotationCollision() {
-            for (LivingEntity entity : armorStand.getWorld().getNearbyLivingEntities(armorStand.getLocation(), 1.0)) {
-                if (entity.equals(parent.caster)) continue;
-                if (armorStand.getBoundingBox().expand(0.5).overlaps(entity.getBoundingBox())) {
-                    parent.parentSpell.damage(entity, new CustomDamageTick(parent.damage, EntityDamageEvent.DamageCause.ENTITY_ATTACK, parent.parentSpell.getKey(), Instant.now(), parent.caster, null)); // UPDATED
-                    Vector knockback = entity.getLocation().toVector().subtract(armorStand.getLocation().toVector()).normalize().multiply(parent.knockback);
-                    entity.setVelocity(entity.getVelocity().add(knockback));
-                }
-            }
+            armorStand.teleport(orbitCenter.clone().add(x, 0, z));
+            visualSpinAngle += visualSpinSpeed;
+            armorStand.setHeadPose(new EulerAngle(0, visualSpinAngle, 0));
+            
+            checkCollision(rotationHitbox, DamageCause.ENTITY_ATTACK, false);
         }
 
         void launch(Vector direction) {
             this.velocity = direction.clone().normalize().multiply(parent.launchSpeed);
-            this.velocity.add(new Vector(0, 0.35, 0)); // Add initial arc
+            this.velocity.add(new Vector(0, parent.launchArc, 0));
         }
 
         /** @return true if this projectile should be removed. */
         boolean tickProjectile() {
             projectileTicks++;
-            if (projectileTicks > 200 || armorStand.isDead()) { // Max 10 seconds
+            if (projectileTicks > projectileMaxTicks || !armorStand.isValid()) {
                 remove();
                 return true;
             }
@@ -229,24 +240,38 @@ public class SpellBoulderToss extends Spell implements Tickable {
             armorStand.teleport(armorStand.getLocation().add(velocity));
 
             if (armorStand.getLocation().getBlock().getType().isSolid()) {
-                // Impact effects
+                // Impact effects could go here
                 remove();
                 return true;
             }
-            
-            for (LivingEntity entity : armorStand.getWorld().getNearbyLivingEntities(armorStand.getLocation(), 1.2)) {
-                 if (entity.equals(parent.caster)) continue;
-                 if (armorStand.getBoundingBox().expand(0.6).overlaps(entity.getBoundingBox())) {
-                     parent.parentSpell.damage(entity, new CustomDamageTick(parent.damage, EntityDamageEvent.DamageCause.PROJECTILE, parent.parentSpell.getKey(), Instant.now(), parent.caster, null)); // UPDATED
-                     remove();
-                     return true;
-                 }
+
+            return checkCollision(projectileHitbox, DamageCause.PROJECTILE, true);
+        }
+
+        /** @return true if collision occurred and projectile should be removed. */
+        private boolean checkCollision(double radius, DamageCause cause, boolean removeOnHit) {
+            for (LivingEntity entity : armorStand.getWorld().getNearbyLivingEntities(armorStand.getLocation(), radius)) {
+                if (entity.equals(parent.caster)) continue;
+
+                if (armorStand.getBoundingBox().expand(radius * 0.5).overlaps(entity.getBoundingBox())) {
+                    parent.parentSpell.damage(entity, new CustomDamageTick(parent.damage, cause, parent.parentSpell.getKey(), Instant.now(), parent.caster, null));
+                    
+                    final Vector kb = entity.getLocation().toVector().subtract(armorStand.getLocation().toVector()).normalize().multiply(parent.knockback);
+                    entity.setVelocity(entity.getVelocity().add(kb));
+                    
+                    if (removeOnHit) {
+                        remove();
+                        return true;
+                    }
+                }
             }
             return false;
         }
-        
+
         void remove() {
-            armorStand.remove();
+            if (armorStand.isValid()) {
+                armorStand.remove();
+            }
         }
     }
 }
