@@ -17,10 +17,22 @@ import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.Spell;
 
+/**
+ * The Mystic Kit.
+ * <p>
+ * This kit focuses on enhanced mana regeneration, scaling with the
+ * player's *current* mana pool.
+ */
 public class KitMystic extends WizardsKit {
 
     private final Wizards game;
 
+    /**
+     * Creates a new instance of the Mystic kit.
+     *
+     * @param game The active {@link Wizards} game instance.
+     * @param data The configuration data for this kit from the database.
+     */
     public KitMystic(Wizards game, Map<String, Object> data) {
         super(data);
         this.game = game;
@@ -31,6 +43,12 @@ public class KitMystic extends WizardsKit {
 
     }
 
+    /**
+     * Plays the introductory animation for the Mystic kit, featuring
+     * a blue "eye" insignia forming on the ground and rising up.
+     *
+     * @param player The player to play the intro for.
+     */
     @Override
     public void playIntro(Player player) {
         if (player == null || !player.isOnline()) {
@@ -112,6 +130,11 @@ public class KitMystic extends WizardsKit {
         }.runTaskTimer(game.getPlugin(), 40L, 1L); // Start after 2 seconds (40 ticks)
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Provides the description for the Mystic's percentage-based mana regen at a specific level.
+     */
     @Override
     public List<String> getLevelDescription(int level) {
         // Mana per second = 0.1 + (0.0125 * (level - 1))

@@ -59,6 +59,11 @@ public class KitEnchantress extends WizardsKit {
         this.game = game;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Provides the description for the Enchantress's duplicate spell-upgrade chance at a specific level.
+     */
     @Override
     public List<String> getLevelDescription(int level) {
         // Chance to level up = 0.2 + (0.0125 * (level - 1))

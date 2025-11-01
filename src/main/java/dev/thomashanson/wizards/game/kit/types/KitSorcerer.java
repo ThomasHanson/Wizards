@@ -16,22 +16,24 @@ import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.Spell;
 
+/**
+ * The Sorcerer Kit.
+ * <p>
+ * This kit focuses on wands, starting with more and having a higher
+ * maximum wand capacity. It also increases the chance of enemies
+ * dropping a wand on death.
+ */
 public class KitSorcerer extends WizardsKit {
 
     private final Wizards game;
 
+    /**
+     * Creates a new instance of the Sorcerer kit.
+     *
+     * @param game The active {@link Wizards} game instance.
+     * @param data The configuration data for this kit from the database.
+     */
     public KitSorcerer(Wizards game, Map<String, Object> data) {
-
-        // super(
-        //         "Sorcerer",
-
-        //         "Along with 3 starting wands, can have 6 wands at the max. " +
-        //                 "All players killed have a higher chance to drop a wand."
-
-        //         // new ItemStack(Material.BLAZE_ROD),
-        //         // new ItemStack(WandElement.FIRE.getMaterial())
-        // );
-
         super(data);
         this.game = game;
     }
@@ -41,6 +43,12 @@ public class KitSorcerer extends WizardsKit {
 
     }
 
+    /**
+     * Plays the introductory animation for the Sorcerer kit, featuring
+     * lightning strikes and smoke.
+     *
+     * @param player The player to play the intro for.
+     */
     @Override
     public void playIntro(Player player) {
         if (player == null || !player.isOnline()) {
@@ -102,6 +110,11 @@ public class KitSorcerer extends WizardsKit {
         }, 40L); // After 2 seconds (1s warning + 1s for first strike)
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Provides the description for the Sorcerer's wand perks at a specific level.
+     */
     @Override
     public List<String> getLevelDescription(int level) {
         // Chance to drop wand = 0.1 + (0.0125 * (level - 1))
@@ -119,11 +132,21 @@ public class KitSorcerer extends WizardsKit {
         return 100;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Sorcerer starts with 3 wands.
+     */
     @Override
     public int getInitialWands() {
         return 3;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Sorcerer has a max of 6 wands.
+     */
     @Override
     public int getInitialMaxWands(int kitLevel) {
         return 6;
@@ -135,10 +158,7 @@ public class KitSorcerer extends WizardsKit {
     }
 
     @Override
-    public void applyModifiers(Wizard wizard, int kitLevel) {
-        double reduction = 0.1 + (0.025 * (kitLevel- 1));
-        wizard.setCooldownMultiplier((float) (1 - reduction), false);
-    }
+    public void applyModifiers(Wizard wizard, int kitLevel) {}
 
     @Override
     public void applyInitialSpells(Wizard wizard) {

@@ -17,21 +17,32 @@ import dev.thomashanson.wizards.game.Wizard;
 import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.Spell;
-import dev.thomashanson.wizards.game.spell.SpellType;
 
+/**
+ * The Mage Kit.
+ * <p>
+ * This kit focuses on reduced spell cooldowns, allowing for more frequent
+ * spell casting.
+ */
 public class KitMage extends WizardsKit {
 
     // The 5 starting spells for the Mage
-    private static final SpellType[] STARTING_SPELLS = {
-            SpellType.MANA_BOLT,
-            SpellType.FIREBALL,
-            SpellType.HEAL,
-            SpellType.ICE_PRISON,
-            SpellType.WIZARDS_COMPASS
-    };
+    // private static final SpellType[] STARTING_SPELLS = {
+    //         SpellType.MANA_BOLT,
+    //         SpellType.FIREBALL,
+    //         SpellType.HEAL,
+    //         SpellType.ICE_PRISON,
+    //         SpellType.WIZARDS_COMPASS
+    // };
 
     private final Wizards game;
 
+    /**
+     * Creates a new instance of the Mage kit.
+     *
+     * @param game The active {@link Wizards} game instance.
+     * @param data The configuration data for this kit from the database.
+     */
     public KitMage(Wizards game, Map<String, Object> data) {
         super(data);
         this.game = game;
@@ -42,6 +53,12 @@ public class KitMage extends WizardsKit {
 
     }
 
+    /**
+    * Plays the introductory animation for the Mage kit, featuring
+    * a ring of green particles around the player's head.
+    *
+    * @param player The player to play the intro for.
+    */
    @Override
     public void playIntro(Player player) {
         if (player == null || !player.isOnline()) {
@@ -137,6 +154,11 @@ public class KitMage extends WizardsKit {
         }.runTaskTimer(game.getPlugin(), 0L, 1L); // Start immediately, repeat every tick
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Provides the description for the Mage's cooldown reduction at a specific level.
+     */
     @Override
     public List<String> getLevelDescription(int level) {
         // Cooldown decrease = 0.1 + (0.025 * (level - 1))
@@ -168,6 +190,11 @@ public class KitMage extends WizardsKit {
         return 2.5F / 20F;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Applies the Mage's cooldown reduction multiplier to the wizard.
+     */
     @Override
     public void applyModifiers(Wizard wizard, int kitLevel) {
         double reduction = 0.1 + (0.025 * (kitLevel- 1));

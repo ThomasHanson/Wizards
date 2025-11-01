@@ -22,28 +22,36 @@ import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.Spell;
 import dev.thomashanson.wizards.game.spell.SpellManager;
 
+/**
+ * The Scholar Kit.
+ * <p>
+ * This kit starts with a set of basic spells and has the unique
+ * ability to "over-level" these specific spells by one additional level.
+ */
 public class KitScholar extends WizardsKit {
 
     private final Wizards game;
 
+    /**
+     * Creates a new instance of the Scholar kit.
+     *
+     * @param game The active {@link Wizards} game instance.
+     * @param data The configuration data for this kit from the database.
+     */
     public KitScholar(Wizards game, Map<String, Object> data) {
         super(data);
-        // super (
-        //         "Scholar",
-
-        //         "Starts with Mana Bolt, Heal, Ice Prison, and Wizard's " +
-        //                 "Compass. It can over-level each spell by 1."
-
-        //         // new ItemStack(Material.BOOK),
-        //         // new ItemStack(Material.BLAZE_ROD)
-        // );
-
         this.game = game;
     }
 
     @Override
     public void playSpellEffect(Player player, Location location) {}
 
+    /**
+     * Plays the introductory animation for the Scholar kit, featuring
+     * a hopping white rabbit that disappears in a puff of smoke and fireworks.
+     *
+     * @param player The player to play the intro for.
+     */
     @Override
     public void playIntro(Player player) {
         if (player == null || !player.isOnline()) {
@@ -126,6 +134,9 @@ public class KitScholar extends WizardsKit {
         }.runTaskTimer(game.getPlugin(), 0L, 1L);
     }
 
+    /**
+     * Spawns a small, custom firework for the intro animation.
+     */
     private void spawnFirework(Location location, org.bukkit.Color primaryColor, org.bukkit.Color fadeColor) {
         if (location.getWorld() == null) return;
         Firework fw = location.getWorld().spawn(location, Firework.class);
@@ -141,6 +152,11 @@ public class KitScholar extends WizardsKit {
         game.getPlugin().getServer().getScheduler().runTaskLater(game.getPlugin(), fw::detonate, 1L);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Provides the description for the Scholar's over-leveling perk.
+     */
     @Override
     public List<String> getLevelDescription(int level) {
         // Scholar has no upgrades, so it's the same for all levels.
@@ -169,12 +185,23 @@ public class KitScholar extends WizardsKit {
         return 2.5F / 20F;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Applies the Scholar's cooldown reduction (note: this appears to be
+     * copied from Mage and may be unintentional).
+     */
     @Override
     public void applyModifiers(Wizard wizard, int kitLevel) {
         double reduction = 0.1 + (0.025 * (kitLevel- 1));
         wizard.setCooldownMultiplier((float) (1 - reduction), false);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Grants the Scholar their set of starting spells.
+     */
     @Override
     public void applyInitialSpells(Wizard wizard) {
         // Get the SpellManager from your main game instance
@@ -202,6 +229,12 @@ public class KitScholar extends WizardsKit {
         }
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Allows the Scholar's starting spells to be leveled up one level
+     * higher than the default maximum.
+     */
     @Override
     public int getModifiedMaxSpellLevel(Spell spell, int currentDefaultMaxLevel) {
         // Switch on the spell's unique key (e.g., "MANA_BOLT")

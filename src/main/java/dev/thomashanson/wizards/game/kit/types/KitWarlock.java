@@ -17,22 +17,22 @@ import dev.thomashanson.wizards.game.Wizards;
 import dev.thomashanson.wizards.game.kit.WizardsKit;
 import dev.thomashanson.wizards.game.spell.Spell;
 
+/**
+ * The Warlock Kit.
+ * <p>
+ * This kit focuses on a greatly expanded maximum mana pool.
+ */
 public class KitWarlock extends WizardsKit {
 
     private final Wizards game;
 
+    /**
+     * Creates a new instance of the Warlock kit.
+     *
+     * @param game The active {@link Wizards} game instance.
+     * @param data The configuration data for this kit from the database.
+     */
     public KitWarlock(Wizards game, Map<String, Object> data) {
-
-        // super (
-
-        //         "Warlock",
-
-        //         "Increases max mana to 150-575."
-
-        //         // new ItemStack(Material.GOLDEN_APPLE),
-        //         // new ItemStack(WandElement.MANA.getMaterial())
-        // );
-
         super(data);
         this.game = game;
     }
@@ -42,6 +42,12 @@ public class KitWarlock extends WizardsKit {
 
     }
 
+    /**
+     * Plays the introductory animation for the Warlock kit, featuring
+     * a swirling purple and black portal effect.
+     *
+     * @param player The player to play the intro for.
+     */
     @Override
     public void playIntro(Player player) {
         if (player == null || !player.isOnline()) {
@@ -135,6 +141,11 @@ public class KitWarlock extends WizardsKit {
         }.runTaskTimer(game.getPlugin(), 0L, 1L);
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Provides the description for the Warlock's increased max mana at a specific level.
+     */
     @Override
     public List<String> getLevelDescription(int level) {
         // Max mana (rounded) = 150 + (6.25 * (level - 1))
@@ -145,6 +156,11 @@ public class KitWarlock extends WizardsKit {
         );
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Warlock's max mana is set based on its level-scaling formula.
+     */
     @Override
     public float getInitialMaxMana(int kitLevel) {
         return (float) (150 + (6.25 * (kitLevel - 1)));
@@ -165,6 +181,12 @@ public class KitWarlock extends WizardsKit {
         return 2.5F / 20F;
     }
 
+    /**
+     * {@inheritDoc}
+     * <p>
+     * Applies the Warlock's cooldown reduction (note: this appears to be
+     * copied from Mage and may be unintentional).
+     */
     @Override
     public void applyModifiers(Wizard wizard, int kitLevel) {
         double reduction = 0.1 + (0.025 * (kitLevel- 1));
