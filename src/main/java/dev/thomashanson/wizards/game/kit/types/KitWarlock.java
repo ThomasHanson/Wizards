@@ -181,17 +181,8 @@ public class KitWarlock extends WizardsKit {
         return 2.5F / 20F;
     }
 
-    /**
-     * {@inheritDoc}
-     * <p>
-     * Applies the Warlock's cooldown reduction (note: this appears to be
-     * copied from Mage and may be unintentional).
-     */
     @Override
-    public void applyModifiers(Wizard wizard, int kitLevel) {
-        double reduction = 0.1 + (0.025 * (kitLevel- 1));
-        wizard.setCooldownMultiplier((float) (1 - reduction), false);
-    }
+    public void applyModifiers(Wizard wizard, int kitLevel) {}
 
     @Override
     public void applyInitialSpells(Wizard wizard) { }
